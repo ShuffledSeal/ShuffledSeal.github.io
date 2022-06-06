@@ -1,0 +1,223 @@
+* {
+    font-family: "Lucida Console", "Courier New", monospace;
+    color: #E84545;
+   }
+
+body {
+background-color: #2B2E4A;
+  }
+  #background {
+    position: fixed;
+    top: 50%;
+    left: 0px;
+    width: 100%;
+    height: 50%;
+    background-color: #53354A;
+    z-index: 1;
+}
+
+.trapezoid {
+	border-bottom: 450px solid #903749;
+	border-left: 250px solid transparent;
+	border-right: 250px solid transparent;
+	height: 0;
+	width: 300px;
+    margin: auto;   
+    text-align: center;
+    /* Two lines below added */
+        display: flex;
+        justify-content: space-evenly;
+}
+
+ul
+{
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+li
+{
+    text-align: center;
+    display: table-row;
+}
+span
+{
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.moon{
+    height: 250px;
+  width: 250px;
+  background-color: #E84545;
+  border-radius: 50%;
+  display: inline-block;
+  margin: auto;
+  /* Two lines below added */
+  display: grid;
+  place-items: center;
+}
+  @-webkit-keyframes animateCloud {
+    0% {
+        margin-left: -100%;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+@-moz-keyframes animateCloud {
+    0% {
+        margin-left: -100%;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+@keyframes animateCloud {
+    0% {
+        margin-left: -100%;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+.x1 {
+    position: absolute;
+    top:5%;
+	-webkit-animation: animateCloud 50s linear infinite;
+	-moz-animation: animateCloud 50s linear infinite;
+	animation: animateCloud 50s linear infinite;
+	
+    -webkit-transform: scale(0.75);
+	-moz-transform: scale(0.75);
+	transform: scale(0.75);
+    opacity: 1;
+}
+
+.x2 {
+    position: absolute;
+    top:25%;
+	-webkit-animation: animateCloud 20s linear infinite;
+	-moz-animation: animateCloud 20s linear infinite;
+	animation: animateCloud 20s linear infinite;
+	
+    -webkit-transform: scale(0.25);
+	-moz-transform: scale(0.25);
+	transform: scale(0.25);
+    opacity: 0.95;
+}
+
+.x3 {
+    top:15%;
+    position: absolute;
+	-webkit-animation: animateCloud 30s linear infinite;
+	-moz-animation: animateCloud 30s linear infinite;
+	animation: animateCloud 30s linear infinite;
+	
+	
+    -webkit-transform: scale(0.5);
+	-moz-transform: scale(0.5);
+	transform: scale(0.5);
+    opacity: 0.9;
+}
+
+.x4 {
+    top:10%;
+    position: absolute;
+	-webkit-animation: animateCloud 38s linear infinite;
+	-moz-animation: animateCloud 38s linear infinite;
+	animation: animateCloud 38s linear infinite;
+
+    -webkit-transform: scale(0.6);
+	-moz-transform: scale(0.6);
+	transform: scale(0.6);
+    opacity: 0.85;
+}
+
+.x5 {
+    top:1%;
+    position: absolute;
+	-webkit-animation: animateCloud 25s linear infinite;
+	-moz-animation: animateCloud 25s linear infinite;
+	animation: animateCloud 25s linear infinite;
+
+
+    -webkit-transform: scale(0.35);
+	-moz-transform: scale(0.35);
+	transform: scale(0.35);
+    opacity: 0.80;
+}
+
+.x6 {
+    top:11%;
+    position: absolute;
+	-webkit-animation: animateCloud 32s linear infinite;
+	-moz-animation: animateCloud 32s linear infinite;
+	animation: animateCloud 32s linear infinite;
+	
+    -webkit-transform: scale(0.4);
+	-moz-transform: scale(0.4);
+	transform: scale(0.4);
+    opacity: 0.75;
+}
+
+.x7 {
+    top:6%;
+    position: absolute;
+	-webkit-animation: animateCloud 17s linear infinite;
+	-moz-animation: animateCloud 17s linear infinite;
+	animation: animateCloud 17s linear infinite;
+	
+
+    -webkit-transform: scale(0.2);
+	-moz-transform: scale(0.2);
+	transform: scale(0.2);
+    opacity: 0.70;
+  
+}
+
+.x8 {
+    top:8%;
+    position: absolute;
+	-webkit-animation: animateCloud 22s linear infinite;
+	-moz-animation: animateCloud 22s linear infinite;
+	animation: animateCloud 22s linear infinite;
+	
+	-webkit-transform: scale(0.3);
+	-moz-transform: scale(0.3);
+	transform: scale(0.3);
+    opacity: 0.65;
+}
+
+.x9 {
+    top:13%;
+    position: absolute;
+	-webkit-animation: animateCloud 28s linear infinite;
+	-moz-animation: animateCloud 28s linear infinite;
+	animation: animateCloud 28s linear infinite;
+
+    -webkit-transform: scale(0.4);
+	-moz-transform: scale(0.4);
+	transform: scale(0.4);
+    opacity: 0.55;
+}
+
+.x10 {
+    top:17%;
+    position: absolute;
+	-webkit-animation: animateCloud 35s linear infinite;
+	-moz-animation: animateCloud 35s linear infinite;
+	animation: animateCloud 35s linear infinite;
+	
+    -webkit-transform: scale(0.55);
+	-moz-transform: scale(0.55);
+	transform: scale(0.55);
+    opacity: 0.6;
+}
+
