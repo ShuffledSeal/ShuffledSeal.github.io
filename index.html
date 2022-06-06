@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,7 +16,7 @@
   Its wings are too small to get its fat little body off the ground.
   The bee, of course, flies anyway because bees don't care what humans think is impossible.">
   <meta property="og:image" content="https://pbs.twimg.com/media/EObUEVuXsAI99lc.jpg">
-  
+
   <link rel="icon" href="favicon.ico">
 
   <link rel="stylesheet" href="CSS/styles.css">
@@ -26,7 +27,7 @@
 
 
   <div class="moon"></div>
-  <img class="x1" src="welcome\clouds.png" alt="cloud"> 
+  <img class="x1" src="welcome\clouds.png" alt="cloud">
   <img class="x2" src="welcome\clouds.png" alt="cloud">
   <img class="x3" src="welcome\clouds.png" alt="cloud">
   <img class="x4" src="welcome\clouds.png" alt="cloud">
@@ -38,17 +39,58 @@
   <img class="x10" src="welcome\clouds.png" alt="cloud">
 
 
-<div id="background">
-  <div class="trapezoid">
-    <ul>
-      <li><span><h3>About Me</h3></span></li>
-      <li><span><h2>Portfolio</h2></span></li>
-      <li><span><h1>Contact Me</h1></span></li>
-  </ul>
-  
-  </div>
-</div>
+  <div id="background">
+    <div class="trapezoid">
+      <ul>
+        <li><span><button id="topBtn" class="button myBtn">
+              <h3>About Me</h3>
+            </button>
+            <div id="topModal" class="modal">
+              <!-- Modal content -->
+              <div class="modal-content">
+                <div class="modal-header">
+                  <span class="close">&times;</span>
+                  <h2>About Me</h2>
+                </div>
+                <div class="modal-body">
+                  <p>Some text in the Modal Body</p>
+                  <p>Some other text...</p>
+                </div>
+                <div class="modal-footer">
+                  <h3>About Me</h3>
+                </div>
+              </div>
+            </div>
+          </span></li>
+        <li><span><button class="button myBtn" onclick="location.href='portfolio.html'" type="button">
+              <h2>Portfolio</h2>
+            </button></span></li>
+        <li><span><button id="bottomBtn" class="button myBtn">
+              <h1>Contact Me</h1>
+            </button>
+            <div id="bottomModal" class="modal">
+              <!-- Modal content -->
+              <div class="modal-content2">
+                <div class="modal-header">
+                  <span class="close">&times;</span>
+                  <h2>Contact Details</h2>
+                </div>
+                <div class="modal-body">
+                  <p>@shuffledseal on instagram</p>
+                  <p>realpolarizedbear@gmail.com</p>
+                </div>
+                <div class="modal-footer">
+                  <h3>Thanks for checking out the website</h3>
+                </div>
+              </div>
+            </div>
+          </span></li>
+      </ul>
 
-  <script src="js/Welcome.js"></script>
+    </div>
+  </div>
+
+  <script src="JS\Welcome.js"></script>
 </body>
+
 </html>
