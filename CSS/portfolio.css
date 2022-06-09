@@ -37,7 +37,9 @@ body {
     background-color: #53354A;
     
     }
-
+button {
+    background:none; border:none;
+}
 .inner {
     position: absolute;
     left: 3%;
