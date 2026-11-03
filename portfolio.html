@@ -2,17 +2,17 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">  
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>ShuffledSeal</title>
+  <title>Portfolio — ShuffledSeal</title>
 
   <meta name="description" content="My portfolio.">
   <meta name="author" content="Abdoodles">
   <meta property="og:title" content="List of projects I completed">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ShuffledSeal.github.io/portfolio.html">
-  <meta property="og:description" content="So guys, we did it, we reached a quarter of a million subscribers, 250,000 subscribers and still growing the fact that we've reached this number in such a short amount of time is just phenomenal, I'm-I'm just amazed. 
+  <meta property="og:description" content="So guys, we did it, we reached a quarter of a million subscribers, 250,000 subscribers and still growing the fact that we've reached this number in such a short amount of time is just phenomenal, I'm-I'm just amazed.
   Thank you all so much for supporting this channel and helping it grow.
   I-I love you guys... You guys are just awesome.">
   <meta property="og:image" content="https://i.redd.it/lcw2ysgeq9b51.png">
@@ -24,51 +24,59 @@
 </head>
 
 <body>
-<div class="title">My Portfolio</div>
-<div class="container"> 
+<header class="title">My Portfolio</header>
+<a class="home-link" href="index.html">&larr; home</a>
+<main class="container">
   <div class="inner">
 
 
-    <div class="slide-container">
+    <div class="slide-container" id="slides" tabindex="0" aria-label="Projects, scroll horizontally">
 
       <div class="slide" id="aether">
          <div class="image-ctn">
-           <img src="assets/aether-preview.webp" alt="Æther Observatory — a cosmic playground homepage with a smiling Saturn" onclick="location.href='aether/'"/>
+           <a href="aether/" aria-label="Enter Æther Observatory"><img src="assets/aether-preview.webp" alt="Æther Observatory — a cosmic playground homepage with a smiling Saturn"/></a>
          </div>
         <div class="text-ctn">
-          <button class="button myBtn" onclick="location.href='aether/'" type="button"><h1>Æther Observatory</h1></button>
+          <a class="button myBtn" href="aether/"><h2>Æther Observatory</h2></a>
           <p>A private observatory for the endlessly curious. Four cosmic games, six wonder rooms, and a cabinet for everything you discover — handcrafted with vanilla HTML, CSS and JavaScript. Borrow a comet's orbit, photograph a nebula, and make a world that could never exist.</p>
         </div>
       </div>
       <div class="slide">
          <div class="image-ctn">
-           <img src="https://images.unsplash.com/photo-1589881133595-a3c085cb731d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=765&q=80" alt="A block of cheese" onclick="location.href='https://www.youtube.com/watch?v=vE2ETqUGj6Q'"/>
+           <a href="https://www.youtube.com/watch?v=vE2ETqUGj6Q" aria-label="Cheese (external video)"><img src="https://images.unsplash.com/photo-1589881133595-a3c085cb731d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=765&q=80" alt="A block of cheese"/></a>
          </div>
         <div class="text-ctn">
-          <button class="button myBtn" onclick="location.href='https://www.youtube.com/watch?v=vE2ETqUGj6Q'" type="button"><h1>Cheese</h1></button>
+          <a class="button myBtn" href="https://www.youtube.com/watch?v=vE2ETqUGj6Q"><h2>Cheese</h2></a>
           <p>Cheese is a dairy product produced in wide ranges of flavors, textures, and forms by coagulation of the milk protein casein. It comprises proteins and fat from milk, usually the milk of cows, buffalo, goats, or sheep. During production, the milk is usually acidified and the enzymes of either rennet or bacterial enzymes with similar activity are added to cause the casein to coagulate.</p>
         </div>
-      </div>      
+      </div>
       <div class="slide">
          <div class="image-ctn">
-           <img src="https://images.unsplash.com/photo-1559598467-f8b76c8155d0?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=765&q=80" alt="A glass of milk" onclick="location.href='https://www.youtube.com/watch?v=dQw4w9WgXcQ'" />
+           <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" aria-label="Milk (external video)"><img src="https://images.unsplash.com/photo-1559598467-f8b76c8155d0?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=765&q=80" alt="A glass of milk"/></a>
          </div>
         <div class="text-ctn">
-          <button class="button myBtn" onclick="location.href='https://www.youtube.com/watch?v=dQw4w9WgXcQ'" type="button"><h1>Cheese</h1></button>
+          <a class="button myBtn" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><h2>Milk</h2></a>
           <p>Milk is a nutrient-rich liquid food produced by the mammary glands of mammals. It is the primary source of nutrition for young mammals (including breastfed human infants) before they are able to digest solid food.</p>
         </div>
-      </div>      
-      
-    </div>
-    
+      </div>
 
+    </div>
+
+    <button class="slide-nav prev" type="button" aria-label="Previous project">&larr;</button>
+    <button class="slide-nav next" type="button" aria-label="Next project">&rarr;</button>
+    <div class="slide-dots" role="group" aria-label="Choose a project">
+      <button type="button" aria-label="Project 1" aria-current="true"></button>
+      <button type="button" aria-label="Project 2"></button>
+      <button type="button" aria-label="Project 3"></button>
+    </div>
 
   </div>
-</div>
+</main>
 <div id="background"></div>
 
 
   <script src="JS/Welcome.js"></script>
+  <script src="JS/portfolio.js"></script>
 </body>
 
 </html>

@@ -4,6 +4,8 @@
     box-sizing: border-box;
    }
 
+:root { --cream: #F2E6C9; }
+
 html, body {
     height: 100%;
 }
@@ -16,12 +18,13 @@ body {
     text-rendering: optimizeLegibility;
       }
 
+/* Horizon aligns with the frame's bottom edge instead of slicing it. */
 #background {
         position: fixed;
-        top: 50%;
+        top: 90%;
         left: 0px;
         width: 100%;
-        height: 50%;
+        height: 10%;
         background-color: #903749;
         z-index: -999;
     }
@@ -36,6 +39,19 @@ body {
   padding: 0.35em 0.5em;
   text-align: center;
 }
+
+.home-link {
+    position: fixed;
+    top: 14px;
+    left: 18px;
+    z-index: 5;
+    color: var(--cream);
+    font-size: 13px;
+    padding: 8px 10px;
+    text-decoration: none;
+}
+.home-link:hover { color: #ffffff; }
+
 .container {
     position: absolute;
     left: 10%;
@@ -46,11 +62,11 @@ body {
     background-color: #53354A;
 
     }
-button {
-    background:none; border:none;
+button, .myBtn {
     cursor: pointer;
     font-family: inherit;
 }
+button { background:none; border:none; }
 .inner {
     position: absolute;
     left: 3%;
@@ -73,42 +89,49 @@ button {
   min-width: 0;
   overflow-y: auto;
   text-align: center;
-  word-wrap: break-word;
       }
 
-.text-ctn h1 {
+.text-ctn h2 {
     margin: 0 0 0.6em;
+    font-size: 2em;
 }
 
 .text-ctn p {
     margin: 0;
     line-height: 1.7;
     max-width: 52ch;
+    text-align: left;
+    color: var(--cream);
+    word-wrap: break-word;
 }
 
 .image-ctn {
     width: 40%;
     min-width: 0;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
     overflow: hidden;
       }
+.image-ctn a { display: contents; }
 img {
     max-height: 100%;
     max-width: 100%;
     object-fit: contain;
-    cursor: pointer;
 }
 
-.myBtn:hover h1,
-.myBtn:focus-visible h1 {
+.myBtn { text-decoration: none; }
+
+.myBtn:hover h2,
+.myBtn:focus-visible h2 {
     text-shadow: 0 0 14px rgba(232, 69, 69, 0.55);
 }
 
-.myBtn:focus-visible {
-    outline: 2px dashed #E84545;
+a:focus-visible,
+button:focus-visible,
+.slide-container:focus-visible {
+    outline: 2px solid var(--cream);
     outline-offset: 4px;
 }
 
@@ -132,12 +155,50 @@ img {
         padding: 1em;
       }
 
-@media (max-width: 720px) {
+/* Slide navigation: arrows on the frame, dots under the strip. */
+.slide-nav {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 3;
+    background: #2B2E4A;
+    color: var(--cream);
+    border: 1px solid #903749;
+    font-size: 20px;
+    line-height: 1;
+    padding: 10px 13px;
+    transition: background 0.15s ease;
+}
+.slide-nav.prev { left: 10px; }
+.slide-nav.next { right: 10px; }
+.slide-nav:hover { background: #903749; }
+
+.slide-dots {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    translate: -50% 0;
+    display: flex;
+    gap: 10px;
+    z-index: 3;
+}
+.slide-dots button {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1px solid var(--cream);
+    background: transparent;
+    padding: 0;
+}
+.slide-dots button[aria-current="true"] { background: var(--cream); }
+
+@media (max-width: 1024px) {
     .title { font-size: 170%; }
     .container { left: 4%; right: 4%; top: 8%; bottom: 4%; }
-    .slide { flex-direction: column; justify-content: center; gap: 0.5em; }
+    .slide { flex-direction: column; justify-content: center; gap: 0.75em; }
     .image-ctn { width: 100%; height: 42%; }
     .text-ctn { height: auto; max-height: 55%; padding: 0.5em 0.75em; }
-    .text-ctn h1 { font-size: 1.3em; }
+    .text-ctn h2 { font-size: 1.4em; }
     .text-ctn p { font-size: 0.85em; }
+    .slide-nav { font-size: 16px; padding: 8px 10px; }
 }

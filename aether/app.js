@@ -801,6 +801,13 @@ document.addEventListener('submit', event => {
 
 document.addEventListener('keydown', event => {
   const editing = event.target.closest('input, textarea, select, [contenteditable]');
+  // A single Escape always honours the search hint, even with text in the
+  // field — Chromium would otherwise spend the first press clearing it.
+  if (event.key === 'Escape' && event.target.id === 'observatory-search') {
+    event.preventDefault();
+    closeModal();
+    return;
+  }
   if (((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') || (event.key === '/' && !editing && !modal.open)) {
     event.preventDefault();
     const draft = modal.open ? modal.querySelector('#journal-form') : null;

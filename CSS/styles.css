@@ -1,6 +1,7 @@
 /* ShuffledSeal — original design, polished.
    Same composition and palette: navy sky, red sun, drifting clouds,
-   purple horizon, maroon road, monospace red type. */
+   purple horizon, maroon road, monospace type. Cream ink where text
+   needs to be read; red kept for the sun and the sky. */
 
 :root {
     --sky: #2B2E4A;
@@ -8,6 +9,7 @@
     --ground: #53354A;
     --road: #903749;
     --ink: #E84545;
+    --cream: #F2E6C9;
     --mono: "Lucida Console", "Courier New", monospace;
 }
 
@@ -22,7 +24,7 @@ html, body {
 body {
     margin: 0;
     font-family: var(--mono);
-    color: var(--ink);
+    color: var(--cream);
     background-color: var(--sky);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
@@ -51,6 +53,29 @@ body {
     background-color: var(--sun);
     border-radius: 50%;
     z-index: 2;
+}
+
+/* Whose sky this is. */
+.site-id {
+    position: absolute;
+    top: 5vh;
+    right: 5vw;
+    margin: 0;
+    z-index: 2;
+    text-align: right;
+    line-height: 1.6;
+    pointer-events: none;
+}
+.site-name {
+    display: block;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+.site-line {
+    display: block;
+    font-size: 12px;
+    opacity: 0.72;
 }
 
 /* Clouds drift on the compositor (transform), not layout — no more stutter. */
@@ -108,59 +133,59 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(14px, 3.4vh, 38px);
+    gap: clamp(10px, 2.6vh, 30px);
     text-align: center;
 }
 
-.trapezoid li {
-    display: block;
-}
-
-.trapezoid span {
-    display: block;
-}
-
-.trapezoid h1,
-.trapezoid h2,
-.trapezoid h3 {
-    margin: 0;
+/* Menu labels grow as the road comes "closer" — sizes ascend on purpose. */
+.menu-link {
+    display: inline-block;
     font-weight: bold;
     line-height: 1.25;
 }
+.size-s { font-size: 15px; }
+.size-m { font-size: 20px; }
+.size-l { font-size: 26px; }
 
 .myBtn {
     background: none;
     border: none;
-    color: var(--ink);
+    color: var(--cream);
     font-family: var(--mono);
     cursor: pointer;
-    padding: 6px 14px;
+    padding: 10px 18px;
     transition: color 0.15s ease, text-shadow 0.15s ease;
 }
 
 .myBtn:hover,
 .myBtn:focus-visible {
-    color: #ff6b6b;
-    text-shadow: 0 0 14px rgba(232, 69, 69, 0.55);
+    color: #ffffff;
+    text-shadow: 0 0 14px rgba(242, 230, 201, 0.5);
 }
 
-.myBtn:focus-visible {
-    outline: 2px dashed var(--ink);
+.myBtn:focus-visible,
+.modal a:focus-visible,
+.close:focus-visible {
+    outline: 2px solid var(--cream);
     outline-offset: 4px;
 }
 
-/* Modals — same fade-in / slide-up behaviour, now centred, closable,
-   and consistent between the two. */
-.modal {
-    display: none;
+/* Modals — native <dialog>: real focus trap, Escape and backdrop included. */
+dialog.modal {
     position: fixed;
-    z-index: 10;
-    left: 0;
-    top: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
     overflow: auto;
-    background-color: rgb(0, 0, 0);
+}
+
+dialog.modal::backdrop {
     background-color: #00000066;
     animation: fadeIn 0.4s;
 }
@@ -173,18 +198,20 @@ body {
     border: 1px solid var(--road);
     width: min(80%, 560px);
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-    animation: animatetop 0.4s;
 }
 
+dialog[open] .modal-content { animation: animatetop 0.4s; }
+
 .modal-content2 {
-    position: fixed;
+    position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
     background-color: var(--ground);
     box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.25);
-    animation: slideIn 0.4s;
 }
+
+dialog[open] .modal-content2 { animation: slideIn 0.4s; }
 
 .modal-header,
 .modal-footer {
@@ -202,6 +229,7 @@ body {
 .modal-body {
     padding: 16px 20px;
     line-height: 1.7;
+    color: var(--cream);
 }
 
 .modal-body p {
@@ -212,25 +240,34 @@ body {
     margin-bottom: 0;
 }
 
+.modal-body a {
+    color: var(--cream);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.modal-body a:hover {
+    color: #ffffff;
+}
+
 .close {
     position: absolute;
     top: 50%;
-    right: 12px;
+    right: 10px;
     translate: 0 -50%;
     background: none;
     border: none;
-    color: var(--ink);
+    color: var(--cream);
     font-family: var(--mono);
-    font-size: 22px;
+    font-size: 24px;
     line-height: 1;
-    padding: 8px 10px;
+    padding: 10px 12px;
     cursor: pointer;
     transition: color 0.15s ease;
 }
 
-.close:hover,
-.close:focus-visible {
-    color: #ff6b6b;
+.close:hover {
+    color: #ffffff;
 }
 
 @keyframes slideIn {
@@ -253,15 +290,23 @@ body {
     .cloud { scale: calc(var(--s) * 0.5); }
     .x2, .x6, .x9 { display: none; }
     .trapezoid ul { gap: 12px; padding-bottom: 7%; }
-    .trapezoid h1 { font-size: 1.4em; }
-    .trapezoid h2 { font-size: 1.15em; }
-    .trapezoid h3 { font-size: 0.95em; }
+    .size-l { font-size: 22px; }
+    .size-m { font-size: 18px; }
+    .size-s { font-size: 14px; }
+    .site-id { top: 3.5vh; right: 4vw; }
+    .site-name { font-size: 17px; }
+    .site-line { font-size: 10px; }
     .modal-content { width: calc(100% - 24px); margin-top: 8vh; }
 }
 
-/* Reduced motion: clouds rest mid-drift instead of travelling. */
+/* Reduced motion: clouds hold their staggered positions instead of travelling. */
 @media (prefers-reduced-motion: reduce) {
-    .cloud { animation-duration: 0.01s; animation-delay: calc(var(--t) * -0.45); }
-    .modal, .modal-content, .modal-content2 { animation: none; }
+    .cloud {
+        animation: none;
+        transform: translateX(calc(-110vw - 220vw * var(--d, 0)));
+    }
+    dialog.modal::backdrop,
+    dialog[open] .modal-content,
+    dialog[open] .modal-content2 { animation: none; }
     .myBtn, .close { transition: none; }
 }

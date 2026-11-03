@@ -200,7 +200,7 @@ main { padding-top: 32px; }
 .stat-icon { position: absolute; right: 18px; top: 18px; width: 27px; height: 27px; border: 0; color: #c4b381; }
 .stat-icon svg { width: 21px; height: 21px; }
 .stat-icon .stat-moon { width: 23px; height: 23px; }
-.stat-label { font-size: 8px; letter-spacing: 1.4px; color: #b2baa0; padding-right: 30px; }
+.stat-label { font-size: 9px; letter-spacing: 1.4px; color: #b2baa0; padding-right: 30px; }
 .stat-value { font-size: 27px; line-height: 1.2; margin-top: 10px; color: #eee7d4; }
 .stat-detail { font-size: 9px; line-height: 1.7; margin-top: 7px; color: #a9b49e; }
 
@@ -277,7 +277,10 @@ main { padding-top: 32px; }
 .event-date small { font-size: 8px; color: #b1b99f; }
 .event-name { font-size: 23px; }
 .event-info .event-meta { font-size: 9px; color: #a9b39c; margin-top: 6px; white-space: normal; }
-.event-tag { font-size: 8px; padding-inline: 6px; }
+.event-tag { font-size: 9px; padding-inline: 6px; }
+.nav-count { font-size: 10px; }
+.planet-node:focus-visible .planet-halo { opacity: 1; stroke-width: 1.6; }
+.recap-stats { font-size: 12px; color: #cdbf9e; font-style: italic; font-family: var(--serif); margin-top: 6px; }
 .events-footnote { color: #b7b99b; font-size: 17px; padding: 20px 10px; }
 .bottom-note { margin-top: 42px; padding-top: 30px; align-items: center; flex-direction: column; gap: 17px; text-align: center; }
 .quote { font-size: 27px; line-height: 1.35; color: #c5c8b1; }
@@ -561,6 +564,9 @@ body[data-observatory-theme="rose"] :is(.panel, .stat, .destination-card) { back
   .sidebar-bottom { padding-top: 10px; }
   .ambience-toggle { padding-block: 16px; }
   .profile { padding-block: 17px; }
+}
+@media (max-width: 720px), (prefers-reduced-motion: reduce) {
+  .modal::backdrop { backdrop-filter: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .scene-astrolabe, .scene-saturn > .celestial-art { translate: none; }

@@ -73,7 +73,7 @@ window.AetherArcade = (() => {
     for (const entries of Object.values(catalog)) { entries.forEach(entry => { if (entry.ids) Object.freeze(entry.ids); Object.freeze(entry); }); Object.freeze(entries); }
     Object.freeze(catalog);
   }
-  const milestones = { merge: [3, 9, 18, 30], hop: [180, 500, 1000, 1600], dash: [5, 20, 36, 55], breaker: [6, 18, 35, 60] };
+  const milestones = { merge: [4, 14, 28, 48], hop: [180, 500, 1000, 1600], dash: [5, 18, 34, 52], breaker: [5, 14, 26, 45] };
   const progressLabels = { merge: 'merges', hop: 'metres travelled', dash: 'stars caught', breaker: 'crystal hits' };
 
   function create(canvas, options) {
@@ -95,7 +95,7 @@ window.AetherArcade = (() => {
     let catcher, falling, spawn, remaining, wave, dashTime, magnet;
     let paddle, comets, bricks, launchTimer, slowTime;
     let dropArmed = false, hueCache;
-    let notifyTimer = 0;
+    let notifyTimer = 0, releases = 0;
     let suspended = false, owned = [], offer = null, draftDecks = [], draftIndex = 0, lastDraftTime = 0, draftFallbacks = 0;
     let aimVelocity = 0, aimStamp = 0, guidedBall = null, fields = [], echoes = [];
     let pickupSchedule = [], activePower = null, slow = 0;
@@ -106,7 +106,7 @@ window.AetherArcade = (() => {
     const dangerLimit = () => has('deep-cradle') ? 5.2 : 3.4;
     const basketWidth = () => has('wide-halo') ? 55 : 39;
     const cometRadius = () => has('dense-core') ? 11 : 8;
-    const paddleHalf = () => (slowTime > 0 ? .68 : .43) + (has('crescent-crown') ? .2 : 0);
+    const paddleHalf = () => (slowTime > 0 ? .8 : .55) + (has('crescent-crown') ? .22 : 0);
     const tetherReach = () => (options.relaxed ? 270 : 235) + (has('longwave-tether') ? 80 : 0);
     const ringReach = () => has('ring-compass') ? (has('solar-spool') && flightBoost > 0 ? 340 : 150) : 0;
     const magnetReach = () => magnet > 0 ? (has('lodestone') ? 300 : 260) : has('lodestone') ? 180 : 0;
@@ -132,6 +132,9 @@ window.AetherArcade = (() => {
       if (phase !== 'running' || suspended || draftIndex >= 4) return;
       // Only simulation time counts. A quiet first run still gets a relic at 12s;
       // later droughts get one after 24s. Drafts never interrupt collision loops.
+      // Comet Surf: the first draft is earned by an actual slingshot release.
+      // A ship drifting on its launch velocity never earns a free discovery.
+      if (options.game === 'hop' && draftIndex === 0 && !releases) return;
       const reached = progressValue() >= milestones[options.game][draftIndex];
       const fallbackAfter = draftIndex === 0 ? (options.game === 'dash' ? 8 : 12) : 24;
       if (!reached && time - lastDraftTime < fallbackAfter) return;
@@ -235,7 +238,9 @@ window.AetherArcade = (() => {
       // A daily board should be a daily board: the seed rotates the rings and picks armoured crystals.
       const rotation = random() * TAU;
       [62, 111, 157].forEach((radius, ring) => {
-        const count = 6 + ring * 4;
+        // Wave one is sparse on purpose: the opening should need the paddle,
+        // not cascade into free points while the player watches.
+        const count = level === 1 ? 4 + ring * 3 : 6 + ring * 4;
         for (let i = 0; i < count; i++) {
           const a = i / count * TAU + ring * .27 + rotation;
           const armoured = level > 1 && random() < .34;
@@ -271,7 +276,7 @@ window.AetherArcade = (() => {
       activePower = null; slow = 0;
       owned = []; offer = null; suspended = false; draftIndex = 0; lastDraftTime = 0; draftFallbacks = 0;
       maxMetres = 0; totalCatches = 0; crystalHits = 0; ringsCaught = 0; shields = 0; shieldCharge = 0;
-      orbitCharge = 0; flightBoost = 0; reactorRings = 0; clockCatches = 0; splitHits = 0; ward = 0; wardReturns = 0; tetherAwaitingPress = false;
+      orbitCharge = 0; flightBoost = 0; reactorRings = 0; clockCatches = 0; splitHits = 0; ward = 0; wardReturns = 0; tetherAwaitingPress = false; releases = 0;
       fields = []; echoes = []; guidedBall = null; lastDirection = 1; finishDelay = 0; visualTime = 0;
       phase = 'ready'; score = 0; time = 0; accumulator = 0; last = 0; result = ''; notifyTimer = 0;
       particles = []; ripples = []; popups = []; shake = 0; flash = 0; clearInput();
@@ -429,7 +434,7 @@ window.AetherArcade = (() => {
         ship.y = clamp(ship.y, 8, H - 8);
         if (energy > .15) { flightBoost = 1.8 * energy; invulnerable = Math.max(invulnerable, .3 + energy * .5); relicField(ship.x - camera, ship.y, ringReach() || 65, '#edf19b'); }
         orbitCharge = 0;
-        burst(ship.x - camera, ship.y, '#f3e69b', 12); tether = null; tone(640, .12);
+        burst(ship.x - camera, ship.y, '#f3e69b', 12); tether = null; releases++; tone(640, .12);
       }
       if (tether) {
         if (has('solar-spool')) orbitCharge = Math.min(1, orbitCharge + dt / 1.25);
@@ -573,9 +578,9 @@ window.AetherArcade = (() => {
         }
         if (!f.taken && !f.bad && f.y > H + 30) {
           f.taken = true;
-          // A missed gift never breaks the streak; it just drifts by.
+          // A missed star never breaks the streak — only a meteor does. The
+          // promised ×8 has to be reachable, or the multiplier is decoration.
           if (f.kind === 'pickup') popups.push({ x: f.x, y: H - 60, text: 'THE GIFT DRIFTS BY', colour: '#b7abc9', life: 1.2 });
-          else combo = 0;
         }
       }
       falling = falling.filter(f => !f.taken && f.y < H + 50);
@@ -604,7 +609,8 @@ window.AetherArcade = (() => {
       if (launchTimer > 0) {
         launchTimer -= dt;
         comets.forEach((c, i) => {
-          const a = paddle.angle + i * .1, speed = 285 + Math.min(160, (level - 1) * 30);
+          // A gentle opening serve; speed builds through paddle returns.
+          const a = paddle.angle + i * .1, speed = 210 + Math.min(140, (level - 1) * 26);
           c.x = W / 2 + Math.cos(a) * 208; c.y = H / 2 + Math.sin(a) * 208;
           c.vx = -Math.cos(a + .13 + i * .24) * speed; c.vy = -Math.sin(a + .13 + i * .24) * speed; c.trail = [];
         });
@@ -657,8 +663,12 @@ window.AetherArcade = (() => {
       comets = comets.filter(c => !c.lost);
       // Only losing the final comet spends a life, even if several leave in one step.
       if (!comets.length && lastLost) {
-        invulnerable = 0; hurt(lastLost.x, lastLost.y); combo = 0; launchTimer = 1.25;
-        if (phase === 'running') comets.push({ x: W / 2, y: H / 2 + 208, vx: 0, vy: -290, trail: [], secondary: false });
+        invulnerable = 0; hurt(lastLost.x, lastLost.y); combo = 0; launchTimer = 2.1;
+        if (phase === 'running') {
+          comets.push({ x: W / 2, y: H / 2 + 208, vx: 0, vy: -290, trail: [], secondary: false });
+          // A beat to breathe: the comet pins to the paddle until launch.
+          popups.push({ x: W / 2 + Math.cos(paddle.angle) * 208, y: H / 2 + Math.sin(paddle.angle) * 208 - 30, text: 'COMET INCOMING', colour: '#a6d9ec', life: 1.6 });
+        }
       }
       while (splitHits >= 6) { splitHits -= 6; splitComet(comets[0]); }
       if (bricks.every(b => !b.hp) && phase === 'running') { level++; lives = Math.min(3, lives + 1); scoreAt(500, W / 2, H / 2, 'CONSTELLATION CLEARED +500'); burst(W / 2, H / 2, '#edf19b', 80, 300); makeBricks(); }
