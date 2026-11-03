@@ -1,29 +1,40 @@
-// Get the modal
-let modal;
+// Modal wiring. Guards let this file load on pages that have no modals
+// (like the portfolio) without throwing.
 
-// Get the button that opens the modal
+var openModal = null;
+var modalTrigger = null;
+
+function showModal(id, trigger) {
+  hideModal();
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = "block";
+  openModal = el;
+  modalTrigger = trigger || null;
+  var closeButton = el.querySelector(".close");
+  if (closeButton) closeButton.focus();
+}
+
+function hideModal() {
+  if (!openModal) return;
+  openModal.style.display = "none";
+  openModal = null;
+  if (modalTrigger) { modalTrigger.focus(); modalTrigger = null; }
+}
+
 var topBtn = document.getElementById("topBtn");
-
-// Get the button that opens the modal
 var bottomBtn = document.getElementById("bottomBtn");
 
+if (topBtn) topBtn.addEventListener("click", function () { showModal("topModal", topBtn); });
+if (bottomBtn) bottomBtn.addEventListener("click", function () { showModal("bottomModal", bottomBtn); });
 
+// Click the dimmed backdrop or a × button to close.
+document.addEventListener("click", function (event) {
+  if (!openModal) return;
+  if (event.target === openModal || event.target.closest(".close")) hideModal();
+});
 
-// When the user clicks the button, open the modal 
-topBtn.onclick = function() {
-  modal = document.getElementById("topModal");
-  modal.style.display = "block";
-}
-
-bottomBtn.onclick = function() {
-    modal = document.getElementById("bottomModal");
-    modal.style.display = "block";
-  }
-  
-
-// When the user clicks anywhere outside of the modal, close it
-window.onclick = function(event) {
-  if (event.target == modal) {
-    modal.style.display = "none";
-  }
-}
+// Escape closes the open modal.
+document.addEventListener("keydown", function (event) {
+  if (event.key === "Escape") hideModal();
+});

@@ -1,321 +1,267 @@
+/* ShuffledSeal — original design, polished.
+   Same composition and palette: navy sky, red sun, drifting clouds,
+   purple horizon, maroon road, monospace red type. */
+
+:root {
+    --sky: #2B2E4A;
+    --sun: #E84545;
+    --ground: #53354A;
+    --road: #903749;
+    --ink: #E84545;
+    --mono: "Lucida Console", "Courier New", monospace;
+}
+
 * {
-    font-family: "Lucida Console", "Courier New", monospace;
-    color: #E84545;
-   }
-
-body {
-background-color: #2B2E4A;
-overflow: hidden;
-  }
-  #background {
-    position: fixed;
-    top: 50%;
-    left: 0px;
-    width: 100%;
-    height: 50%;
-    background-color: #53354A;
-    z-index: 1;
-}
-
-.trapezoid {
-	border-bottom: 450px solid #903749;
-	border-left: 250px solid transparent;
-	border-right: 250px solid transparent;
-	height: 0;
-	width: 300px;
-    margin: auto;   
-    text-align: center;
-    /* Two lines below added */
-        display: flex;
-        justify-content: space-evenly;
-}
-
-ul
-{
-    display: table;
-    -moz-box-sizing: border-box;
     box-sizing: border-box;
 }
 
-li
-{
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--mono);
+    color: var(--ink);
+    background-color: var(--sky);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* The horizon: lower half of the scene. */
+#background {
+    position: fixed;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background-color: var(--ground);
+    z-index: 1;
+}
+
+/* The red sun, centred in the sky. */
+.moon {
+    position: absolute;
+    top: 4vh;
+    left: 50%;
+    translate: -50% 0;
+    width: min(250px, 30vmin);
+    height: min(250px, 30vmin);
+    background-color: var(--sun);
+    border-radius: 50%;
+    z-index: 2;
+}
+
+/* Clouds drift on the compositor (transform), not layout — no more stutter. */
+.cloud {
+    position: fixed;
+    left: 0;
+    z-index: 2;
+    scale: var(--s);
+    opacity: var(--o, 1);
+    animation: drift var(--t) linear infinite;
+    animation-delay: calc(var(--t) * var(--d, 0));
+    will-change: transform;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+@keyframes drift {
+    from { transform: translateX(-110vw); }
+    to   { transform: translateX(110vw); }
+}
+
+.x1  { top: 5%;  --s: 0.75; --t: 50s; --o: 1;    --d: -0.13; }
+.x2  { top: 25%; --s: 0.25; --t: 20s; --o: 0.95; --d: -0.42; }
+.x3  { top: 15%; --s: 0.5;  --t: 30s; --o: 0.9;  --d: -0.67; }
+.x4  { top: 10%; --s: 0.6;  --t: 38s; --o: 0.85; --d: -0.28; }
+.x5  { top: 1%;  --s: 0.35; --t: 25s; --o: 0.8;  --d: -0.81; }
+.x6  { top: 11%; --s: 0.4;  --t: 32s; --o: 0.75; --d: -0.55; }
+.x7  { top: 6%;  --s: 0.2;  --t: 17s; --o: 0.7;  --d: -0.35; }
+.x8  { top: 8%;  --s: 0.3;  --t: 22s; --o: 0.65; --d: -0.72; }
+.x9  { top: 13%; --s: 0.4;  --t: 28s; --o: 0.55; --d: -0.5; }
+.x10 { top: 17%; --s: 0.55; --t: 35s; --o: 0.6;  --d: -0.9; }
+
+/* The road: same trapezoid silhouette, drawn with an antialiased clip-path
+   instead of the border trick, and scaled to any screen. */
+.trapezoid {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    translate: -50% 0;
+    width: min(100vw, calc(50vh * 1.7778));
+    height: 100%;
+    background-color: var(--road);
+    clip-path: polygon(31.25% 0, 68.75% 0, 100% 100%, 0 100%);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.trapezoid ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 5%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(14px, 3.4vh, 38px);
     text-align: center;
-    display: table-row;
-}
-span
-{
-    display: table-cell;
-    vertical-align: middle;
 }
 
-.moon{
-    height: 250px;
-  width: 250px;
-  background-color: #E84545;
-  border-radius: 50%;
-  display: inline-block;
-  margin: auto;
-  /* Two lines below added */
-  display: grid;
-  place-items: center;
-}
-  @-webkit-keyframes animateCloud {
-    0% {
-        margin-left: -100%;
-    }
-    100% {
-        margin-left: 100%;
-    }
+.trapezoid li {
+    display: block;
 }
 
-@-moz-keyframes animateCloud {
-    0% {
-        margin-left: -100%;
-    }
-    100% {
-        margin-left: 100%;
-    }
+.trapezoid span {
+    display: block;
 }
 
-@keyframes animateCloud {
-    0% {
-        margin-left: -100%;
-    }
-    100% {
-        margin-left: 100%;
-    }
-}
-@keyframes up-down {
-    from {
-      transform: translateY(0);
-    }
-    to {
-      transform: translateY(8px);
-    }
-  }
-
-.x1 {
-    position: absolute;
-    top:5%;
-	-webkit-animation: animateCloud 50s linear infinite;
-	-moz-animation: animateCloud 50s linear infinite;
-	animation: animateCloud 50s linear infinite;
-	
-    -webkit-transform: scale(0.75);
-	-moz-transform: scale(0.75);
-	transform: scale(0.75);
-    opacity: 1;
+.trapezoid h1,
+.trapezoid h2,
+.trapezoid h3 {
+    margin: 0;
+    font-weight: bold;
+    line-height: 1.25;
 }
 
-.x2 {
-    position: absolute;
-    top:25%;
-	-webkit-animation: animateCloud 20s linear infinite;
-	-moz-animation: animateCloud 20s linear infinite;
-	animation: animateCloud 20s linear infinite;
-	
-    -webkit-transform: scale(0.25);
-	-moz-transform: scale(0.25);
-	transform: scale(0.25);
-    opacity: 0.95;
+.myBtn {
+    background: none;
+    border: none;
+    color: var(--ink);
+    font-family: var(--mono);
+    cursor: pointer;
+    padding: 6px 14px;
+    transition: color 0.15s ease, text-shadow 0.15s ease;
 }
 
-.x3 {
-    top:15%;
-    position: absolute;
-	-webkit-animation: animateCloud 30s linear infinite;
-	-moz-animation: animateCloud 30s linear infinite;
-	animation: animateCloud 30s linear infinite;
-	
-	
-    -webkit-transform: scale(0.5);
-	-moz-transform: scale(0.5);
-	transform: scale(0.5);
-    opacity: 0.9;
+.myBtn:hover,
+.myBtn:focus-visible {
+    color: #ff6b6b;
+    text-shadow: 0 0 14px rgba(232, 69, 69, 0.55);
 }
 
-.x4 {
-    top:10%;
-    position: absolute;
-	-webkit-animation: animateCloud 38s linear infinite;
-	-moz-animation: animateCloud 38s linear infinite;
-	animation: animateCloud 38s linear infinite;
-
-    -webkit-transform: scale(0.6);
-	-moz-transform: scale(0.6);
-	transform: scale(0.6);
-    opacity: 0.85;
+.myBtn:focus-visible {
+    outline: 2px dashed var(--ink);
+    outline-offset: 4px;
 }
 
-.x5 {
-    top:1%;
-    position: absolute;
-	-webkit-animation: animateCloud 25s linear infinite;
-	-moz-animation: animateCloud 25s linear infinite;
-	animation: animateCloud 25s linear infinite;
-
-
-    -webkit-transform: scale(0.35);
-	-moz-transform: scale(0.35);
-	transform: scale(0.35);
-    opacity: 0.80;
-}
-
-.x6 {
-    top:11%;
-    position: absolute;
-	-webkit-animation: animateCloud 32s linear infinite;
-	-moz-animation: animateCloud 32s linear infinite;
-	animation: animateCloud 32s linear infinite;
-	
-    -webkit-transform: scale(0.4);
-	-moz-transform: scale(0.4);
-	transform: scale(0.4);
-    opacity: 0.75;
-}
-
-.x7 {
-    top:6%;
-    position: absolute;
-	-webkit-animation: animateCloud 17s linear infinite;
-	-moz-animation: animateCloud 17s linear infinite;
-	animation: animateCloud 17s linear infinite;
-	
-
-    -webkit-transform: scale(0.2);
-	-moz-transform: scale(0.2);
-	transform: scale(0.2);
-    opacity: 0.70;
-  
-}
-
-.x8 {
-    top:8%;
-    position: absolute;
-	-webkit-animation: animateCloud 22s linear infinite;
-	-moz-animation: animateCloud 22s linear infinite;
-	animation: animateCloud 22s linear infinite;
-	
-	-webkit-transform: scale(0.3);
-	-moz-transform: scale(0.3);
-	transform: scale(0.3);
-    opacity: 0.65;
-}
-
-.x9 {
-    top:13%;
-    position: absolute;
-	-webkit-animation: animateCloud 28s linear infinite;
-	-moz-animation: animateCloud 28s linear infinite;
-	animation: animateCloud 28s linear infinite;
-
-    -webkit-transform: scale(0.4);
-	-moz-transform: scale(0.4);
-	transform: scale(0.4);
-    opacity: 0.55;
-}
-
-.x10 {
-    top:17%;
-    position: absolute;
-	-webkit-animation: animateCloud 35s linear infinite;
-	-moz-animation: animateCloud 35s linear infinite;
-	animation: animateCloud 35s linear infinite;
-	
-    -webkit-transform: scale(0.55);
-	-moz-transform: scale(0.55);
-	transform: scale(0.55);
-    opacity: 0.6;
-}
-
-
-/* The Modal (background) */
+/* Modals — same fade-in / slide-up behaviour, now centred, closable,
+   and consistent between the two. */
 .modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1; /* Sit on top */
+    display: none;
+    position: fixed;
+    z-index: 10;
     left: 0;
     top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: #00000066; /* Black w/ opacity */
-    -webkit-animation-name: fadeIn; /* Fade in the background */
-    -webkit-animation-duration: 0.4s;
-    animation-name: fadeIn;
-    animation-duration: 0.4s
-  }
-  .myBtn { background:#903749; border:none; }
-  /* Modal Content */
-  .modal-content {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0, 0, 0);
+    background-color: #00000066;
+    animation: fadeIn 0.4s;
+}
+
+.modal-content {
     position: relative;
-    background-color: #903749;
-    margin: auto;
+    background-color: var(--road);
+    margin: 12vh auto 5vh;
     padding: 0;
-    border: 1px solid #903749;
-    width: 80%;
-    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
-    -webkit-animation-name: animatetop;
-    -webkit-animation-duration: 0.4s;
-    animation-name: animatetop;
-    animation-duration: 0.4s
-  } 
-  
-  .modal-content2 {
+    border: 1px solid var(--road);
+    width: min(80%, 560px);
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    animation: animatetop 0.4s;
+}
+
+.modal-content2 {
     position: fixed;
     bottom: 0;
-    background-color: #53354A;
+    left: 0;
     width: 100%;
-    -webkit-animation-name: slideIn;
-    -webkit-animation-duration: 0.4s;
-    animation-name: slideIn;
-    animation-duration: 0.4s
-  }
+    background-color: var(--ground);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.25);
+    animation: slideIn 0.4s;
+}
 
-  
-  
-  .modal-header {
-    padding: 2px 16px;
-    background-color: #2B2E4A;
+.modal-header,
+.modal-footer {
+    position: relative;
+    padding: 14px 20px;
+    background-color: var(--sky);
     color: white;
-  }
-  
-  .modal-body {padding: 2px 16px;}
-  
-  .modal-footer {
-    padding: 2px 16px;
-    background-color: #2B2E4A;
-    color: white;
-  }
-  
-  /* Add Animation */
-  @-webkit-keyframes slideIn {
-    from {bottom: -33%; opacity: 0} 
-    to {bottom: 0; opacity: 1}
-  }
-  
-  @keyframes slideIn {
-    from {bottom: -33%; opacity: 0}
-    to {bottom: 0; opacity: 1}
-  }
-  
-  @-webkit-keyframes fadeIn {
-    from {opacity: 0} 
-    to {opacity: 1}
-  }
-  
-  @keyframes fadeIn {
-    from {opacity: 0} 
-    to {opacity: 1}
-  }
+}
 
-  @-webkit-keyframes animatetop {
-    from {top:-300px; opacity:0} 
-    to {top:0; opacity:1}
-  }
+.modal-header h2,
+.modal-footer h3 {
+    margin: 0;
+}
 
-  @keyframes animatetop {
-    from {top:-300px; opacity:0}
-    to {top:0; opacity:1}
-  }
+.modal-body {
+    padding: 16px 20px;
+    line-height: 1.7;
+}
+
+.modal-body p {
+    margin: 0 0 10px;
+}
+
+.modal-body p:last-child {
+    margin-bottom: 0;
+}
+
+.close {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    translate: 0 -50%;
+    background: none;
+    border: none;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 22px;
+    line-height: 1;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.close:hover,
+.close:focus-visible {
+    color: #ff6b6b;
+}
+
+@keyframes slideIn {
+    from { bottom: -33%; opacity: 0; }
+    to   { bottom: 0;    opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes animatetop {
+    from { top: -300px; opacity: 0; }
+    to   { top: 0;      opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .moon { top: 6vh; }
+    .cloud { scale: calc(var(--s) * 0.5); }
+    .x2, .x6, .x9 { display: none; }
+    .trapezoid ul { gap: 12px; padding-bottom: 7%; }
+    .trapezoid h1 { font-size: 1.4em; }
+    .trapezoid h2 { font-size: 1.15em; }
+    .trapezoid h3 { font-size: 0.95em; }
+    .modal-content { width: calc(100% - 24px); margin-top: 8vh; }
+}
+
+/* Reduced motion: clouds rest mid-drift instead of travelling. */
+@media (prefers-reduced-motion: reduce) {
+    .cloud { animation-duration: 0.01s; animation-delay: calc(var(--t) * -0.45); }
+    .modal, .modal-content, .modal-content2 { animation: none; }
+    .myBtn, .close { transition: none; }
+}

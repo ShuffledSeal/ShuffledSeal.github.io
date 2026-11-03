@@ -27,68 +27,72 @@
 
 
   <div class="moon"></div>
-  <img class="x1" src="welcome\clouds.png" alt="cloud">
-  <img class="x2" src="welcome\clouds.png" alt="cloud">
-  <img class="x3" src="welcome\clouds.png" alt="cloud">
-  <img class="x4" src="welcome\clouds.png" alt="cloud">
-  <img class="x5" src="welcome\clouds.png" alt="cloud">
-  <img class="x6" src="welcome\clouds.png" alt="cloud">
-  <img class="x7" src="welcome\clouds.png" alt="cloud">
-  <img class="x8" src="welcome\clouds.png" alt="cloud">
-  <img class="x9" src="welcome\clouds.png" alt="cloud">
-  <img class="x10" src="welcome\clouds.png" alt="cloud">
+  <img class="cloud x1" src="welcome/clouds.png" alt="">
+  <img class="cloud x2" src="welcome/clouds.png" alt="">
+  <img class="cloud x3" src="welcome/clouds.png" alt="">
+  <img class="cloud x4" src="welcome/clouds.png" alt="">
+  <img class="cloud x5" src="welcome/clouds.png" alt="">
+  <img class="cloud x6" src="welcome/clouds.png" alt="">
+  <img class="cloud x7" src="welcome/clouds.png" alt="">
+  <img class="cloud x8" src="welcome/clouds.png" alt="">
+  <img class="cloud x9" src="welcome/clouds.png" alt="">
+  <img class="cloud x10" src="welcome/clouds.png" alt="">
 
 
   <div id="background">
     <div class="trapezoid">
       <ul>
-        <li><span><button id="topBtn" class="button myBtn">
+        <li><span><button id="topBtn" class="button myBtn" aria-haspopup="dialog">
               <h3>About Me</h3>
             </button>
-            <div id="topModal" class="modal">
-              <!-- Modal content -->
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h2>About Me</h2>
-                </div>
-                <div class="modal-body">
-                  <p>Some text in the Modal Body</p>
-                  <p>Some other text...</p>
-                </div>
-                <div class="modal-footer">
-                  <h3>About Me</h3>
-                </div>
-              </div>
-            </div>
           </span></li>
         <li><span><button class="button myBtn" onclick="location.href='portfolio.html'" type="button">
               <h2>Portfolio</h2>
             </button></span></li>
-        <li><span><button id="bottomBtn" class="button myBtn">
+        <li><span><button id="bottomBtn" class="button myBtn" aria-haspopup="dialog">
               <h1>Contact Me</h1>
             </button>
-            <div id="bottomModal" class="modal">
-              <!-- Modal content -->
-              <div class="modal-content2">
-                <div class="modal-header">
-                  <h2>Contact Details</h2>
-                </div>
-                <div class="modal-body">
-                  <p>@shuffledseal on instagram</p>
-                  <p>realpolarizedbear@gmail.com</p>
-                </div>
-                <div class="modal-footer">
-                  <h3>Thanks for checking out the website</h3>
-                </div>
-              </div>
-            </div>
           </span></li>
       </ul>
 
     </div>
   </div>
 
-  <script src="JS\Welcome.js"></script>
+  <!-- About modal -->
+  <div id="topModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="about-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="about-title">About Me</h2>
+        <button class="close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Some text in the Modal Body</p>
+        <p>Some other text...</p>
+      </div>
+      <div class="modal-footer">
+        <h3>About Me</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact modal -->
+  <div id="bottomModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="contact-title">
+    <div class="modal-content2">
+      <div class="modal-header">
+        <h2 id="contact-title">Contact Details</h2>
+        <button class="close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>@shuffledseal on instagram</p>
+        <p>realpolarizedbear@gmail.com</p>
+      </div>
+      <div class="modal-footer">
+        <h3>Thanks for checking out the website</h3>
+      </div>
+    </div>
+  </div>
+
+  <script src="JS/Welcome.js"></script>
 </body>
 
 </html>

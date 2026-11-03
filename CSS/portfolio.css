@@ -1,12 +1,19 @@
 * {
     font-family: "Lucida Console", "Courier New", monospace;
     color: #E84545;
+    box-sizing: border-box;
    }
 
+html, body {
+    height: 100%;
+}
 
 body {
+    margin: 0;
     background-color: #2B2E4A;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
       }
 
 #background {
@@ -26,6 +33,8 @@ body {
   flex-direction: column;
   font-size: 250%;
   font-weight: bold;
+  padding: 0.35em 0.5em;
+  text-align: center;
 }
 .container {
     position: absolute;
@@ -35,10 +44,12 @@ body {
     bottom: 10%;
 
     background-color: #53354A;
-    
+
     }
 button {
     background:none; border:none;
+    cursor: pointer;
+    font-family: inherit;
 }
 .inner {
     position: absolute;
@@ -47,7 +58,8 @@ button {
     top: 3%;
     bottom: 0%;
     background-color: #2B2E4A;
-    display: flex;      
+    display: flex;
+    min-width: 0;
     }
 
 
@@ -56,38 +68,76 @@ button {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 1em;
+  padding: 1em 2em;
   height: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  text-align: center;
   word-wrap: break-word;
       }
-      
-.image-ctn {
 
-    width: 40%;   
+.text-ctn h1 {
+    margin: 0 0 0.6em;
+}
+
+.text-ctn p {
+    margin: 0;
+    line-height: 1.7;
+    max-width: 52ch;
+}
+
+.image-ctn {
+    width: 40%;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;  
+    flex-direction: column;
+    overflow: hidden;
       }
 img {
-
-    max-height:77vh ;
-    max-width: 65vh;
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    cursor: pointer;
 }
-    
-      
+
+.myBtn:hover h1,
+.myBtn:focus-visible h1 {
+    text-shadow: 0 0 14px rgba(232, 69, 69, 0.55);
+}
+
+.myBtn:focus-visible {
+    outline: 2px dashed #E84545;
+    outline-offset: 4px;
+}
+
       .slide-container {
         scroll-snap-type: x mandatory;
         overflow-x: auto;
         display: flex;
         overflow-y: hidden;
+        width: 100%;
+        scrollbar-width: thin;
+        scrollbar-color: #E84545 #2B2E4A;
       }
-      
+
       .slide {
         display: flex;
-        scroll-snap-align: end;
+        align-items: center;
+        scroll-snap-align: center;
         min-width: 100%;
-        height: 77vh;
-        display: flex;
+        height: 100%;
+        gap: 1em;
+        padding: 1em;
       }
-      
+
+@media (max-width: 720px) {
+    .title { font-size: 170%; }
+    .container { left: 4%; right: 4%; top: 8%; bottom: 4%; }
+    .slide { flex-direction: column; justify-content: center; gap: 0.5em; }
+    .image-ctn { width: 100%; height: 42%; }
+    .text-ctn { height: auto; max-height: 55%; padding: 0.5em 0.75em; }
+    .text-ctn h1 { font-size: 1.3em; }
+    .text-ctn p { font-size: 0.85em; }
+}
