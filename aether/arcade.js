@@ -11,36 +11,36 @@ window.AetherArcade = (() => {
 
   const relics = {
     merge: [
-      { id: 'echo-hourglass', name: 'Echo Hourglass', description: 'Keep merge chains alive for 2.4 seconds. Plan the next collision.', glyph: '⌛', tag: 'CHAIN' },
+      { id: 'echo-hourglass', name: 'Echo Hourglass', description: 'Keep merge chains alive for 3.4 seconds. Plan the next collision.', glyph: '⌛', tag: 'CHAIN' },
       { id: 'quake-core', name: 'Quake Core', description: 'Every merge sends a lifting shockwave through nearby planets.', glyph: '◎', tag: 'SHOCKWAVE' },
-      { id: 'binary-heart', name: 'Binary Heart', description: 'Matching planets gently attract across a 65-pixel gap.', glyph: '∞', tag: 'ATTRACTION' },
-      { id: 'guiding-thread', name: 'Guiding Thread', description: 'Aim steers your newest planet during its first 1.1 seconds.', glyph: '↘', tag: 'CONTROL' },
+      { id: 'binary-heart', name: 'Binary Heart', description: 'Matching planets pull together across a 140-pixel gap.', glyph: '∞', tag: 'ATTRACTION' },
+      { id: 'guiding-thread', name: 'Guiding Thread', description: 'Aim steers your newest planet during its first 1.8 seconds.', glyph: '↘', tag: 'CONTROL' },
       { id: 'pulse-dynamo', name: 'Pulse Dynamo', description: 'Merges grant 26 pulse energy. Pulses lift harder and clear half the overflow danger.', glyph: 'ϟ', tag: 'ENERGY' },
       { id: 'deep-cradle', name: 'Deep Cradle', description: 'Overflow grace grows to 5.2 seconds and drains faster when the rim clears.', glyph: '∪', tag: 'SURVIVAL' },
     ],
     hop: [
-      { id: 'ring-compass', name: 'Ring Compass', description: 'Pull collectible rings toward your ship from 150 pixels away.', glyph: '◎', tag: 'ATTRACTION' },
+      { id: 'ring-compass', name: 'Ring Compass', description: 'Pull collectible rings toward your ship from 230 pixels away.', glyph: '◎', tag: 'ATTRACTION' },
       { id: 'solar-spool', name: 'Solar Spool', description: 'Hold an orbit to charge a faster, briefly protected slingshot.', glyph: '☀', tag: 'CHARGE' },
-      { id: 'longwave-tether', name: 'Longwave Tether', description: 'Catch a planet from 80 pixels farther away.', glyph: '⌁', tag: 'REACH' },
+      { id: 'longwave-tether', name: 'Longwave Tether', description: 'Catch a planet from 120 pixels farther away.', glyph: '⌁', tag: 'REACH' },
       { id: 'moon-sail', name: 'Moon Sail', description: 'A stabilising sail softens vertical drift and cuts free-flight gravity by two thirds.', glyph: '◈', tag: 'FLIGHT' },
-      { id: 'comet-aegis', name: 'Comet Aegis', description: 'Start with a shield. Collect three rings to rebuild a spent shield.', glyph: '◇', tag: 'SHIELD' },
-      { id: 'ring-reactor', name: 'Ring Reactor', description: 'Rings boost forward speed; every fourth ring restores a life.', glyph: 'ϟ', tag: 'REACTOR' },
+      { id: 'comet-aegis', name: 'Comet Aegis', description: 'Start with a shield. Collect two rings to rebuild a spent shield.', glyph: '◇', tag: 'SHIELD' },
+      { id: 'ring-reactor', name: 'Ring Reactor', description: 'Rings boost forward speed; every third ring restores a life.', glyph: 'ϟ', tag: 'REACTOR' },
     ],
     dash: [
-      { id: 'lodestone', name: 'Lodestone', description: 'A permanent 180-pixel field pulls nearby stars into your basket.', glyph: '◎', tag: 'MAGNET' },
-      { id: 'star-aegis', name: 'Star Aegis', description: 'Start with a shield. Every five caught stars forge another, up to two.', glyph: '◇', tag: 'SHIELD' },
-      { id: 'wide-halo', name: 'Wide Halo', description: 'Your basket becomes 40 percent wider. Mind the meteors too.', glyph: '∪', tag: 'REACH' },
-      { id: 'afterimage', name: 'Afterimage', description: 'Dashing leaves a star-catching echo behind for 1.8 seconds.', glyph: '✧', tag: 'ECHO' },
-      { id: 'ion-cell', name: 'Ion Cell', description: 'Recharge dashes faster from time and catches, and dash 40 percent longer.', glyph: 'ϟ', tag: 'ENERGY' },
-      { id: 'second-hand', name: 'Second Hand', description: 'Every six catches add 1.8 seconds to the meteor shower.', glyph: '⌛', tag: 'TIME' },
+      { id: 'lodestone', name: 'Lodestone', description: 'A permanent 260-pixel field pulls nearby stars into your basket.', glyph: '◎', tag: 'MAGNET' },
+      { id: 'star-aegis', name: 'Star Aegis', description: 'Start with a shield. Every four caught stars forge another, up to two.', glyph: '◇', tag: 'SHIELD' },
+      { id: 'wide-halo', name: 'Wide Halo', description: 'Your basket becomes two-thirds wider. Mind the meteors too.', glyph: '∪', tag: 'REACH' },
+      { id: 'afterimage', name: 'Afterimage', description: 'Dashing leaves a star-catching echo behind for 2.6 seconds.', glyph: '✧', tag: 'ECHO' },
+      { id: 'ion-cell', name: 'Ion Cell', description: 'Recharge dashes faster from time and catches, and dash 70 percent longer.', glyph: 'ϟ', tag: 'ENERGY' },
+      { id: 'second-hand', name: 'Second Hand', description: 'Every five catches add 1.8 seconds to the meteor shower.', glyph: '⌛', tag: 'TIME' },
     ],
     breaker: [
-      { id: 'twin-comet', name: 'Twin Comet', description: 'Gain a second comet now. Every six crystal hits split another, up to three.', glyph: '✦', tag: 'MULTIBALL' },
-      { id: 'shatterglass', name: 'Shatterglass', description: 'Crystal impacts also shatter one nearby crystal within 62 pixels.', glyph: '✧', tag: 'SHATTER' },
-      { id: 'crescent-crown', name: 'Crescent Crown', description: 'Widen the paddle arc by almost half.', glyph: '☾', tag: 'REACH' },
+      { id: 'twin-comet', name: 'Twin Comet', description: 'Gain a second comet now. Every five crystal hits split another, up to three.', glyph: '✦', tag: 'MULTIBALL' },
+      { id: 'shatterglass', name: 'Shatterglass', description: 'Crystal impacts also shatter one nearby crystal within 85 pixels.', glyph: '✧', tag: 'SHATTER' },
+      { id: 'crescent-crown', name: 'Crescent Crown', description: 'Widen the paddle arc by over half.', glyph: '☾', tag: 'REACH' },
       { id: 'dense-core', name: 'Dense Core', description: 'Larger, visibly heavier comets break armoured crystals in one hit.', glyph: '●', tag: 'IMPACT' },
-      { id: 'chrono-coil', name: 'Chrono Coil', description: 'Hits grant more energy. Slow Orbit lasts seven seconds and turns comets inward.', glyph: '⌛', tag: 'TIME' },
-      { id: 'return-sigil', name: 'Return Sigil', description: 'A visible ward rescues one missed comet. Six paddle returns restore it.', glyph: '↶', tag: 'WARD' },
+      { id: 'chrono-coil', name: 'Chrono Coil', description: 'Hits grant more energy. Slow Orbit lasts eight seconds and turns comets inward.', glyph: '⌛', tag: 'TIME' },
+      { id: 'return-sigil', name: 'Return Sigil', description: 'A visible ward rescues one missed comet. Four paddle returns restore it.', glyph: '↶', tag: 'WARD' },
     ],
   };
   const synergies = {
@@ -73,7 +73,7 @@ window.AetherArcade = (() => {
     for (const entries of Object.values(catalog)) { entries.forEach(entry => { if (entry.ids) Object.freeze(entry.ids); Object.freeze(entry); }); Object.freeze(entries); }
     Object.freeze(catalog);
   }
-  const milestones = { merge: [4, 14, 28, 48], hop: [180, 500, 1000, 1600], dash: [5, 18, 34, 52], breaker: [5, 14, 26, 45] };
+  const milestones = { merge: [5, 16, 32, 55], hop: [180, 450, 900, 1500], dash: [6, 22, 40, 60], breaker: [5, 15, 30, 50] };
   const progressLabels = { merge: 'merges', hop: 'metres travelled', dash: 'stars caught', breaker: 'crystal hits' };
 
   function create(canvas, options) {
@@ -104,12 +104,12 @@ window.AetherArcade = (() => {
     const has = id => owned.some(r => r.id === id);
     const activeSynergies = () => synergies[options.game].filter(s => s.ids.every(has)).map(({ name, description }) => ({ name, description }));
     const dangerLimit = () => has('deep-cradle') ? 5.2 : 3.4;
-    const basketWidth = () => has('wide-halo') ? 55 : 39;
-    const cometRadius = () => has('dense-core') ? 11 : 8;
-    const paddleHalf = () => (slowTime > 0 ? .8 : .55) + (has('crescent-crown') ? .22 : 0);
-    const tetherReach = () => (options.relaxed ? 270 : 235) + (has('longwave-tether') ? 80 : 0);
-    const ringReach = () => has('ring-compass') ? (has('solar-spool') && flightBoost > 0 ? 340 : 150) : 0;
-    const magnetReach = () => magnet > 0 ? (has('lodestone') ? 300 : 260) : has('lodestone') ? 180 : 0;
+    const basketWidth = () => has('wide-halo') ? 64 : 39;
+    const cometRadius = () => has('dense-core') ? 13 : 8;
+    const paddleHalf = () => (slowTime > 0 ? .8 : .55) + (has('crescent-crown') ? .3 : 0);
+    const tetherReach = () => (options.relaxed ? 270 : 235) + (has('longwave-tether') ? 120 : 0);
+    const ringReach = () => has('ring-compass') ? (has('solar-spool') && flightBoost > 0 ? 340 : 230) : 0;
+    const magnetReach = () => magnet > 0 ? (has('lodestone') ? 340 : 300) : has('lodestone') ? 260 : 0;
     const progressValue = () => options.game === 'merge' ? totalMerges : options.game === 'hop' ? Math.floor(maxMetres) : options.game === 'dash' ? totalCatches : crystalHits;
     const stats = () => ({ simulationTime: time, totalMerges, totalCatches, crystalHits, ringsCaught, maxMetres: Math.floor(maxMetres), comets: comets.length, shields, shieldCharge, orbitCharge, ward, draftFallbacks });
 
@@ -285,6 +285,11 @@ window.AetherArcade = (() => {
       camera = 0; nextWorld = 250; worlds = []; rings = []; rocks = []; tether = null; tetherAwaitingPress = false; distanceScore = 0;
       ship = { x: 80, y: 235, vx: 235, vy: -30, trail: [] };
       while (nextWorld < 1600) newWorld();
+      // Two settled companions greet the first drop — the jar never starts empty.
+      if (options.game === 'merge') {
+        balls.push({ x: W / 2 - 58, y: H - 27 - radii[0], vx: 0, vy: 0, tier: 0, age: 5, angle: .2, squash: 0, born: 0 });
+        balls.push({ x: W / 2 + 62, y: H - 27 - radii[1], vx: 0, vy: 0, tier: 1, age: 5, angle: -.3, squash: 0, born: 0 });
+      }
       catcher = { x: W / 2, vx: 0, tilt: 0 }; falling = []; spawn = .8; remaining = 75; wave = 0; dashTime = 0; magnet = 0;
       paddle = { angle: Math.PI / 2, target: Math.PI / 2 }; comets = [{ x: W / 2, y: H / 2 + 210, vx: 0, vy: -290, trail: [], secondary: false }]; slowTime = 0;
       makeBricks(); aim = W / 2; pointerAim = null; notify(); draw();
@@ -311,15 +316,15 @@ window.AetherArcade = (() => {
       if (phase !== 'running' || suspended || charge < 100 || options.game === 'hop') return;
       charge = 0;
       if (options.game === 'merge') {
-        balls.forEach(b => { b.vx += aim < W / 2 ? -110 : 110; b.vy -= has('pulse-dynamo') ? 190 : 130; });
+        balls.forEach(b => { b.vx += aim < W / 2 ? -110 : 110; b.vy -= has('pulse-dynamo') ? 280 : 150; });
         if (has('pulse-dynamo')) { danger *= .5; relicField(W / 2, H - 40, 215, '#9ed7c6'); }
         burst(W / 2, H - 40, '#bba7ed', 30); shake = 6;
       } else if (options.game === 'dash') {
-        if (has('afterimage')) { echoes.push({ x: catcher.x, life: 1.8 }); if (echoes.length > 3) echoes.shift(); }
-        dashTime = has('ion-cell') ? .28 : .2; invulnerable = Math.max(invulnerable, .5); catcher.vx = lastDirection * 1250;
+        if (has('afterimage')) { echoes.push({ x: catcher.x, life: 2.6 }); if (echoes.length > 3) echoes.shift(); }
+        dashTime = has('ion-cell') ? .34 : .2; invulnerable = Math.max(invulnerable, .5); catcher.vx = lastDirection * 1250;
         burst(catcher.x, H - 72, '#9ed7c6', 22);
       } else {
-        slowTime = has('chrono-coil') ? 7 : 5;
+        slowTime = has('chrono-coil') ? 8 : 5;
         if (has('chrono-coil')) for (const c of comets) {
           const a = Math.atan2(H / 2 - c.y, W / 2 - c.x), speed = Math.max(285, Math.hypot(c.vx, c.vy));
           c.vx = Math.cos(a) * speed; c.vy = Math.sin(a) * speed;
@@ -352,14 +357,14 @@ window.AetherArcade = (() => {
         const a = balls[i], b = balls[j];
         if (a.tier !== b.tier) continue;
         const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), sum = radii[a.tier] * 2;
-        const guided = has('guiding-thread') && ((a === guidedBall && a.age < 1.1) || (b === guidedBall && b.age < 1.1));
-        if (d > sum && d < sum + (guided ? 140 : 65)) {
-          const force = (guided ? 220 : 80) * dt / d;
+        const guided = has('guiding-thread') && ((a === guidedBall && a.age < 1.8) || (b === guidedBall && b.age < 1.8));
+        if (d > sum && d < sum + (guided ? 200 : 140)) {
+          const force = (guided ? 320 : 190) * dt / d;
           a.vx += dx * force; a.vy += dy * force; b.vx -= dx * force; b.vy -= dy * force;
         }
       }
-      if (has('guiding-thread') && guidedBall?.age < 1.1 && balls.includes(guidedBall)) guidedBall.vx += clamp((aim - guidedBall.x) * 3 - guidedBall.vx, -220, 220) * dt * 3;
-      balls.forEach(b => { b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); b.vy += 400 * dt; b.vx *= Math.exp(-.38 * dt); b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35; });
+      if (has('guiding-thread') && guidedBall?.age < 1.8 && balls.includes(guidedBall)) guidedBall.vx += clamp((aim - guidedBall.x) * 3 - guidedBall.vx, -220, 220) * dt * 3;
+      balls.forEach(b => { b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); b.vy += (400 + Math.min(140, danger * 50)) * dt; b.vx *= Math.exp(-.38 * dt); b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35; });
       for (let pass = 0; pass < 6; pass++) {
         balls.forEach(b => {
           const r = radii[b.tier];
@@ -377,7 +382,7 @@ window.AetherArcade = (() => {
               balls.splice(j, 1); balls.splice(i, 1);
               if (tier < names.length) balls.push({ x, y, vx: (a.vx + b.vx) * .35, vy: -55, tier, age: 0, angle: 0, squash: -.2, born: .32 });
               largest = Math.max(largest, Math.min(10, tier)); totalMerges++; combo++;
-              comboTimer = has('echo-hourglass') ? 2.4 + (has('quake-core') && combo > 1 ? .6 : 0) : .85;
+              comboTimer = has('echo-hourglass') ? 3.4 + (has('quake-core') && combo > 1 ? .6 : 0) : .85;
               charge = Math.min(100, charge + (has('pulse-dynamo') ? 26 : 16));
               if (has('quake-core')) shocks.push({ x, y, tier, chain: has('echo-hourglass') && combo > 1 });
               scoreAt(2 ** tier * Math.min(combo, 5), x, y - radii[Math.min(tier, 10)], combo > 1 ? `${combo}× CHAIN!` : `+${2 ** tier}`);
@@ -399,17 +404,17 @@ window.AetherArcade = (() => {
         }
       }
       for (const s of shocks) {
-        const reach = s.chain ? 190 + Math.min(combo, 6) * 12 : 145;
+        const reach = s.chain ? 250 + Math.min(combo, 6) * 12 : 200;
         for (const b of balls) {
           const dx = b.x - s.x, dy = b.y - s.y, d = Math.hypot(dx, dy);
           if (d < 1 || d > reach + radii[b.tier]) continue;
-          const pull = s.chain && b.tier === s.tier, impulse = (pull ? -115 : 85) * Math.max(.2, 1 - d / (reach + radii[b.tier]));
+          const pull = s.chain && b.tier === s.tier, impulse = (pull ? -150 : 120) * Math.max(.2, 1 - d / (reach + radii[b.tier]));
           b.vx = clamp(b.vx + dx / d * impulse, -340, 340); b.vy = clamp(b.vy + dy / d * impulse - (pull ? 15 : 65), -260, 650);
         }
         relicField(s.x, s.y, reach, s.chain ? '#edf19b' : '#bba7ed');
       }
       const overflow = balls.some(b => b.age > 2.2 && b.y - radii[b.tier] < 92);
-      danger = overflow ? danger + dt : Math.max(0, danger - dt * (has('deep-cradle') ? 3 : 2));
+      danger = overflow ? danger + dt : Math.max(0, danger - dt * (has('deep-cradle') ? 4 : 2));
       if (danger > dangerLimit() || balls.length > 110) finish('One very full universe.');
     }
     function surfStep(dt) {
@@ -437,7 +442,7 @@ window.AetherArcade = (() => {
         burst(ship.x - camera, ship.y, '#f3e69b', 12); tether = null; releases++; tone(640, .12);
       }
       if (tether) {
-        if (has('solar-spool')) orbitCharge = Math.min(1, orbitCharge + dt / 1.25);
+        if (has('solar-spool')) orbitCharge = Math.min(1, orbitCharge + dt / .9);
         tether.angle += tether.direction * (270 + level * 6) / tether.radius * dt;
         ship.x = tether.planet.x + Math.cos(tether.angle) * tether.radius; ship.y = tether.planet.y + Math.sin(tether.angle) * tether.radius;
         ship.vx = -Math.sin(tether.angle) * tether.direction * 290; ship.vy = Math.cos(tether.angle) * tether.direction * 290;
@@ -448,9 +453,15 @@ window.AetherArcade = (() => {
       camera = Math.max(camera, ship.x - 270);
       while (nextWorld < camera + W + 650) newWorld();
       worlds = worlds.filter(w => w.x > camera - 350 || tether?.planet === w);
-      for (const w of worlds) if (!tether && Math.hypot(ship.x - w.x, ship.y - w.y) < w.r + 10) {
-        const before = lives; hurt(ship.x - camera, ship.y);
-        if (lives < before) { ship.vx = 260; ship.vy = ship.y < w.y ? -180 : 180; }
+      for (const w of worlds) {
+        const wDistance = Math.hypot(ship.x - w.x, ship.y - w.y);
+        if (!tether && wDistance < w.r + 10) {
+          const before = lives; hurt(ship.x - camera, ship.y);
+          if (lives < before) { ship.vx = 260; ship.vy = ship.y < w.y ? -180 : 180; }
+        } else if (!tether && wDistance < w.r + 34 && !w.grazed) {
+          // Skimming a planet you never grabbed still counts for something.
+          w.grazed = true; scoreAt(25, ship.x - camera, ship.y - 28, 'GRAZE +25'); tone(470, .07);
+        }
       }
       for (const r of rings) {
         if (phase !== 'running') break;
@@ -460,9 +471,9 @@ window.AetherArcade = (() => {
           r.taken = true; combo++; ringsCaught++;
           if (has('comet-aegis') && shields === 0) {
             shieldCharge++;
-            if (shieldCharge >= (has('ring-reactor') ? 2 : 3)) { shields = 1; shieldCharge = 0; relicField(ship.x - camera, ship.y, 38, '#9ed7c6'); }
+            if (shieldCharge >= 2) { shields = 1; shieldCharge = 0; relicField(ship.x - camera, ship.y, 38, '#9ed7c6'); }
           }
-          if (has('ring-reactor')) { ship.vx = Math.min(560, ship.vx + 40); reactorRings++; if (reactorRings % 4 === 0) { lives = Math.min(3, lives + 1); relicField(ship.x - camera, ship.y, 80, '#9ed7c6'); } }
+          if (has('ring-reactor')) { ship.vx = Math.min(560, ship.vx + 40); reactorRings++; if (reactorRings % 3 === 0) { lives = Math.min(3, lives + 1); relicField(ship.x - camera, ship.y, 80, '#9ed7c6'); } }
           if (has('ring-compass') && has('solar-spool') && flightBoost > 0) flightBoost = Math.min(3, flightBoost + .35);
           scoreAt(50 + Math.min(combo, 10) * 10, r.x - camera, r.y - 35, `${combo}× ORBIT`); burst(r.x - camera, r.y, '#edf19b', 28); tone(520 + combo % 8 * 65, .15);
         }
@@ -489,10 +500,13 @@ window.AetherArcade = (() => {
     }
     function spawnWave() {
       wave++; const base = 75 + random() * (W - 150), pattern = wave % 4;
+      // Every eighth wave is a golden surge: a breather and a streak-builder.
+      const surge = wave % 8 === 0;
+      if (surge) { popups.push({ x: W / 2, y: H * .3, text: 'STAR SURGE — CATCH EVERYTHING', colour: '#edf19b', life: 1.6 }); tone(880, .3, 'sine', .07); }
       for (let i = 0; i < 5; i++) {
         const x = pattern === 0 ? 90 + i * 180 : clamp(base + (i - 2) * (pattern === 1 ? 74 : 125), 35, W - 35);
-        const bad = pattern === 2 ? i === 0 || i === 4 : i === wave % 5;
-        falling.push({ x, y: -30 - (pattern === 1 ? i * 35 : 0), speed: 155 + time * 2.4 + i * 6, bad, kind: !bad && i === 2 && wave % 7 === 0 ? 'jelly' : 'star', r: bad ? 18 : 12, wait: bad ? .55 : .1, spin: i, taken: false });
+        const bad = surge ? false : pattern === 2 ? i === 0 || i === 4 : i === wave % 5;
+        falling.push({ x, y: -30 - (pattern === 1 ? i * 35 : 0), speed: (155 + time * 2.4 + i * 6) * (surge ? .82 : 1), bad, kind: !bad && i === 2 && wave % 7 === 0 ? 'jelly' : 'star', r: bad ? 18 : 12, wait: bad ? .55 : .1, spin: i, taken: false });
       }
     }
     function collectPickup(f) {
@@ -536,7 +550,7 @@ window.AetherArcade = (() => {
         break;
       }
       echoes.forEach(e => { e.life -= dt; }); echoes = echoes.filter(e => e.life > 0);
-      if (wasDashing && dashTime <= 0 && has('afterimage') && has('ion-cell')) { echoes.push({ x: catcher.x, life: 1.8 }); if (echoes.length > 3) echoes.shift(); relicField(catcher.x, H - 72, basketWidth(), '#9ed7c6'); }
+      if (wasDashing && dashTime <= 0 && has('afterimage') && has('ion-cell')) { echoes.push({ x: catcher.x, life: 2.6 }); if (echoes.length > 3) echoes.shift(); relicField(catcher.x, H - 72, basketWidth(), '#9ed7c6'); }
       const direction = (keys.has('ArrowRight') || keys.has('d') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('a') ? 1 : 0);
       if (direction) { pointerAim = null; lastDirection = direction; }
       if (dashTime <= 0) {
@@ -564,13 +578,16 @@ window.AetherArcade = (() => {
             combo++; totalCatches++; charge = Math.min(100, charge + (has('ion-cell') ? 11 : 7) + (echoCatch && !directCatch && has('ion-cell') ? 18 : 0));
             if (has('star-aegis') && shields < 2) {
               shieldCharge += has('lodestone') && f.attracted ? 2 : 1;
-              if (shieldCharge >= 5) { shields++; shieldCharge -= 5; relicField(catcher.x, H - 72, basketWidth() + 14, '#9ed7c6'); }
+              if (shieldCharge >= 4) { shields++; shieldCharge -= 4; relicField(catcher.x, H - 72, basketWidth() + 14, '#9ed7c6'); }
             }
             if (has('second-hand')) {
               clockCatches++;
-              if (clockCatches % 6 === 0) { remaining = Math.min(90, remaining + 1.8); scoreAt(0, f.x, f.y - 60, '+1.8 SECONDS'); relicField(catcher.x, H - 72, 70, '#edf19b'); }
+              if (clockCatches % 5 === 0) { remaining = Math.min(90, remaining + 1.8); scoreAt(0, f.x, f.y - 60, '+1.8 SECONDS'); relicField(catcher.x, H - 72, 70, '#edf19b'); }
             }
             const multiplier = Math.min(8, 1 + Math.floor(combo / 5));
+            if (multiplier > Math.min(8, 1 + Math.floor((combo - 1) / 5))) {
+              popups.push({ x: W / 2, y: H * .3, text: `STREAK ×${multiplier}`, colour: '#edf19b', life: 1.5 }); tone(660 + multiplier * 70, .2);
+            }
             scoreAt(10 * multiplier, f.x, f.y - 25, f.kind === 'jelly' ? 'STAR MAGNET!' : `+${10 * multiplier}`);
             if (f.kind === 'jelly') { magnet = Math.max(magnet, 6); lives = Math.min(3, lives + 1); }
             burst(f.x, f.y, f.kind === 'jelly' ? '#bba7ed' : '#edf19b', 13); tone(380 + combo % 8 * 65, .11);
@@ -632,9 +649,8 @@ window.AetherArcade = (() => {
             if (dot < 0) { c.vx -= 2 * dot * nx; c.vy -= 2 * dot * ny; }
             hitCrystal(b, has('dense-core') ? 2 : 1);
             if (has('shatterglass')) {
-              const prism = has('twin-comet') && c.secondary, reach = prism ? 105 : 62;
-              const neighbours = bricks.filter(n => n !== b && n.hp > 0 && Math.hypot(n.x - b.x, n.y - b.y) <= reach).sort((a, n) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(n.x - b.x, n.y - b.y)).slice(0, prism ? 2 : 1);
-              for (const n of neighbours) { hitCrystal(n); fields.push({ x: b.x, y: b.y, toX: n.x, toY: n.y, radius: reach, colour: prism ? '#edf19b' : '#bba7ed', life: .4, max: .4 }); }
+              const prism = has('twin-comet') && c.secondary, reach = prism ? 105 : 85;
+              const neighbours = bricks.filter(n => n !== b && n.hp > 0 && Math.hypot(n.x - b.x, n.y - b.y) <= reach).sort((a, n) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(n.x - b.x, n.y - b.y)).slice(0, prism ? 2 : 1);              for (const n of neighbours) { hitCrystal(n); fields.push({ x: b.x, y: b.y, toX: n.x, toY: n.y, radius: reach, colour: prism ? '#edf19b' : '#bba7ed', life: .4, max: .4 }); }
               relicField(b.x, b.y, reach, prism ? '#edf19b' : '#bba7ed', .35);
             }
             break;
@@ -651,7 +667,9 @@ window.AetherArcade = (() => {
             const speed = Math.min(490, Math.hypot(c.vx, c.vy) + 4), bounce = a + Math.PI + offset * .8;
             c.x = W / 2 + Math.cos(a) * (contact - .2); c.y = H / 2 + Math.sin(a) * (contact - .2);
             c.vx = Math.cos(bounce) * speed; c.vy = Math.sin(bounce) * speed;
-            if (has('return-sigil')) { wardReturns++; if (wardReturns >= 6) { ward = 1; wardReturns = 0; relicField(W / 2, H / 2, 254, '#9ed7c6'); } }
+            // A brief arrow shows where your angle sent the comet.
+            fields.push({ x: c.x, y: c.y, toX: c.x + Math.cos(bounce) * 52, toY: c.y + Math.sin(bounce) * 52, radius: 10, colour: '#a6d9ec', life: .25, max: .25 });
+            if (has('return-sigil')) { wardReturns++; if (wardReturns >= 4) { ward = 1; wardReturns = 0; relicField(W / 2, H / 2, 254, '#9ed7c6'); } }
             burst(c.x, c.y, '#a8dcdf', 8, 70); tone(200, .07, 'triangle');
           } else if (ward && distance >= 254 - radius) {
             ward = 0; const speed = Math.hypot(c.vx, c.vy); c.vx = -Math.cos(a) * speed; c.vy = -Math.sin(a) * speed;
@@ -670,7 +688,7 @@ window.AetherArcade = (() => {
           popups.push({ x: W / 2 + Math.cos(paddle.angle) * 208, y: H / 2 + Math.sin(paddle.angle) * 208 - 30, text: 'COMET INCOMING', colour: '#a6d9ec', life: 1.6 });
         }
       }
-      while (splitHits >= 6) { splitHits -= 6; splitComet(comets[0]); }
+      while (splitHits >= 5) { splitHits -= 5; splitComet(comets[0]); }
       if (bricks.every(b => !b.hp) && phase === 'running') { level++; lives = Math.min(3, lives + 1); scoreAt(500, W / 2, H / 2, 'CONSTELLATION CLEARED +500'); burst(W / 2, H / 2, '#edf19b', 80, 300); makeBricks(); }
     }
     function step(dt) {
@@ -728,10 +746,10 @@ window.AetherArcade = (() => {
       if (has('binary-heart')) for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) {
         const a = balls[i], b = balls[j];
         if (a.tier !== b.tier) continue;
-        const d = Math.hypot(b.x - a.x, b.y - a.y), reach = radii[a.tier] * 2 + (has('guiding-thread') ? 140 : 65);
+        const d = Math.hypot(b.x - a.x, b.y - a.y), reach = radii[a.tier] * 2 + (has('guiding-thread') ? 200 : 140);
         if (d > radii[a.tier] * 2 && d < reach) { ctx.globalAlpha = .12 + (1 - d / reach) * .22; ctx.strokeStyle = '#edf19b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.globalAlpha = 1; }
       }
-      if (has('guiding-thread') && guidedBall && balls.includes(guidedBall) && guidedBall.age < 1.1) { ctx.strokeStyle = '#edf19b88'; ctx.setLineDash([3, 6]); ctx.beginPath(); ctx.moveTo(aim, 52); ctx.lineTo(guidedBall.x, guidedBall.y); ctx.stroke(); ctx.setLineDash([]); }
+      if (has('guiding-thread') && guidedBall && balls.includes(guidedBall) && guidedBall.age < 1.8) { ctx.strokeStyle = '#edf19b88'; ctx.setLineDash([3, 6]); ctx.beginPath(); ctx.moveTo(aim, 52); ctx.lineTo(guidedBall.x, guidedBall.y); ctx.stroke(); ctx.setLineDash([]); }
       if (phase !== 'over' && phase !== 'ending') {
         const r = radii[queue[0]], x = clamp(aim, r + 24, W - r - 24);
         let landing = H - 27 - r;
@@ -742,6 +760,13 @@ window.AetherArcade = (() => {
       }
       for (const b of balls) { const growth = b.born > 0 ? 1 + Math.sin(b.born / .32 * Math.PI) * .12 : 1; orb(ctx, b.x, b.y, radii[b.tier] * growth, b.tier, true, b.angle, 1 + (reduced ? 0 : b.squash), visualTime); }
       if (combo > 1) text(`${combo}× CHAIN REACTION`, W / 2, H - 6, 11, '#edf19b');
+      // The chain window, made visible: watch it drain and plan the next merge.
+      if (combo > 0 && comboTimer > 0) {
+        const window3 = has('echo-hourglass') ? 3.4 + (has('quake-core') && combo > 1 ? .6 : 0) : .85;
+        ctx.fillStyle = '#edf19b2e'; ctx.fillRect(W / 2 - 60, 30, 120, 4);
+        ctx.fillStyle = comboTimer < .3 ? '#f5a08c' : '#edf19b'; ctx.fillRect(W / 2 - 60, 30, 120 * clamp(comboTimer / window3, 0, 1), 4);
+        text(`${combo}× CHAIN`, W / 2, 24, 9, '#edf19b');
+      }
     }
     function drawSurf() {
       for (const w of worlds) {
@@ -763,6 +788,12 @@ window.AetherArcade = (() => {
       if (shields > 0) { ctx.strokeStyle = '#9ed7c6aa'; ctx.lineWidth = 2; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.arc(ship.x - camera, ship.y, 22 + Math.sin(visualTime * 5) * 2, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
       ctx.save(); ctx.translate(ship.x - camera, ship.y); ctx.rotate(Math.atan2(ship.vy, ship.vx));
       ctx.fillStyle = '#f7ecce'; ctx.beginPath(); ctx.moveTo(17, 0); ctx.lineTo(-11, -10); ctx.lineTo(-6, 0); ctx.lineTo(-11, 10); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#eea88c'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, TAU); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
+      // Speed lines when the flight gets properly fast.
+      if (!tether && !reduced && Math.hypot(ship.vx, ship.vy) > 420) {
+        const sa = Math.atan2(ship.vy, ship.vx);
+        ctx.strokeStyle = '#f7ecce55'; ctx.lineWidth = 2;
+        for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(ship.x - camera - Math.cos(sa + i * .16) * 26, ship.y - Math.sin(sa + i * .16) * 26); ctx.lineTo(ship.x - camera - Math.cos(sa + i * .16) * 62, ship.y - Math.sin(sa + i * .16) * 62); ctx.stroke(); }
+      }
       if (has('solar-spool') && tether) { ctx.fillStyle = '#edf19b33'; ctx.fillRect(W / 2 - 52, 42, 104, 4); ctx.fillStyle = '#edf19b'; ctx.fillRect(W / 2 - 52, 42, 104 * orbitCharge, 4); text(orbitCharge >= 1 ? 'SLINGSHOT CHARGED' : 'HOLD TO CHARGE', W / 2, 58, 9, '#edf19b'); }
       text(tether ? 'RELEASE TO SLINGSHOT' : 'HOLD NEAR A PLANET TO ORBIT', W / 2, 32, 11, tether ? '#edf19b' : '#cabbd8');
       text(`${Math.floor(ship.x / 10)} METRES`, W - 28, H - 25, 11, '#cfc1dc', 'right');
@@ -809,7 +840,12 @@ window.AetherArcade = (() => {
         ctx.fillStyle = activePower.colour; ctx.fillRect(px + 30, py + 21, (pw - 70) * clamp(activePower.remaining / activePower.duration, 0, 1), 3);
       }
       for (const echo of echoes) {
-        ctx.globalAlpha = Math.min(.5, echo.life / 1.8); ctx.strokeStyle = '#9ed7c6'; ctx.lineWidth = 2; ctx.setLineDash([4, 7]); ctx.beginPath(); ctx.ellipse(echo.x, H - 72, basketWidth(), 13, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        ctx.globalAlpha = Math.min(.5, echo.life / 2.6); ctx.strokeStyle = '#9ed7c6'; ctx.lineWidth = 2; ctx.setLineDash([4, 7]); ctx.beginPath(); ctx.ellipse(echo.x, H - 72, basketWidth(), 13, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
+      // A streak on fire: the boat glows gold once the run gets going.
+      if (combo >= 10) {
+        ctx.globalAlpha = Math.min(.55, (combo - 8) / 30) * (reduced ? .8 : .7 + Math.sin(visualTime * 9) * .3);
+        ctx.fillStyle = '#edf19b'; ctx.beginPath(); ctx.ellipse(catcher.x, H - 56, basketWidth() * .9, 15, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
       }
       ctx.save(); ctx.translate(catcher.x, H - 72); ctx.rotate(catcher.tilt);
       ctx.globalAlpha = invulnerable > 0 && Math.sin(visualTime * 30) > 0 ? .4 : 1;
