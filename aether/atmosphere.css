@@ -1,0 +1,568 @@
+/* The observatory's finishing layer: ink-dark forest, lamplight, engraved brass. */
+:root {
+  --bg: #101b17;
+  --sidebar: #0c1511;
+  --panel: #17251e;
+  --text: #f1ecdf;
+  --muted: #a7b0a1;
+  --gold: #d2b781;
+  --gold-bright: #efdaa9;
+  --line: #c7b68829;
+  --exp-muted: #b0bcae;
+  --exp-border: #cbb88a36;
+}
+
+/* A quiet architectural frame, with room for the exhibits to breathe. */
+.workspace {
+  background: radial-gradient(ellipse at 85% 0, #bc99531a, transparent 34%),
+    radial-gradient(ellipse at 0 45%, #5e9c7b09, transparent 45%);
+}
+.sidebar {
+  background: radial-gradient(ellipse at 50% 0, #bfa96c0c, transparent 42%), var(--sidebar);
+  border-right-color: #c4ac792c;
+}
+.brand-name { color: #eee4cd; }
+.brand-emblem { filter: drop-shadow(0 0 12px #d2b78124); }
+.brand-caption { font-size: 7.5px; letter-spacing: 2px; }
+.ornament-rule { margin-block: 20px; }
+.nav-label { color: #a0a78f; font-size: 9px; letter-spacing: 1.7px; }
+.primary-nav { gap: 6px; }
+.primary-nav a { font-size: 12px; height: 46px; color: #adb5a5; }
+.primary-nav a[aria-current=page] {
+  background: linear-gradient(90deg, #c4ac7921, #c4ac7907);
+  border-color: #c4ac793b;
+  color: #eddbb1;
+}
+.primary-nav a:hover { background: #c4ac790c; color: #f0e6cf; }
+.nav-play { font-size: 8px; letter-spacing: .6px; }
+.sidebar-bottom { padding-top: 18px; }
+.sidebar-poem { padding-bottom: 22px; }
+.poem-moon { height: 45px; margin-bottom: 8px; }
+.sidebar-poem p { color: #b9c0a9; font-size: 21px; }
+.ambience-toggle { font-size: 10px; }
+.profile-copy strong { font-size: 11px; }
+.profile-copy small { font-size: 9px; }
+.topbar { background: #07110c20; }
+.breadcrumb, .location-button { font-size: 11px; }
+.topbar .icon-button { width: 36px; height: 36px; }
+.topbar .mobile-menu { display: none; }
+main { padding-top: 32px; }
+.page-footer { font-size: 8px; letter-spacing: 1.5px; padding-block: 28px; }
+.page-footer button { font-size: 9px; }
+.button { font-size: 11px; min-height: 42px; padding: 11px 18px; border-color: #cbb58455; }
+.button-primary {
+  background: linear-gradient(115deg, #e9d3a0, #d2b57d);
+  border-color: #f0daa5;
+  color: #1b281e;
+  box-shadow: inset 0 1px #fff4cd66, 0 4px 18px #0002;
+}
+.button-primary:hover {
+  background: linear-gradient(115deg, #f2dfb6, #e3c68c);
+  box-shadow: inset 0 1px #fff4cd88, 0 6px 24px #d2b78120;
+}
+.text-link { font-size: 11px; color: #d3c6a6; }
+.text-link svg { transition: transform .25s ease; }
+.text-link:hover svg { transform: translate(2px, -2px); }
+.eyebrow, .section-label { font-size: 9px; }
+.welcome { margin-bottom: 28px; }
+.welcome h1 { font-size: 35px; letter-spacing: -.5px; }
+.welcome p { font-size: 11px; margin-top: 7px; color: #a8b29f; }
+.date-button { font-size: 11px; padding: 11px 14px; background: #d2b78105; }
+
+/* The frontispiece: a painted sky behind a living astronomical plate. */
+.playground-hero {
+  min-height: 548px;
+  padding: 52px 44px 86px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  border-color: #d2b78166;
+  background: #14241c;
+  box-shadow: 0 20px 65px #020b0740, inset 0 0 80px #070f0a50;
+}
+.playground-hero::before { inset: 9px; border-color: #dac28a24; }
+.playground-hero::after {
+  background: linear-gradient(90deg, #0d1c16f5 0%, #102218e8 29%, #12251b6b 62%, #16201966),
+    linear-gradient(0deg, #0b1814ed, transparent 36%, #14251c35);
+}
+.playground-hero .hero-painting {
+  object-position: 64% 48%;
+  filter: saturate(.65) brightness(.85);
+  opacity: .8;
+}
+.playground-hero:hover .hero-painting { filter: saturate(.65) brightness(.85); }
+.playground-hero .hero-copy { padding: 0; }
+.playground-hero .eyebrow { font-size: 9px; letter-spacing: 2px; color: #e0c590; gap: 10px; }
+.hero-kicker-star { font-size: 19px; line-height: 1; color: #ebd49f; }
+.playground-hero h2 {
+  font-size: clamp(52px, 5.1vw, 78px);
+  letter-spacing: -1.8px;
+  line-height: .98;
+  margin-top: 24px;
+  max-width: 650px;
+  color: #f6f0df;
+  text-shadow: 0 3px 30px #05100b66;
+}
+.playground-hero h2 em { display: inline; color: #e3c48a; }
+.playground-hero .hero-description {
+  color: #bdc6b7;
+  font-size: 12px;
+  line-height: 1.9;
+  max-width: 360px;
+  margin-top: 24px;
+}
+.playground-hero .hero-cta { gap: 22px; margin-top: 28px; }
+.hero-cta .button { padding: 13px 20px; font-size: 12px; gap: 22px; }
+.hero-cta .text-link { font-size: 10px; line-height: 1.8; }
+.hero-colophon {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #d2b7812b;
+  font-size: 8px;
+  letter-spacing: 1.6px;
+  color: #c5c6a6;
+  z-index: 3;
+}
+.hero-colophon > span { display: flex; align-items: center; gap: 9px; }
+.hero-colophon > span > span { color: var(--gold); margin-inline: 3px; }
+.hero-colophon i { height: 4px; width: 4px; border-radius: 50%; background: #adca9c; box-shadow: 0 0 9px #b2d39a66; }
+.scene-grid { opacity: .65; background-size: 35px 35px; }
+.scene-astrolabe {
+  position: absolute;
+  right: -1.5%;
+  top: 47%;
+  width: 51%;
+  height: auto;
+  opacity: .65;
+  transform: translateY(-50%) rotate(-14deg);
+  translate: calc(var(--scene-x, 0px) * -.5) calc(var(--scene-y, 0px) * -.5);
+  transition: translate .65s ease-out;
+  pointer-events: none;
+}
+.scene-orbit { width: 51%; height: 45%; right: 0; top: 24%; border-color: #e4cd9633; transform: rotate(-33deg); }
+.scene-coordinate { top: 27px; right: 28px; font-size: 8px; color: #dac897; letter-spacing: 1.6px; }
+.scene-coordinate > span { margin-left: 16px; color: #b3b69b; font-size: 7px; }
+.scene-saturn { width: 47%; height: 60%; right: -1%; top: 17%; }
+.scene-saturn > .celestial-art {
+  translate: var(--scene-x, 0px) var(--scene-y, 0px);
+  transition: transform .7s ease, translate .5s ease-out;
+  filter: drop-shadow(0 18px 18px #050e1044);
+}
+.cosmic-scene .celestial-art > path { display: none; }
+.scene-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #102219ee;
+  color: #ead4a6;
+  border-color: #c7ac7366;
+  box-shadow: 0 5px 20px #07120b33;
+  padding: 9px 14px;
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  bottom: 0;
+}
+.scene-tag svg { width: 13px; height: 13px; }
+.scene-tag > span { font-size: 16px; line-height: 1; }
+.scene-jelly { left: 52%; top: 9%; width: 110px; height: 110px; }
+.scene-jelly .scene-tag { font-size: 6.5px; bottom: -7%; }
+.scene-music { left: auto; right: 22%; bottom: 15%; gap: 10px; }
+.scene-music > span { width: 45px; height: 45px; background: #a8d4c30b; }
+.scene-music > small { color: #c1d6b9; font-size: 7px; }
+.scene-sun { right: 3%; bottom: 11%; width: 76px; height: 76px; font-size: 46px; }
+.scene-sun > span { left: auto; right: 15%; bottom: 100%; }
+.scene-handnote {
+  position: absolute;
+  top: 12%;
+  right: 4%;
+  font: italic 16px/1.1 var(--serif);
+  color: #d9d0ae;
+  transform: rotate(7deg);
+  text-align: center;
+}
+.spark-one { left: 61%; top: 49%; font-size: 20px; }
+.spark-two { right: 10%; bottom: 27%; font-size: 24px; color: #ecd1a4; }
+#sun-reaction { left: auto; right: 5%; bottom: 29%; }
+#sun-reaction::before { left: auto; right: 24px; }
+.cosmic-scene a:focus-visible { outline-offset: 3px; border-radius: 6px; }
+.cosmic-scene a:focus-visible .scene-tag { background: #e2cca0; color: #152219; }
+
+/* Marginal notes, set at a comfortable reading size. */
+.stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 24px 0 0; }
+.stat { position: relative; padding: 23px 21px; min-height: 132px; background: linear-gradient(130deg, #1c2b22, #132019); }
+.stat:hover { background: #213429; }
+.stat > span:last-child { width: 100%; min-width: 0; }
+.stat-icon { position: absolute; right: 18px; top: 18px; width: 27px; height: 27px; border: 0; color: #c4b381; }
+.stat-icon svg { width: 21px; height: 21px; }
+.stat-icon .stat-moon { width: 23px; height: 23px; }
+.stat-label { font-size: 8px; letter-spacing: 1.4px; color: #b2baa0; padding-right: 30px; }
+.stat-value { font-size: 27px; line-height: 1.2; margin-top: 10px; color: #eee7d4; }
+.stat-detail { font-size: 9px; line-height: 1.7; margin-top: 7px; color: #a9b49e; }
+
+/* Chapters and specimen cards. Each wing has its own pool of lamplight. */
+.home-destinations, .home-almanac { margin-top: 47px; }
+.home-section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 23px; }
+.home-section-heading .section-label { margin: 0 0 10px; font-size: 8px; letter-spacing: 2px; }
+.home-section-heading h2 { font-size: 39px; letter-spacing: -.7px; }
+.home-section-heading > .text-link { margin-bottom: 4px; }
+.almanac-edition { color: #a7b09a; font-size: 8px; letter-spacing: 1.4px; margin-bottom: 7px; }
+.destination-grid { gap: 21px; }
+.destination-card {
+  --card-light: #c8a776;
+  min-height: 390px;
+  padding: 26px;
+  background: radial-gradient(ellipse at 90% 85%, #c8a7761f, transparent 70%), #17251d;
+  border-color: #c7b58a42;
+  border-radius: 3px;
+  isolation: isolate;
+}
+.destination-card::before { inset: 8px; border-color: #d8c69c1c; }
+.destination-card::after {
+  content: '';
+  position: absolute;
+  width: 270px;
+  height: 270px;
+  right: -85px;
+  bottom: -60px;
+  border: 1px solid var(--card-light);
+  outline: 1px solid var(--card-light);
+  outline-offset: 12px;
+  border-radius: 50%;
+  opacity: .12;
+  z-index: -1;
+  pointer-events: none;
+}
+.destination-make { --card-light: #c3a7cf; background: radial-gradient(ellipse at 85% 90%, #ad81b92c, transparent 70%), #19231f; }
+.destination-music { --card-light: #a1cebb; background: radial-gradient(ellipse at 85% 90%, #7cbaaa24, transparent 70%), #14251f; }
+.destination-card:hover { border-color: var(--card-light); box-shadow: 0 20px 40px #030c0744; }
+.destination-top { font-size: 8px; letter-spacing: 1.4px; color: #cdbb92; }
+.round-arrow { width: 32px; height: 32px; font-size: 16px; transition: color .25s, background .25s, transform .25s; }
+.destination-card:hover .round-arrow { background: var(--card-light); color: #152219; transform: rotate(45deg); }
+.destination-card h3 { font-size: 35px; margin-top: 24px; letter-spacing: -.7px; }
+.destination-card p { font-size: 11px; max-width: 255px; color: #b6beae; margin-top: 14px; }
+.destination-drawing { width: 65%; height: 172px; right: -3%; bottom: 36px; opacity: 1; transition: translate .5s ease; }
+.destination-card:hover .destination-drawing { translate: 0 -6px; }
+.destination-drawing .celestial-art > path { display: none; }
+.destination-drawing .celestial-art > circle { opacity: .2; }
+.destination-label { bottom: 25px; left: 27px; font-size: 8px; letter-spacing: 1.4px; color: #e1cfab; z-index: 1; }
+.drop-drawing .draw-orb { box-shadow: inset -10px -8px 12px #0b172c33, inset 2px 3px 6px #fff2, 0 8px 20px #0003; }
+.music-drawing { right: 3%; bottom: 44px; gap: 7px; }
+.music-drawing i { width: 8px; box-shadow: 0 0 14px #d2b78113; }
+
+/* The practical sky retains the precision of a printed celestial atlas. */
+.panel { background: linear-gradient(140deg, #d7c49308, transparent 65%), #14211a; border-color: var(--exp-border); }
+.panel-heading { padding: 23px 24px 0; }
+.panel-heading h2 { font-size: 27px; }
+.panel-subtitle { margin: 7px 24px 0; font-size: 10px; color: #a6b09b; }
+.panel-heading .text-link { font-size: 9px; }
+.chart-topline { padding: 20px 24px 0; gap: 12px; }
+.segmented button { font-size: 10px; padding: 7px 12px; color: #adb79f; }
+.segmented button[aria-pressed=true] { background: #c4ac7920; color: #f0dfb6; }
+.chart-scale { font-size: 7px; color: #a7b194; line-height: 1.7; text-align: right; }
+.orrery-wrap { background: radial-gradient(ellipse at 50% 50%, #c4a4650c, transparent 65%); }
+.orrery-svg { height: 252px; }
+.orrery-svg .orbit-line { opacity: .34; }
+.orrery-svg .orbit-line:nth-child(even) { opacity: .23; }
+.planet-label { fill: #d4d7be; }
+.chart-footer { margin: 0 24px; font-size: 8px; color: #a5ae94; padding-block: 16px; }
+.chart-footer .text-link { font-size: 8px; }
+.events-list { padding: 10px 24px 0; }
+.event-row { padding: 20px 0; gap: 16px; }
+.event-date { width: 42px; font-size: 32px; color: #dac28e; }
+.event-date small { font-size: 8px; color: #b1b99f; }
+.event-name { font-size: 23px; }
+.event-info .event-meta { font-size: 9px; color: #a9b39c; margin-top: 6px; white-space: normal; }
+.event-tag { font-size: 8px; padding-inline: 6px; }
+.events-footnote { color: #b7b99b; font-size: 17px; padding: 20px 10px; }
+.bottom-note { margin-top: 42px; padding-top: 30px; align-items: center; flex-direction: column; gap: 17px; text-align: center; }
+.quote { font-size: 27px; line-height: 1.35; color: #c5c8b1; }
+.quote-credit { display: block; font: 8px var(--sans); letter-spacing: 2px; margin: 13px 0 0; color: #a3af95; }
+.edition { font-size: 8px; letter-spacing: 1.4px; }
+
+/* Carry the same finish through the rooms, instruments and keepsakes. */
+.exp-heading, .view-header { position: relative; padding-bottom: 27px; border-bottom: 1px solid var(--exp-border); }
+.exp-heading::after, .view-header::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 58px; height: 1px; background: var(--gold); }
+.exp-heading h1 { font-size: clamp(48px, 5vw, 74px); letter-spacing: -1.5px; }
+.view-header h1 { font-size: clamp(40px, 4vw, 58px); }
+.view-header p { font-size: 12px; }
+.arcade-page > .exp-heading h1 { font-size: clamp(44px, 4.5vw, 64px); }
+.exp-subtitle { color: #b7c1b0; }
+.instrument-panel, .room-play { background: linear-gradient(135deg, #d2b7810b, #d2b78100 65%), var(--panel); box-shadow: inset 0 1px #f5e2b505; }
+.instrument-stage, .game-cabinet { border-color: #ceb78366; box-shadow: 0 15px 45px #030a082d; }
+.instrument-top { background: #0b161645; color: #e0cda7; }
+.dome-intro { isolation: isolate; background: radial-gradient(ellipse, #11232066, transparent 72%); }
+.dome-intro::before { content: ''; position: absolute; inset: 4%; background: url('assets/celestial-dial.svg') center / contain no-repeat; opacity: .25; z-index: -1; pointer-events: none; }
+.music-orbit > span { width: 17px; height: 17px; background: radial-gradient(circle at 30% 25%, #fff0dc, var(--note-colour) 40%, #14212fc9); box-shadow: 0 0 19px #e7cd8e30; }
+.orbit-0 { --rest-angle: 72deg; animation-delay: -.8s; }
+.orbit-1 { --rest-angle: 134deg; animation-delay: -2.6s; }
+.orbit-2 { --rest-angle: 203deg; animation-delay: -6.2s; }
+.orbit-3 { --rest-angle: 254deg; animation-delay: -12s; }
+.instrument-panel h2 { color: #eee6d1; }
+.exp-input, .exp-select { background: #09151190; border-color: #c8b38340; }
+.exp-input:hover, .exp-select:hover { border-color: #c8b38370; }
+.passport-pill { background: radial-gradient(at 0 0, #d2b7811c, #d2b78103); }
+.passport-star { text-shadow: 0 0 20px #d2b78144; }
+.room-card { background: var(--panel); border-radius: 3px; }
+.room-art { background: radial-gradient(ellipse at 45% 45%, #b59f6a30, #13241f 80%); }
+.room-art .celestial-art > rect { fill: transparent; }
+.room-art::after { content: ''; position: absolute; inset: 9px; border: 1px solid #dbc79820; pointer-events: none; }
+.room-darkroom .room-art { background: radial-gradient(ellipse at 50% 55%, #956b9d36, #1e222a 80%); }
+.room-worlds .room-art { background: radial-gradient(ellipse at 50% 55%, #689e8d2e, #122522 80%); }
+.room-orchestra .room-art { background: radial-gradient(ellipse at 50% 55%, #8e80bb33, #1b2230 80%); }
+.room-history .room-art { background: radial-gradient(ellipse at 50% 55%, #b1825933, #24251f 80%); }
+.room-letters .room-art { background: radial-gradient(ellipse at 50% 55%, #b5918226, #222127 80%); }
+.room-copy { padding: 26px; }
+.room-copy h2 { font-size: 33px; }
+.room-copy p { font-size: 12px; }
+.room-copy > span { border-top: 1px solid var(--exp-border); padding-top: 15px; }
+.room-arrow { border-color: #d2b78166; background: #12221deb; }
+.room-number { color: #e3d0a5; font-size: 9px; background: #102019cc; }
+.arcade-choice { min-height: 126px; background: radial-gradient(at 10% 50%, var(--accent-wash), transparent 80%), var(--panel); }
+.arcade-choice.selected { box-shadow: inset 0 -2px var(--accent), 0 8px 25px #0002; }
+.choice-copy strong { font-size: 24px; }
+.choice-copy small { font-size: 8px; }
+.choice-number { color: #c5b798; font-size: 9px; }
+.game-overlay { background: radial-gradient(ellipse at 50% 30%, #c4ac790e, transparent 70%), linear-gradient(#111f2ade, #14242eed); }
+.game-overlay .overlay-emblem { text-shadow: 0 0 50px var(--accent-wash); }
+.relic-dialog { background: radial-gradient(ellipse at 50% 0, #b8934d26, transparent 70%), #111e18; border-color: #d9bd8488; }
+.relic-choice { background: radial-gradient(at 0 0, #d2b78113, transparent 80%), #16251e; }
+.relic-choice-art { background: radial-gradient(ellipse at 35% 25%, #c4ac7928, #c4ac7900); }
+.cabinet-passport { background: radial-gradient(at 0 0, #c4ac7918, transparent 70%), var(--panel); }
+.discovery-stamp.earned { background: radial-gradient(ellipse at 50% 25%, #d2b7811c, transparent 85%); }
+.journal-card .entry-body { color: #b9c3ad; }
+.collection-visual { background: radial-gradient(ellipse, #c4ac7912, transparent 70%); }
+.modal { background: radial-gradient(ellipse at 100% 0, #c4ac7912, transparent 70%), var(--panel); border-color: #cbb28188; }
+.modal-content .modal-description { color: #b8c2ad; font-size: 12px; }
+.modal-content .eyebrow { font-size: 10px; }
+.modal .form-field label { font-size: 11px; }
+
+/* Preserve the catalogue's alternate inks. */
+body[data-observatory-theme="midnight"] :is(.panel, .stat, .destination-card),
+body[data-observatory-theme="rose"] :is(.panel, .stat, .destination-card) { background-color: var(--panel); background-image: linear-gradient(125deg, #c4ac790e, transparent); }
+
+/* Translation keeps the SVG's own positioning transforms intact. */
+@keyframes art-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+
+@media (min-width: 1600px) {
+  .playground-hero { min-height: 590px; padding: 62px 54px 90px; }
+  .playground-hero h2 { font-size: 82px; }
+  .hero-cta .text-link { font-size: 11px; }
+  .scene-astrolabe { width: 50%; max-width: 650px; }
+  .scene-jelly { width: 130px; height: 130px; }
+  .stat-value { font-size: 30px; }
+  .stat-label { font-size: 9px; }
+  .destination-card { min-height: 415px; padding: 30px; }
+  .destination-card h3 { font-size: 39px; }
+  .destination-card p { font-size: 12px; }
+}
+@media (max-width: 1200px) {
+  .primary-nav a { font-size: 11px; gap: 9px; }
+  .brand-caption { font-size: 6.5px; }
+  .profile-copy small { font-size: 8px; }
+  .playground-hero { min-height: 515px; padding: 40px 32px 80px; }
+  .playground-hero h2 { font-size: clamp(46px, 5.2vw, 62px); letter-spacing: -1.2px; }
+  .playground-hero .eyebrow { font-size: 8px; letter-spacing: 1.6px; }
+  .playground-hero .hero-description { font-size: 11px; }
+  .playground-hero .hero-cta { align-items: flex-start; flex-direction: column; gap: 10px; margin-top: 24px; }
+  .hero-cta .button { font-size: 11px; padding: 12px 17px; }
+  .hero-cta .text-link { min-height: 32px; }
+  .scene-jelly { left: 58%; top: 10%; width: 90px; height: 90px; }
+  .scene-jelly .scene-tag { display: none; }
+  .scene-handnote { display: none; }
+  .scene-music { right: 16%; bottom: 17%; }
+  .scene-sun { right: 2%; bottom: 29%; width: 60px; height: 60px; font-size: 38px; }
+  .scene-coordinate > span { font-size: 6px; margin-left: 8px; }
+  .hero-colophon { font-size: 7px; letter-spacing: 1px; }
+  .hero-colophon > span:last-child { gap: 5px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat { padding: 20px; min-height: 120px; }
+  .stat-value { font-size: 26px; }
+  .destination-card { padding: 23px; min-height: 375px; }
+  .destination-card h3 { font-size: 30px; }
+  .destination-drawing { width: 75%; height: 150px; }
+  .destination-top { font-size: 7px; letter-spacing: .9px; }
+  .destination-label { left: 24px; font-size: 7px; letter-spacing: 1px; }
+  .panel-heading { padding: 22px 20px 0; }
+  .panel-heading h2 { font-size: 25px; }
+  .panel-subtitle { margin-left: 20px; font-size: 9px; }
+  .chart-topline { padding-inline: 20px; flex-wrap: wrap; }
+  .chart-scale { font-size: 7px; }
+  .chart-footer { flex-wrap: wrap; margin-inline: 20px; gap: 7px; }
+  .events-list { padding-inline: 20px; }
+  .event-row { gap: 10px; }
+  .event-name { font-size: 21px; }
+  .event-date { font-size: 28px; width: 34px; }
+  .event-info .event-meta { font-size: 8px; }
+  .event-tag { font-size: 7px; }
+  .horizon-panel .panel-heading { flex-wrap: wrap; }
+  .horizon-panel .panel-heading .text-link { margin-left: 25px; }
+  .horizon-panel .panel-subtitle { display: none; }
+  .events-footnote { font-size: 15px; }
+}
+@media (max-width: 1000px) and (min-width: 721px) {
+  .topbar .mobile-menu { display: none; }
+  .scene-astrolabe { width: 56%; right: -5%; }
+  .scene-saturn { width: 49%; right: -4%; }
+  .scene-sun { right: 0; }
+  .scene-music { right: 7%; }
+  .playground-hero h2 { font-size: clamp(43px, 5.7vw, 56px); }
+  .hero-colophon > span:last-child { display: none; }
+}
+@media (max-width: 900px) {
+  .view-header { flex-wrap: wrap; align-items: flex-start; gap: 18px 12px; }
+  .view-header > div:first-child { flex-basis: 100%; }
+  .view-header > .button { flex: 0 1 auto; }
+  .view-header-actions { flex-direction: row; }
+  .destination-card { min-height: 285px; padding: 28px; }
+  .destination-card h3 { font-size: 34px; }
+  .destination-card p { max-width: 52%; }
+  .destination-drawing { width: 43%; height: 200px; bottom: 30px; }
+  .destination-label { left: 29px; font-size: 8px; }
+  .destination-top { font-size: 8px; }
+  .destination-card::after { right: -60px; }
+  .room-copy { padding: 23px; }
+  .room-copy h2 { font-size: 30px; }
+  .home-section-heading h2 { font-size: 35px; }
+  .almanac-edition { display: none; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .horizon-panel .panel-heading { flex-wrap: nowrap; }
+  .horizon-panel .panel-heading .text-link { margin-left: 0; }
+  .horizon-panel .panel-subtitle { display: block; }
+  .event-name { font-size: 24px; }
+  .event-info .event-meta { font-size: 10px; }
+  .event-row { gap: 17px; }
+  .event-date { width: 40px; font-size: 32px; }
+  .event-tag { font-size: 8px; }
+}
+@media (max-width: 720px) {
+  .topbar { padding-inline: 20px; height: 65px; }
+  .topbar .mobile-menu { display: flex; }
+  .topbar .icon-button { width: 40px; height: 40px; }
+  .topbar-actions { gap: 4px; }
+  .breadcrumb { font-size: 10px; gap: 8px; }
+  .primary-nav a { font-size: 12px; gap: 14px; }
+  main { padding: 25px 20px 0; }
+  .welcome { margin-bottom: 24px; gap: 15px; }
+  .welcome h1 { font-size: 31px; }
+  .welcome p { font-size: 10px; margin-top: 9px; }
+  .date-button { font-size: 0; padding: 12px; }
+  .playground-hero { display: block; min-height: 0; padding: 33px 25px 62px; }
+  .playground-hero .hero-copy { padding: 0; }
+  .playground-hero .eyebrow { font-size: 7px; letter-spacing: 1.4px; gap: 8px; }
+  .hero-kicker-star { font-size: 16px; }
+  .playground-hero h2 { font-size: clamp(39px, 11.3vw, 68px); letter-spacing: -1.1px; margin-top: 22px; line-height: 1.02; }
+  .playground-hero .hero-description { max-width: 340px; font-size: 11px; margin-top: 21px; }
+  .playground-hero .hero-cta { margin-top: 23px; gap: 8px; flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .hero-cta .button { min-height: 46px; padding: 12px 17px; font-size: 11px; gap: 20px; }
+  .hero-cta .text-link { display: inline-flex; font-size: 10px; padding: 6px 0; min-height: 36px; }
+  .playground-hero .hero-painting { object-position: 62% center; opacity: .68; }
+  .playground-hero::after { background: linear-gradient(180deg, #0d1e16ed, #102219b0 55%, #10201735 75%, #0b1814da); }
+  .cosmic-scene { height: 255px; margin: 8px -10px -7px; }
+  .scene-astrolabe { width: 290px; max-width: 95%; right: -3%; top: 48%; opacity: .7; }
+  .scene-saturn { width: 74%; height: 100%; right: -5%; top: -8%; }
+  .scene-saturn .scene-tag { bottom: 7%; padding: 8px 11px; font-size: 7px; }
+  .scene-saturn .scene-tag > span { font-size: 13px; }
+  .scene-jelly { width: 85px; height: 85px; left: 1%; top: 5%; }
+  .scene-music { left: 3%; right: auto; bottom: 5%; gap: 8px; }
+  .scene-music > span { width: 40px; height: 40px; font-size: 22px; }
+  .scene-music > small { font-size: 6px; letter-spacing: 1px; }
+  .scene-sun { width: 54px; height: 54px; font-size: 33px; right: 0; bottom: 0; }
+  .scene-orbit { top: 25%; right: -7%; height: 46%; width: 93%; }
+  .spark-one { left: 22%; top: 45%; font-size: 16px; }
+  .spark-two { right: 1%; bottom: 37%; font-size: 21px; }
+  .hero-colophon { left: 22px; right: 22px; bottom: 20px; font-size: 6.5px; letter-spacing: 1px; padding-top: 13px; }
+  .hero-colophon > span:last-child { display: none; }
+  #sun-reaction { right: 0; left: auto; bottom: 27%; max-width: 180px; font-size: 10px; }
+  .stats-grid { margin-top: 19px; }
+  .stat { padding: 19px 16px; min-height: 133px; display: block; }
+  .stat-icon { top: 17px; right: 12px; width: 22px; height: 22px; }
+  .stat-icon svg { width: 18px; height: 18px; }
+  .stat-icon .stat-moon { width: 20px; height: 20px; }
+  .stat-label { font-size: 7px; letter-spacing: .9px; padding-right: 23px; }
+  .stat-value { font-size: 24px; line-height: 1.1; margin-top: 13px; }
+  .stat-detail { font-size: 8px; line-height: 1.6; margin-top: 8px; }
+  .home-destinations, .home-almanac { margin-top: 36px; }
+  .home-section-heading { flex-wrap: wrap; gap: 10px; margin-bottom: 21px; }
+  .home-section-heading h2 { font-size: 34px; }
+  .home-section-heading .section-label { font-size: 7px; letter-spacing: 1.5px; }
+  .home-section-heading > .text-link { font-size: 10px; padding: 4px 0; margin: 0; }
+  .destination-grid { gap: 17px; }
+  .destination-card { min-height: 340px; padding: 25px; }
+  .destination-card h3 { max-width: none; font-size: 33px; margin-top: 24px; }
+  .destination-card p { max-width: 245px; font-size: 11px; }
+  .destination-drawing { width: 60%; height: 147px; bottom: 28px; right: -2%; }
+  .destination-make .destination-drawing { height: 155px; }
+  .destination-label { left: 26px; bottom: 25px; font-size: 8px; }
+  .destination-top { font-size: 7px; letter-spacing: 1.2px; }
+  .round-arrow { width: 29px; height: 29px; }
+  .panel-heading { padding: 21px 20px 0; }
+  .panel-heading h2 { font-size: 26px; }
+  .panel-subtitle { font-size: 9px; margin-inline: 20px; }
+  .panel-heading .text-link { font-size: 8px; padding: 5px 0; }
+  .chart-topline { padding-inline: 20px; flex-wrap: wrap; gap: 10px; }
+  .segmented button { font-size: 9px; padding: 8px 12px; }
+  .chart-topline > .chart-scale { font-size: 6px; }
+  .chart-footer { gap: 9px; font-size: 7px; }
+  .orrery-svg { height: 215px; }
+  .event-row { padding: 19px 0; gap: 13px; }
+  .event-name { font-size: 22px; }
+  .event-info .event-meta { font-size: 9px; }
+  .event-date { font-size: 30px; width: 33px; }
+  .event-tag { font-size: 7px; }
+  .events-footnote { font-size: 17px; }
+  .quote { font-size: 25px; }
+  .bottom-note { margin-top: 31px; padding-top: 25px; }
+  .edition { font-size: 7px; }
+  .page-footer { padding: 25px 20px; gap: 14px; font-size: 7px; letter-spacing: .9px; }
+  .page-footer button { font-size: 8px; }
+  .exp-heading, .view-header { padding-bottom: 24px; }
+  .exp-heading h1 { font-size: 49px; letter-spacing: -1px; }
+  .view-header h1 { font-size: 40px; }
+  .arcade-page > .exp-heading h1 { font-size: 46px; }
+  .room-copy h2 { font-size: 31px; }
+  .room-copy p { font-size: 11px; }
+  .arcade-choice { min-height: 135px; }
+  .choice-copy strong { font-size: 20px; }
+  .choice-copy small { font-size: 7px; }
+  .choice-art { height: 74px; }
+  .game-tools .button { font-size: 10px; }
+}
+@media (max-width: 370px) {
+  main { padding-inline: 15px; }
+  .topbar { padding-inline: 15px; }
+  .playground-hero { padding-inline: 22px; }
+  .playground-hero h2 { font-size: 39px; }
+  .playground-hero .eyebrow { letter-spacing: 1px; font-size: 6.5px; }
+  .stat { padding-inline: 13px; }
+  .stat-value { font-size: 23px; }
+  .stat-label { font-size: 6.5px; }
+  .destination-card { padding: 23px; }
+  .destination-card h3 { font-size: 30px; }
+  .destination-drawing { width: 60%; opacity: 1; }
+  .event-name { font-size: 20px; }
+  .horizon-panel .panel-heading { gap: 8px; }
+  .horizon-panel .panel-heading h2 { font-size: 24px; }
+  .horizon-panel .panel-heading .text-link { font-size: 7px; }
+  .room-copy { padding: 22px; }
+}
+@media (min-width: 1001px) and (max-height: 850px) {
+  .sidebar { padding-top: 20px; }
+  .sidebar .brand-emblem { width: 38px; height: 38px; }
+  .sidebar .brand-name { font-size: 32px; }
+  .sidebar .ornament-rule { margin-block: 14px; }
+  .nav-label { margin-bottom: 10px; }
+  .primary-nav { gap: 3px; }
+  .primary-nav a { height: 44px; }
+  .sidebar-bottom { padding-top: 10px; }
+  .ambience-toggle { padding-block: 16px; }
+  .profile { padding-block: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-astrolabe, .scene-saturn > .celestial-art { translate: none; }
+  .music-orbit { transform: scaleY(.55) rotate(var(--rest-angle, 0deg)); }
+}

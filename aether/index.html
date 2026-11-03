@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111713" />
+    <meta name="description" content="A private observatory for the endlessly curious. Play beneath the stars, make impossible worlds, and keep what you discover." />
+    <title>Æther — A private observatory</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="assets/cormorant-regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/dm-sans-regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/celestial-landscape.webp" as="image" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="experiences.css" />
+    <link rel="stylesheet" href="relics.css" />
+    <link rel="stylesheet" href="roomplay.css?v=3" />
+    <link rel="stylesheet" href="atmosphere.css?v=1" />
+    <script src="cosmos.js?v=4" defer></script>
+    <script src="app.js?v=4" defer></script>
+    <script src="arcade.js" defer></script>
+    <script src="roomplay.js?v=3" defer></script>
+    <script src="observatory.js?v=4" defer></script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to the observatory</a>
+    <div class="mobile-scrim" data-action="close-menu"></div>
+    <aside class="sidebar" aria-label="Observatory navigation">
+      <a href="#overview" class="brand">
+        <svg class="brand-emblem" viewBox="0 0 70 70" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".8"><circle cx="35" cy="35" r="14"/><circle cx="35" cy="35" r="18"/><ellipse cx="35" cy="35" rx="9" ry="18"/><path d="M17 35h36M35 17v36M24 22l22 26M20 43l30-16"/><path d="M35 3v10m0 44v10M3 35h10m44 0h10M12 12l8 8m30 30 8 8M12 58l8-8m30-30 8-8M22 5l4 10m18 40 4 10M5 22l10 4m40 18 10 4M5 48l10-4m40-18 10-4M22 65l4-10M44 15l4-10"/></g><path d="m35 0 2 7-2 3-2-3ZM35 70l-2-7 2-3 2 3ZM0 35l7-2 3 2-3 2ZM70 35l-7 2-3-2 3-2Z" fill="currentColor"/></svg>
+        <span class="brand-name">ÆTHER</span>
+        <span class="brand-caption">A PRIVATE OBSERVATORY</span>
+      </a>
+      <div class="ornament-rule"><span>✧</span></div>
+      <p class="nav-label">THE OBSERVATORY</p>
+      <nav class="primary-nav">
+        <a href="#overview" data-view="overview"><svg><use href="assets/icons.svg#overview"/></svg><span>Overview</span><span class="nav-star" aria-hidden="true">✦</span></a>
+        <a href="#arcade" data-view="arcade"><svg><use href="assets/icons.svg#meteor"/></svg><span>Cosmic arcade</span><span class="nav-count nav-play" aria-hidden="true"></span></a>
+        <a href="#discover" data-view="discover"><svg><use href="assets/icons.svg#sparkles"/></svg><span>Wonder rooms</span></a>
+        <a href="#telescope" data-view="telescope"><svg><use href="assets/icons.svg#search"/></svg><span>The telescope</span></a>
+        <a href="#planetarium" data-view="planetarium"><svg><use href="assets/icons.svg#orbit"/></svg><span>Planetarium</span></a>
+        <a href="#calendar" data-view="calendar"><svg><use href="assets/icons.svg#calendar"/></svg><span>Celestial calendar</span></a>
+        <a href="#journal" data-view="journal"><svg><use href="assets/icons.svg#journal"/></svg><span aria-hidden="true">Field journal</span><span class="nav-count" id="journal-count" aria-hidden="true">3</span><span class="sr-only" id="journal-access">Field journal 3</span></a>
+        <a href="#collection" data-view="collection"><svg><use href="assets/icons.svg#sparkles"/></svg><span>My collection</span></a>
+        <a href="#cabinet" data-view="cabinet"><svg><use href="assets/icons.svg#bookmark"/></svg><span>Discovery cabinet</span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-poem">
+          <svg class="poem-moon" viewBox="0 0 80 60" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".7"><path d="M46 12a20 20 0 1 0 15 31A21 21 0 0 1 46 12Z"/><path d="m60 9 1.8 5.3L67 16l-5.2 1.7L60 23l-1.8-5.3L53 16l5.2-1.7ZM19 8v7m-3.5-3.5h7M68 31v5m-2.5-2.5h5"/><path d="M20 51q20 10 40 0" stroke-dasharray="1 3"/></g></svg>
+          <p>For those who never<br />stopped looking up.</p>
+          <span>PER ASPERA AD ASTRA</span>
+        </div>
+        <button class="ambience-toggle" data-action="ambience" aria-pressed="false"><svg aria-hidden="true"><use href="assets/icons.svg#sound"/></svg><span>Observatory ambience</span><span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i></span><span class="sr-only">Observatory ambience toggle</span></button>
+        <button class="profile" data-action="profile"><span class="avatar">E</span><span class="profile-copy"><strong id="profile-name">The Explorer</strong><small>Keeper of small wonders</small></span><span class="sr-only">Your profile and preferences</span><svg aria-hidden="true"><use href="assets/icons.svg#settings"/></svg></button>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb"><button class="icon-button mobile-menu" data-action="menu" aria-label="Open navigation" aria-expanded="false"><svg><use href="assets/icons.svg#menu"/></svg></button><svg class="breadcrumb-star"><use href="assets/icons.svg#sparkles"/></svg><span>The observatory</span><span class="breadcrumb-slash">/</span><span id="breadcrumb-current">Overview</span></div>
+        <div class="topbar-actions"><button class="location-button" data-action="location"><svg><use href="assets/icons.svg#pin"/></svg><span id="location-label">Greenwich, London</span><svg class="chevron"><use href="assets/icons.svg#chevron-down"/></svg></button><span class="topbar-divider"></span><button class="icon-button" data-action="search" aria-label="Search the observatory (press /)"><svg><use href="assets/icons.svg#search"/></svg></button><button class="icon-button notification-button" data-action="notifications" aria-label="Celestial notices"><svg aria-hidden="true"><use href="assets/icons.svg#bell"/></svg><i aria-hidden="true"></i></button></div>
+      </header>
+      <main id="main" tabindex="-1"></main>
+      <footer class="page-footer"><span>ÆTHER <span class="footer-cross">✧</span> A SMALL WINDOW INTO THE INFINITE</span><button data-action="about">A note from the observatory</button></footer>
+    </div>
+    <dialog id="modal" class="modal" aria-labelledby="modal-title"><button class="icon-button modal-close" data-action="close-modal" aria-label="Close dialog"><svg><use href="assets/icons.svg#close"/></svg></button><div id="modal-content"></div></dialog>
+    <div id="toast" class="toast" popover="manual" role="status" aria-live="polite"></div>
+  </body>
+</html>
