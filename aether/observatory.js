@@ -332,6 +332,7 @@
     $('#relic-dialog')?.close();
     controller?.abort(); cleanups.forEach(fn => fn()); cleanups = [];
     gameHandle?.destroy(); gameHandle = null; stopMusic(); clearInterval(blinkTimer); blinkTimer = null;
+    window.AetherAmbience?.duck(false);
     document.body.classList.remove('game-theatre');
     document.querySelector('.theatre-scrim')?.remove();
     const sidebar = document.querySelector('.sidebar');
@@ -414,6 +415,7 @@
   function mountArcade() {
     lastGamePhase = null;
     let displayedScore = -1, queueKey = '', offerKey = '', buildKey = '', synergyKey = '', pickupKey = '', incomingKey = '';
+    let bestBefore = 0, recapCounted = false;
     const dialog = $('#relic-dialog');
     function closeDraft() {
       if (!dialog.open) return;
@@ -426,11 +428,14 @@
       $('#game-status').textContent = 'The relic draft is still waiting. Choose a card, or keep your current build.';
     });
     on(dialog, 'keydown', event => {
+      // Space is Planet Drop's drop key; it must never activate a card.
+      if (event.key === ' ') { event.preventDefault(); return; }
       if (event.repeat || !['1', '2', '3'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault(); event.stopPropagation();
       const choice = $$('.relic-choice')[Number(event.key) - 1];
       if (choice) gameHandle?.applyRelic(choice.dataset.id);
     });
+    on(dialog, 'keyup', event => { if (event.key === ' ') event.preventDefault(); });
     function updateBuild(data) {
       const owned = data.relics || [], ids = owned.map(relic => relic.id);
       const currentBuild = ids.join(',');
@@ -475,6 +480,8 @@
         return `<button class="relic-choice" data-exp="relic-pick" data-id="${esc(relic.id)}"><span class="relic-choice-number" aria-hidden="true">${i + 1}</span><span class="relic-choice-art" aria-hidden="true">${esc(relic.glyph)}</span><span class="relic-choice-tag">${esc(relic.tag)}</span><strong>${esc(relic.name)}</strong><span class="relic-choice-effect">${esc(relic.description)}</span><span class="relic-choice-pair ${ready ? 'ready' : ''}">${esc(hint)}</span></button>`;
       }).join('');
       if (!dialog.open) dialog.showModal();
+      // Drafts are chaptered: Discovery I of IV, not a recurring popup.
+      dialog.querySelector('.relic-dialog-heading .eyebrow').textContent = `DISCOVERY ${['I', 'II', 'III', 'IV'][owned.length] || 'I'} OF IV · SOMETHING EXTRAORDINARY, FOUND`;
       $('.relic-choice')?.focus({ preventScroll: true });
       $('#game-status').textContent = 'Relic discovered. Choose one of three powers. Your run is paused while you decide.';
     }
@@ -502,6 +509,8 @@
         }
         if (data.lives !== undefined) lastLives = data.lives;
         if (data.phase !== lastGamePhase) {
+          window.AetherAmbience?.duck(data.phase === 'running');
+          if (data.phase === 'running' && lastGamePhase === 'ready') { bestBefore = voyage.best[gameKey()] || 0; recapCounted = false; }
           if (data.phase === 'paused') { $('#overlay-title').textContent = 'Space to breathe.'; $('#overlay-copy').textContent = 'Right where you left it. Ready when you are.'; $('#game-start').innerHTML = 'Keep going ' + icon('arrow-right'); $('#overlay-kicker').textContent = 'PAUSED'; $('#game-status').textContent = 'Game paused. Press P or Keep going to resume.'; }
           if (data.phase === 'over') {
             $('#overlay-title').textContent = 'One more orbit?';
@@ -511,8 +520,32 @@
             const recap = $('#run-recap'); recap.hidden = false;
             const relics = data.relics || [], synergies = data.synergies || [];
             const s = data.stats || {};
-            const statLine = activeGame === 'merge' ? `${s.totalMerges || 0} merges · largest world: ${data.largest}` : activeGame === 'hop' ? `${(s.maxMetres || 0).toLocaleString()} metres travelled · ${s.ringsCaught || 0} rings caught` : activeGame === 'dash' ? `${s.totalCatches || 0} stars caught · survived ${Math.floor(s.simulationTime || 0)}s` : `${s.crystalHits || 0} crystals shattered`;
-            recap.innerHTML = `<p class="eyebrow">EXPEDITION NOTES</p><h3>${synergies.length ? esc(synergies[0].name) : relics.length ? 'A most curious combination.' : 'Every explorer starts somewhere.'}</h3><p>${data.score.toLocaleString()} points · ${relics.length} ${relics.length === 1 ? 'relic' : 'relics'} · ${synergies.length} ${synergies.length === 1 ? 'synergy' : 'synergies'}</p><p class="recap-stats">${esc(statLine)}</p><ul class="recap-relics">${relics.map(relic => `<li>${esc(relic.glyph)} ${esc(relic.name)}</li>`).join('')}</ul><p>${relics.length ? 'Your finds are catalogued. Try a different pairing on the next expedition.' : 'Follow the discovery meter. Your first power is just a few good moves away.'}</p>`;
+            const isBest = data.score > 0 && data.score > bestBefore;
+            const headline = isBest ? 'A personal best, carefully noted.' : relics.length === 4 ? 'A complete build, beautifully odd.' : synergies.length ? synergies[0].name : relics.length ? 'A most curious combination.' : 'Every explorer starts somewhere.';
+            const statTiles = activeGame === 'merge' ? [['MERGES', s.totalMerges || 0], ['LARGEST WORLD', data.largest], ['DROPS', data.drops || 0], ['TIME', `${Math.floor(s.simulationTime || 0)}s`]]
+              : activeGame === 'hop' ? [['DISTANCE', `${(s.maxMetres || 0).toLocaleString()} m`], ['RINGS', s.ringsCaught || 0], ['SECTOR', data.level || 1], ['TIME', `${Math.floor(s.simulationTime || 0)}s`]]
+              : activeGame === 'dash' ? [['STARS CAUGHT', s.totalCatches || 0], ['SURVIVED', `${Math.floor(s.simulationTime || 0)}s`], ['RELICS', relics.length + ' / 4'], ['TIME', `${Math.floor(s.simulationTime || 0)}s`]]
+              : [['CRYSTALS', s.crystalHits || 0], ['WAVE', data.level || 1], ['COMETS', s.comets || 1], ['TIME', `${Math.floor(s.simulationTime || 0)}s`]];
+            const total = Object.values(window.AetherArcade.relics || {}).flat().length;
+            const found = voyage.relics.filter(id => relicById(id)).length;
+            const hook = (window.AetherArcade.synergies?.[activeGame] || []).find(pair => !synergies.some(formed => formed.name === pair.name));
+            const timeline = relics.map((relic, i) => s.draftTimes?.[i] !== undefined ? `${esc(relic.glyph)} ${esc(relic.name)} — found at ${Math.floor(s.draftTimes[i] / 60)}:${String(Math.floor(s.draftTimes[i] % 60)).padStart(2, '0')}` : `${esc(relic.glyph)} ${esc(relic.name)}`).join(' · ');
+            recap.innerHTML = `<div class="recap-grid"><div class="recap-main"><p class="eyebrow">EXPEDITION NOTES${challenge ? ' · TODAY’S COURSE' : ''}</p><h3>${esc(headline)}</h3><div class="recap-score" id="recap-score" data-score="${data.score}">0</div><p class="recap-delta">${isBest ? `A personal best — +${(data.score - bestBefore).toLocaleString()} over your previous finest.` : `Your finest remains ${(voyage.best[gameKey()] || 0).toLocaleString()}.`}</p><div class="recap-tiles">${statTiles.map(([label, value]) => `<div class="recap-tile"><small>${label}</small><strong>${esc(String(value))}</strong></div>`).join('')}</div></div><div class="recap-side">${synergies.length ? synergies.map(synergy => `<div class="synergy-note"><strong>✦ ${esc(synergy.name)}</strong>${esc(synergy.description)}</div>`).join('') : ''}${relics.length ? `<div class="run-relics">${relics.map(relic => `<span class="relic-chip"><span aria-hidden="true">${esc(relic.glyph)}</span>${esc(relic.name)}</span>`).join('')}</div><p class="recap-timeline">${timeline}</p>` : ''}<p class="recap-standing">${found} of ${total} relics catalogued · ${total - found} still strangers.</p><p class="recap-hook">${hook ? `Rumour has it: <em>${esc(hook.name)}</em> awaits.` : 'Every pairing of this corner of the sky, discovered.'}</p><button class="button button-primary" data-exp="game-start">Go again ${icon('play')}</button></div></div>`;
+            // The score counts itself up — theatre for the number you earned.
+            const scoreEl = $('#recap-score');
+            if (scoreEl) {
+              if (motionQuery.matches || recapCounted) scoreEl.textContent = data.score.toLocaleString();
+              else {
+                recapCounted = true;
+                const started = performance.now();
+                const countUp = now => {
+                  const t = Math.min(1, (now - started) / 700);
+                  scoreEl.textContent = Math.round(data.score * (1 - (1 - t) ** 3)).toLocaleString();
+                  if (t < 1 && scoreEl.isConnected) requestAnimationFrame(countUp);
+                };
+                requestAnimationFrame(countUp);
+              }
+            }
           }
           if (data.phase === 'ready') { $('#run-recap').hidden = true; $('#overlay-title').textContent = games[activeGame].title; $('#overlay-copy').textContent = games[activeGame].instruction; $('#game-start').innerHTML = 'Let’s play ' + icon('play'); pickupKey = ''; incomingKey = ''; }
           if (data.phase === 'running') {

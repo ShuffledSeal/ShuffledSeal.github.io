@@ -594,6 +594,13 @@ function togglePlayback() {
   playbackFrame = requestAnimationFrame(tick);
 }
 
+// The game ducks the Observatory's hum while a run plays, and hands it back.
+window.AetherAmbience = {
+  duck(on) {
+    if (audioGain && audioContext) audioGain.gain.setTargetAtTime(on ? .05 : state.ambience ? .2 : 0, audioContext.currentTime, .4);
+  },
+};
+
 async function toggleAmbience() {
   const button = document.querySelector('.ambience-toggle');
   try {
