@@ -100,6 +100,29 @@ try {
   await page.waitForFunction(canvas => canvas.dataset.selectedTier === '1' && canvas.dataset.selectedPath === 'left', await bastion.elementHandle());
   await page.evaluate(() => window.__bastionSmoke.destroy());
 
+  await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 900; canvas.height = 500; canvas.id = 'hop-smoke';
+    canvas.style.cssText = 'display:block;width:450px;height:auto';
+    document.body.append(canvas);
+    window.__hopSmoke = window.AetherArcade.create(canvas, { game: 'hop', relaxed: true, sound: false, seed: 7 });
+    window.__hopSmoke.start();
+  });
+  const hop = page.locator('#hop-smoke');
+  await page.waitForFunction(canvas => canvas.dataset.phase === 'running', await hop.elementHandle());
+  await hop.scrollIntoViewIfNeeded();
+  const hopBox = await hop.boundingBox();
+  assert.ok(hopBox, 'the Comet Surf canvas needs a measurable scaled layout box');
+  await page.mouse.move(hopBox.x + hopBox.width / 2, hopBox.y + hopBox.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(canvas => canvas.dataset.tethered === 'true', await hop.elementHandle());
+  await hop.dispatchEvent('pointercancel', { pointerId: 1 });
+  await page.mouse.up();
+  await page.waitForTimeout(180);
+  assert.equal(await hop.getAttribute('data-releases'), '0', 'a cancelled Comet Surf pointer press must not slingshot');
+  assert.equal(await hop.getAttribute('data-tethered'), 'true', 'a cancelled Comet Surf pointer press must preserve its orbit');
+  await page.evaluate(() => { window.__hopSmoke.destroy(); document.querySelector('#hop-smoke').remove(); });
+
   const safePage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const saveErrors = [];
   safePage.on('pageerror', error => saveErrors.push(error.message));
@@ -131,7 +154,7 @@ try {
 
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, retreat cost, and Bastion upgrades.');
+  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, retreat cost, and Bastion upgrades.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});

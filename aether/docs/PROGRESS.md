@@ -1,5 +1,11 @@
 # Æther Progress
 
+## 2026-11-04 - Comet Surf input fix
+
+- Fixed `pointercancel` and `lostpointercapture` so they preserve a Comet Surf orbit instead of launching it.
+- Made arcade teardown release active pointer capture and reset input.
+- Added a scaled-canvas browser regression for cancelled Comet Surf gestures.
+
 ## 2026-11-04 - Uncommitted foundation audit
 
 - Added a concise repository, route, save-contract, test, and risk baseline.

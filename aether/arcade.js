@@ -157,6 +157,7 @@ window.AetherArcade = (() => {
       canvas.dataset.phase = phase; canvas.dataset.score = score; canvas.dataset.count = balls?.length || 0;
       canvas.dataset.largest = largest; canvas.dataset.lives = lives; canvas.dataset.level = level;
       canvas.dataset.suspended = String(suspended);
+      canvas.dataset.releases = releases; canvas.dataset.tethered = String(!!tether);
       const incomingPickup = options.game === 'dash' ? falling.find(g => g.kind === 'pickup' && !g.taken) : null;
       const incomingDef = incomingPickup && powerUps.dash.find(p => p.id === incomingPickup.pickupId);
       options.onUpdate?.({ phase, suspended, score, best, next: names[queue?.[0] || 0], queue: queue.slice(), largest: names[largest], lives, combo, remaining: Math.ceil(remaining), danger: clamp(danger / dangerLimit(), 0, 1), drops, charge: Math.floor(charge), detail, result,
@@ -1711,7 +1712,8 @@ window.AetherArcade = (() => {
       if (options.game === 'merge' && dropArmed) action();
       dropArmed = false;
     });
-    const cancelPointer = e => { if (e.pointerId === pointerId) { pointerHeld = false; pointerId = null; dropArmed = false; } };
+    // A cancelled gesture is never an intentional launch or drop.
+    const cancelPointer = e => { if (e.pointerId === pointerId) clearInput(); };
     listen(canvas, 'pointercancel', cancelPointer); listen(canvas, 'lostpointercapture', cancelPointer);
     listen(canvas, 'keydown', event => {
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
@@ -1736,7 +1738,7 @@ window.AetherArcade = (() => {
       skipRelic: () => resolveOffer(null, true),
       startForecast(id) { forecastPick = id; reset(); start(); },
       setSound(value) { sound = value; if (!value) audio?.suspend(); },
-      destroy() { destroyed = true; cancelAnimationFrame(frame); clearTimeout(idleTimer); abort.abort(); audio?.close().catch(() => {}); },
+      destroy() { clearInput(); destroyed = true; cancelAnimationFrame(frame); clearTimeout(idleTimer); abort.abort(); audio?.close().catch(() => {}); },
     };
   }
   return { create, orb, names, colours, radii, dimensions, relics, synergies, powerUps };
