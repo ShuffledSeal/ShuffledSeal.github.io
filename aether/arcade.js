@@ -67,16 +67,29 @@ window.AetherArcade = (() => {
     dash: [
       { id: 'lodestone-bloom', name: 'Lodestone Bloom', glyph: '◎', colour: '#bba7ed', duration: 8, incoming: 'LODESTONE BLOOM INCOMING', expiry: 'THE BLOOM CLOSES', description: 'Stars lean into your boat for 8 seconds.' },
       { id: 'clock-moth', name: 'Clock Moth', glyph: '⌛', colour: '#9ed7c6', duration: 6, incoming: 'CLOCK MOTH INCOMING', expiry: 'THE MOTH FLIES ON', description: 'Everything falls 45 percent slower for 6 seconds.' },
+      { id: 'moonshield', name: 'Moonshield', glyph: '◇', colour: '#a9d3be', duration: 3, incoming: 'MOONSHIELD INCOMING', expiry: 'THE MOON REMEMBERS', description: 'Two meteors bounce off.' },
+      { id: 'prism-net', name: 'Prism Net', glyph: '≋', colour: '#e29eb7', duration: 8, incoming: 'PRISM NET INCOMING', expiry: 'THE NET FOLDS', description: 'Catch above and below the line.' },
+      { id: 'star-prism', name: 'Star Prism', glyph: '✦', colour: '#f2d38a', duration: 12, charges: 5, incoming: 'STAR PRISM INCOMING', expiry: 'THE PRISM DIMS', description: 'The next five catches score triple.' },
     ],
   };
+  // The Moonboat Expedition: six weathers, then the whale. Quick Forecast
+  // (75s) stays as the instant-retry mode; daily skies take the expedition.
+  const dashStages = [
+    { until: 35, name: 'WAKE THE SKY', sub: 'The forecast is extremely weird', speed: 1, spawn: 1, bad: 0, wind: 0, mission: { id: 'catch', text: 'Catch 12 stars', target: 12 } },
+    { until: 80, name: 'CROSSWIND', sub: 'The sky leans sideways', speed: 1.05, spawn: .9, bad: 0, wind: 26, mission: { id: 'calm', text: 'Take no hits for 25 seconds', target: 25 } },
+    { until: 125, name: 'JELLY TIDE', sub: 'Helpful strangers drift by', speed: 1.1, spawn: .92, bad: 0, wind: 0, jelly: true, mission: { id: 'centre', text: 'Catch 8 stars in the centre lane', target: 8 } },
+    { until: 175, name: 'PINK WEATHER', sub: 'Narrow lanes. Trust your dash', speed: 1.2, spawn: .85, bad: 1, wind: 0, mission: { id: 'gift', text: 'Collect a gift before it passes', target: 1 } },
+    { until: 225, name: 'THE LONG NIGHT', sub: 'Two weathers at once', speed: 1.28, spawn: .8, bad: 1, wind: 20, mission: { id: 'surge', text: 'Catch 10 stars during a surge', target: 10 } },
+  ];
+  const WHALE_AT = 225, EXPEDITION_LENGTH = 270;
   for (const catalog of [relics, synergies, powerUps]) {
     for (const entries of Object.values(catalog)) { entries.forEach(entry => { if (entry.ids) Object.freeze(entry.ids); Object.freeze(entry); }); Object.freeze(entries); }
     Object.freeze(catalog);
   }
-  const milestones = { merge: [4, 12, 24, 40], hop: [180, 450, 900, 1500], dash: [5, 15, 28, 45], breaker: [5, 14, 28, 48] };
+  const milestones = { merge: [5, 14, 28, 48], hop: [220, 550, 1000, 1600], dash: [6, 20, 38, 58], breaker: [6, 16, 32, 55] };
   // Drafts are events, not a checklist: at least this long between offers,
   // no matter how hot the run gets.
-  const MIN_DRAFT_GAP = 18;
+  const MIN_DRAFT_GAP = 30;
   const progressLabels = { merge: 'merges', hop: 'metres travelled', dash: 'stars caught', breaker: 'crystal hits' };
 
   function create(canvas, options) {
@@ -105,6 +118,7 @@ window.AetherArcade = (() => {
     let balls, queue, cooldown, danger, largest, drops;
     let ship, worlds, rings, rocks, camera, nextWorld, tether, distanceScore;
     let catcher, falling, spawn, remaining, wave, dashTime, magnet;
+    let dashStageIndex = -2, missionProgress = 0, missionDone = false, lastHitTime = -99, giftCollected = false, whale = null, breathLanes = [];
     let paddle, comets, bricks, launchTimer, slowTime;
     let dropArmed = false, hueCache;
     let notifyTimer = 0, releases = 0;
@@ -119,7 +133,9 @@ window.AetherArcade = (() => {
     let aimVelocity = 0, aimStamp = 0, guidedBall = null, fields = [], echoes = [];
     let pickupSchedule = [], activePower = null, slow = 0;
     let maxMetres = 0, totalCatches = 0, crystalHits = 0, ringsCaught = 0, shields = 0, shieldCharge = 0;
-    let orbitCharge = 0, flightBoost = 0, reactorRings = 0, clockCatches = 0, splitHits = 0, ward = 0, wardReturns = 0, tetherAwaitingPress = false;
+    let orbitCharge = 0, flightBoost = 0, reactorRings = 0, clockCatches = 0, splitHits = 0, ward = 0, wardReturns = 0, tetherAwaitingPress = false, routeMod = null;
+    let forecastPick = null, gravityScale = 1;
+    const expedition = options.game === 'dash' && options.expedition === true;
     const has = id => owned.some(r => r.id === id);
     const activeSynergies = () => synergies[options.game].filter(s => s.ids.every(has)).map(({ name, description }) => ({ name, description }));
     const dangerLimit = () => has('deep-cradle') ? 5.2 : 3.4;
@@ -133,7 +149,7 @@ window.AetherArcade = (() => {
     const stats = () => ({ simulationTime: time, totalMerges, totalCatches, crystalHits, ringsCaught, maxMetres: Math.floor(maxMetres), comets: comets.length, shields, shieldCharge, orbitCharge, ward, draftFallbacks, draftTimes: draftTimes.slice() });
 
     function notify() {
-      const detail = options.game === 'merge' ? `${names[largest]} · ${drops} drops` : options.game === 'hop' ? `${Math.floor(ship.x / 10)} m · sector ${level}` : options.game === 'dash' ? `${Math.ceil(remaining)}s · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}` : `Wave ${level} · ${bricks.filter(b => b.hp > 0).length} crystals`;
+      const detail = options.game === 'merge' ? `${names[largest]} · ${drops} drops` : options.game === 'hop' ? `${Math.floor(ship.x / 10)} m · sector ${level}` : options.game === 'dash' ? (expedition ? `${whale ? 'THE WHALE' : dashStages[dashStageIndex]?.name || 'THE FORECAST'} · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}` : `${Math.ceil(remaining)}s · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}`) : `Wave ${level} · ${bricks.filter(b => b.hp > 0).length} crystals`;
       canvas.dataset.phase = phase; canvas.dataset.score = score; canvas.dataset.count = balls?.length || 0;
       canvas.dataset.largest = largest; canvas.dataset.lives = lives; canvas.dataset.level = level;
       canvas.dataset.suspended = String(suspended);
@@ -144,6 +160,7 @@ window.AetherArcade = (() => {
         relicProgress: draftIndex < 4 ? { value: progressValue(), target: milestones[options.game][draftIndex], label: progressLabels[options.game] } : { value: owned.length, target: 4, label: 'relics collected' },
         pickup: activePower ? { id: activePower.id, name: activePower.name, glyph: activePower.glyph, remaining: activePower.remaining, total: activePower.duration } : null,
         incoming: incomingDef ? { id: incomingDef.id, name: incomingDef.name, x: Math.round(incomingPickup.x) } : null,
+        mission: currentMission() ? { ...currentMission(), progress: Math.floor(missionProgress), done: missionDone } : null,
       });
     }
     function relicField(x, y, radius, colour = '#bba7ed', life = .6) { fields.push({ x, y, radius, colour, life, max: life }); }
@@ -177,7 +194,7 @@ window.AetherArcade = (() => {
       // A hot streak cannot summon relics back to back — but the first
       // discovery still comes early enough to hook a reckless player.
       if (draftIndex > 0 && time - lastDraftTime < MIN_DRAFT_GAP) return;
-      const fallbackAfter = draftIndex === 0 ? (options.game === 'dash' ? 8 : 12) : 24;
+      const fallbackAfter = draftIndex === 0 ? (options.game === 'dash' ? 8 : 14) : 34;
       if (!reached && time - lastDraftTime < fallbackAfter) return;
       if (!reached) draftFallbacks++;
       // The telegraph: a golden beat of slow-motion before the draft appears.
@@ -340,12 +357,15 @@ window.AetherArcade = (() => {
       if (invulnerable > 0 || phase !== 'running' || suspended) return;
       if (shields > 0) {
         shields--; invulnerable = 1; relicField(x, y, 64, '#9ed7c6'); burst(x, y, '#9ed7c6', 20);
+        // Moonshield's lesson: a blocked meteor charges the dash.
+        if (options.game === 'dash') { charge = Math.min(100, charge + 20); lastHitTime = time; }
         punch(.3, .04); motif([[622, 0, .16, 'triangle', .05], [466.16, .02, .2, 'triangle', .04]]);
         if (options.game === 'dash' && has('lodestone') && has('star-aegis')) { magnet = Math.max(magnet, 3); relicField(x, y, 300); }
         if (options.game === 'hop' && has('ring-reactor') && has('comet-aegis')) { ship.vx = Math.max(ship.vx, 410); ship.vy = clamp(ship.vy, -90, 90); flightBoost = Math.max(flightBoost, 1.2); }
         return;
       }
       lives--; combo = 0; invulnerable = 1.6; shake = 12; flash = .15;
+      lastHitTime = time;
       // A lost heart stops the world for a beat; the last heart dreads slower.
       punch(0, .1); if (lives === 1 && !reduced) punch(.5, .25);
       burst(x, y, '#f58e9b', 28); tone(100, .23, 'sawtooth', .055);
@@ -354,9 +374,13 @@ window.AetherArcade = (() => {
     }
     function newWorld() {
       const x = nextWorld, y = 160 + random() * 240, r = 27 + random() * 15;
+      const route = routeMod && x < routeMod.until ? routeMod.kind : null;
       worlds.push({ x, y, r, tier: Math.floor(random() * 9) });
       rings.push({ x: x + 190, y: clamp(y + (random() - .5) * 190, 80, H - 80), taken: false });
-      if (x > 900) rocks.push({ x: x + 110, y: y < H / 2 ? H - 95 - random() * 70 : 80 + random() * 70, r: 20 + random() * 10, grazed: false });
+      // Gold routes bloom with extra rings; moon routes hold the rocks back.
+      if (route === 'gold' && random() < .55) rings.push({ x: x + 260, y: clamp(y + (random() - .5) * 260, 80, H - 80), taken: false });
+      if (x > 900 && route !== 'moon') rocks.push({ x: x + 110, y: y < H / 2 ? H - 95 - random() * 70 : 80 + random() * 70, r: 20 + random() * 10, grazed: false });
+      if (route === 'storm' && random() < .5) rocks.push({ x: x + 260, y: 90 + random() * (H - 180), r: 18 + random() * 9, grazed: false });
       nextWorld += 370 + random() * 80;
     }
     function makeBricks() {
@@ -372,9 +396,16 @@ window.AetherArcade = (() => {
         for (let i = 0; i < count; i++) {
           const a = i / count * TAU + ring * .27 + rotation;
           const armoured = level > 1 && random() < .34;
-          bricks.push({ x: W / 2 + Math.cos(a) * radius, y: H / 2 + Math.sin(a) * radius, r: 15, hp: armoured ? 2 : 1, tier: (i + ring * 3 + level) % 8, hit: 0, angle: a });
+          // Crystal families arrive from wave two: pulse crystals slow time
+          // when broken; one heart crystal per wave gives a life back.
+          const family = level > 1 && !armoured && random() < .16 ? 'pulse' : null;
+          bricks.push({ x: W / 2 + Math.cos(a) * radius, y: H / 2 + Math.sin(a) * radius, r: 15, hp: armoured ? 2 : 1, tier: (i + ring * 3 + level) % 8, hit: 0, angle: a, family });
         }
       });
+      if (level > 1 && bricks.length) {
+        const heartIndex = Math.floor(random() * bricks.length);
+        if (bricks[heartIndex].hp === 1) bricks[heartIndex].family = 'heart';
+      }
       oneCrystal = false;
       launchTimer = 1.2;
     }
@@ -394,7 +425,8 @@ window.AetherArcade = (() => {
       if (options.game === 'dash') {
         const pickupRandom = seeded(seed ^ 0x9c4d);
         let at = 8 + pickupRandom() * 4, previous = '';
-        while (at < 67) { // The last 8 seconds of the forecast stay gift-free.
+        const giftsUntil = expedition ? 255 : 67; // The last stretch stays gift-free.
+        while (at < giftsUntil) {
           let def = powerUps.dash[Math.floor(pickupRandom() * powerUps.dash.length)];
           if (def.id === previous) def = powerUps.dash.find(p => p.id !== previous);
           pickupSchedule.push({ time: at, id: def.id, x: 60 + pickupRandom() * (W - 120), fired: false });
@@ -403,9 +435,10 @@ window.AetherArcade = (() => {
         }
       }
       activePower = null; slow = 0;
+      dashStageIndex = -2; missionProgress = 0; missionDone = false; lastHitTime = -99; giftCollected = false; whale = null; breathLanes = [];
       owned = []; offer = null; suspended = false; draftIndex = 0; lastDraftTime = 0; draftFallbacks = 0;
       maxMetres = 0; totalCatches = 0; crystalHits = 0; ringsCaught = 0; shields = 0; shieldCharge = 0;
-      orbitCharge = 0; flightBoost = 0; reactorRings = 0; clockCatches = 0; splitHits = 0; ward = 0; wardReturns = 0; tetherAwaitingPress = false; releases = 0;
+      orbitCharge = 0; flightBoost = 0; reactorRings = 0; clockCatches = 0; splitHits = 0; ward = 0; wardReturns = 0; tetherAwaitingPress = false; releases = 0; routeMod = null;
       fields = []; echoes = []; guidedBall = null; lastDirection = 1; finishDelay = 0; finishTotal = 0; finishWon = false; visualTime = 0;
       timeScale = 1; timeKick = 0; zoom = 1; glow = 0; kick = 0; flashTint = '245,142,155';
       draftWarn = 0; stirred = -1; draftTimes = []; pileT = 0; peakBand = 0; lastThump = 0;
@@ -415,15 +448,21 @@ window.AetherArcade = (() => {
       particles = []; ripples = []; popups = []; shake = 0; flash = 0; clearInput();
       charge = options.game === 'dash' ? 100 : 0; combo = 0; comboTimer = 0; lives = 3; invulnerable = 0; level = 1; totalMerges = 0;
       balls = []; queue = [0, Math.floor(random() * 4), Math.floor(random() * 4)]; cooldown = 0; danger = 0; largest = 0; drops = 0;
+      // Tonight's forecast shapes the jar before the first drop falls.
+      gravityScale = forecastPick === 'lowgrav' ? .75 : 1;
+      if (forecastPick === 'lookahead') queue.push(Math.floor(random() * 4));
       camera = 0; nextWorld = 250; worlds = []; rings = []; rocks = []; tether = null; tetherAwaitingPress = false; distanceScore = 0;
       ship = { x: 80, y: 235, vx: 235, vy: -30, trail: [] };
       while (nextWorld < 1600) newWorld();
-      // Two settled companions greet the first drop — the jar never starts empty.
+      // Two settled companions greet the first drop — more on a crowded night.
+      // Spaced so nothing starts overlapping or mid-merge.
       if (options.game === 'merge') {
-        balls.push({ x: W / 2 - 58, y: H - 27 - radii[0], vx: 0, vy: 0, tier: 0, age: 5, angle: .2, squash: 0, born: 0 });
-        balls.push({ x: W / 2 + 62, y: H - 27 - radii[1], vx: 0, vy: 0, tier: 1, age: 5, angle: -.3, squash: 0, born: 0 });
+        const seededJar = [[-58, 0, .2], [62, 1, -.3], [0, 2, .1], [-124, 0, -.15], [124, 1, .25]];
+        seededJar.slice(0, forecastPick === 'crowded' ? 5 : 2).forEach(([ox, tier, angle]) => {
+          balls.push({ x: W / 2 + ox, y: H - 27 - radii[tier], vx: 0, vy: 0, tier, age: 5, angle, squash: 0, born: 0 });
+        });
       }
-      catcher = { x: W / 2, vx: 0, tilt: 0 }; falling = []; spawn = .8; remaining = 75; wave = 0; dashTime = 0; magnet = 0;
+      catcher = { x: W / 2, vx: 0, tilt: 0 }; falling = []; spawn = .8; remaining = expedition ? EXPEDITION_LENGTH : 75; wave = 0; dashTime = 0; magnet = 0;
       paddle = { angle: Math.PI / 2, target: Math.PI / 2 }; comets = [{ x: W / 2, y: H / 2 + 210, vx: 0, vy: -290, trail: [], secondary: false }]; slowTime = 0;
       makeBricks(); aim = W / 2; pointerAim = null; notify(); draw();
     }
@@ -488,7 +527,7 @@ window.AetherArcade = (() => {
         guidedBall = { x: clamp(aim, radii[tier] + 24, W - radii[tier] - 24), y: 46, vx: clamp(aimVelocity * .28, -125, 125), vy: 30, tier, age: 0, angle: 0, squash: -.3, born: .2 };
         balls.push(guidedBall);
         burst(guidedBall.x, 52, colours[tier], 6, 90); light('223,172,127', .02, .08);
-        drops++; cooldown = .32; tone(200 + tier * 60, .09, 'triangle'); notify();
+        drops++; cooldown = .5; tone(200 + tier * 60, .09, 'triangle'); notify();
       } else if (options.game === 'dash' || options.game === 'breaker') ability();
     }
     function mergeStep(dt) {
@@ -509,7 +548,7 @@ window.AetherArcade = (() => {
         }
       }
       if (has('guiding-thread') && guidedBall?.age < 1.1 && balls.includes(guidedBall)) guidedBall.vx += clamp((aim - guidedBall.x) * 3 - guidedBall.vx, -220, 220) * dt * 3;
-      balls.forEach(b => { b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); b.vy += (400 + Math.min(140, danger * 50)) * dt; b.vx *= Math.exp(-.38 * dt); b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35; });
+      balls.forEach(b => { b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); b.vy += (400 * gravityScale + Math.min(140, danger * 50)) * dt; b.vx *= Math.exp(-.38 * dt); b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35; });
       for (let pass = 0; pass < 6; pass++) {
         balls.forEach(b => {
           const r = radii[b.tier];
@@ -681,7 +720,9 @@ window.AetherArcade = (() => {
       }
       maxMetres = Math.max(maxMetres, ship.x / 10);
       const distance = Math.floor(Math.max(0, ship.x) / 100);
-      if (distance > distanceScore) { score += distance - distanceScore; distanceScore = distance; best = Math.max(best, score); }
+      // Route risk pays: storm doubles the distance purse, gold pays half again.
+      const routeBonus = routeMod && ship.x < routeMod.until ? routeMod.kind === 'storm' ? 2 : routeMod.kind === 'gold' ? 1.5 : 1 : 1;
+      if (distance > distanceScore) { score += Math.round((distance - distanceScore) * routeBonus); distanceScore = distance; best = Math.max(best, score); }
       const sector = 1 + Math.floor(ship.x / 2400);
       if (sector > level) {
         level = sector; lives = Math.min(3, lives + 1);
@@ -692,11 +733,18 @@ window.AetherArcade = (() => {
         scoreAt(150, W / 2, 130, `SECTOR ${level} · +150`);
         light('237,241,155', .1, .8); kick = .8;
         motif([[523.25, 0, .12], [587.33, .1, .12], [698.46, .2, .12], [1046.5, .3, .35]], .055);
+        // Fly your route: the lane you cross in becomes the next sector's weather.
+        const lane = ship.y < H / 3 ? 'storm' : ship.y > H * 2 / 3 ? 'moon' : 'gold';
+        routeMod = { kind: lane, until: level * 2400 + 2400 };
+        const routeNames = { storm: 'STORM ROUTE — FAST AND MEAN', gold: 'GOLD ROUTE — RINGS AHEAD', moon: 'MOON ROUTE — A QUIET DRIFT' };
+        popups.push({ x: W / 2, y: H * .3 + 62, text: routeNames[lane], colour: lane === 'storm' ? '#f5a08c' : lane === 'moon' ? '#a9d3be' : '#edf19b', life: 2, size: 13 });
       }
       ship.trail.push({ x: ship.x, y: ship.y }); if (ship.trail.length > (reduced ? 4 : 38)) ship.trail.shift();
     }
     function spawnWave() {
-      wave++; const base = 75 + random() * (W - 150), pattern = wave % 4;
+      wave++;
+      const stage = expedition && dashStageIndex >= 0 ? dashStages[dashStageIndex] : null;
+      const base = 75 + random() * (W - 150), pattern = wave % 4;
       // Every eighth wave is a golden surge: a breather and a streak-builder.
       const surge = wave % 8 === 0;
       if (surge) {
@@ -706,23 +754,44 @@ window.AetherArcade = (() => {
       }
       for (let i = 0; i < 5; i++) {
         const x = pattern === 0 ? 90 + i * 180 : clamp(base + (i - 2) * (pattern === 1 ? 74 : 125), 35, W - 35);
-        const bad = surge ? false : pattern === 2 ? i === 0 || i === 4 : i === wave % 5;
-        falling.push({ x, y: -30 - (pattern === 1 ? i * 35 : 0), speed: (155 + time * 2.4 + i * 6) * (surge ? .82 : 1), bad, kind: !bad && i === 2 && wave % 7 === 0 ? 'jelly' : 'star', r: bad ? 18 : 12, wait: bad ? .55 : .1, spin: i, taken: false });
+        let bad = surge ? false : pattern === 2 ? i === 0 || i === 4 : i === wave % 5;
+        // Pink weather adds a second threat per wave.
+        if (!surge && !bad && stage?.bad && random() < .35) bad = i === (wave + 2) % 5;
+        const isJelly = !bad && (i === 2 && (wave % 7 === 0 || (stage?.jelly && wave % 3 === 0)));
+        falling.push({ x, y: -30 - (pattern === 1 ? i * 35 : 0), speed: (155 + time * 2.4 + i * 6) * (surge ? .82 : 1) * (stage?.speed || 1), bad, kind: isJelly ? 'jelly' : 'star', r: bad ? 18 : 12, wait: bad ? .55 : .1, spin: i, taken: false, wind: stage?.wind || 0 });
       }
     }
     function collectPickup(f) {
       const def = powerUps.dash.find(p => p.id === f.pickupId);
       if (!def) return;
+      giftCollected = true;
       // One effect at a time: a new gift replaces the old with its own farewell.
       if (activePower && activePower.id !== def.id) popups.push({ x: W / 2, y: H * .4, text: activePower.expiry, colour: activePower.colour, life: 1.2 });
       if (def.id === 'lodestone-bloom') magnet = Math.max(magnet, def.duration);
-      else slow = Math.max(slow, def.duration);
-      activePower = { ...def, remaining: def.duration, warned: false };
+      else if (def.id === 'moonshield') shields = Math.min(3, shields + 2);
+      else if (def.id === 'clock-moth') slow = Math.max(slow, def.duration);
+      activePower = { ...def, remaining: def.duration, warned: false, charges: def.charges || 0 };
       popups.push({ x: f.x, y: f.y - 34, text: `POWER UP · ${def.name.toUpperCase()}`, colour: def.colour, life: 1.7 });
       burst(f.x, f.y, def.colour, 26); relicField(catcher.x, H - 72, 90, def.colour);
       light(rgbOf(def.colour), .08, .5); kick = .5;
       motif([[560, 0, .1], [840, .09, .2]], .06);
       notify();
+    }
+    const stageStartTime = idx => idx <= 0 ? 0 : dashStages[idx - 1].until;
+    const WHALE_MISSION = { id: 'whale', text: 'Catch 20 breath-stars', target: 20 };
+    const currentMission = () => {
+      if (!expedition) return null;
+      if (whale) return WHALE_MISSION;
+      return dashStageIndex >= 0 && dashStageIndex < dashStages.length ? dashStages[dashStageIndex].mission : null;
+    };
+    function missionCatch(f) {
+      const mission = currentMission();
+      if (!mission || missionDone || f.bad) return;
+      if (mission.id === 'catch' && f.kind === 'star') missionProgress++;
+      else if (mission.id === 'centre' && f.kind === 'star' && Math.abs(f.x - W / 2) < 150) missionProgress++;
+      else if (mission.id === 'surge' && surgeUntil > time) missionProgress++;
+      else if (mission.id === 'gift' && f.kind === 'pickup') missionProgress = 1;
+      else if (mission.id === 'whale' && f.breath) missionProgress++;
     }
     function dashStep(dt) {
       const wasDashing = dashTime > 0;
@@ -763,16 +832,84 @@ window.AetherArcade = (() => {
       }
       catcher.x = clamp(catcher.x + catcher.vx * dt, basketWidth(), W - basketWidth()); catcher.tilt += (catcher.vx / 2200 - catcher.tilt) * dt * 12;
       catcher.pop = Math.max(0, (catcher.pop || 0) - dt * 1.4);
-      if (spawn <= 0 && remaining > 3) { spawnWave(); spawn = Math.max(.72, 1.45 - time * .008); }
+      // Expedition staging: six named weathers, each with a mission.
+      const stage = expedition && dashStageIndex >= 0 && dashStageIndex < dashStages.length ? dashStages[dashStageIndex] : null;
+      if (expedition) {
+        const idx = dashStages.findIndex(s => time < s.until);
+        if (idx !== dashStageIndex) {
+          dashStageIndex = idx; missionProgress = 0; missionDone = false; giftCollected = false;
+          if (idx >= 0) {
+            dashAct = idx + 1;
+            banner(dashStages[idx].name, '#cbb287', 20);
+            popups.push({ x: W / 2, y: H * .3 + 36, text: dashStages[idx].sub, colour: '#b7abc9', life: 1.8, size: 13 });
+            popups.push({ x: W / 2, y: H * .3 + 60, text: `MISSION · ${dashStages[idx].mission.text.toUpperCase()}`, colour: '#a9d3be', life: 2.2, size: 12 });
+            motif([[587.33, 0, .15], [783.99, .1, .3]], .05);
+          } else {
+            dashAct = 5;
+            banner('THE UMBRA WHALE', '#9ed7c6', 24);
+            popups.push({ x: W / 2, y: H * .3 + 40, text: 'Three breaths. Catch the light.', colour: '#b7abc9', life: 2, size: 13 });
+            popups.push({ x: W / 2, y: H * .3 + 64, text: `MISSION · ${WHALE_MISSION.text.toUpperCase()}`, colour: '#a9d3be', life: 2.2, size: 12 });
+            motif([[329.63, 0, .4], [261.63, .3, .6]], .06);
+            whale = { x: W + 260, breath: 0, timer: 3, telegraph: 0 };
+            missionProgress = 0; missionDone = false;
+          }
+          notify();
+        }
+      }
+      // The whale breathes constellations: telegraph, then catch the light.
+      if (whale && phase === 'running') {
+        whale.x -= 16 * dt;
+        if (whale.x < -280) whale.x = W + 260;
+        if (whale.breath < 3) {
+          if (whale.telegraph > 0) {
+            whale.telegraph -= dt;
+            if (whale.telegraph <= 0) {
+              breathLanes.forEach((laneX, li) => {
+                for (let k = 0; k < 3; k++) falling.push({ x: laneX, y: -30 - k * 46, speed: (165 + whale.breath * 40) * (stage?.speed || 1), bad: false, kind: 'star', breath: true, r: 12, wait: 0, spin: k, taken: false, wind: 0 });
+                if (whale.breath >= 1 && li === whale.breath % 3) falling.push({ x: laneX, y: -200, speed: 175 + whale.breath * 40, bad: true, kind: 'star', r: 18, wait: 0, spin: 0, taken: false, wind: 0 });
+              });
+              whale.breath++; whale.timer = 12 - whale.breath * 2; breathLanes = [];
+              motif([[880, 0, .2], [1108.73, .12, .3]], .05);
+            }
+          } else {
+            whale.timer -= dt;
+            if (whale.timer <= 0) {
+              whale.telegraph = 1.2;
+              breathLanes = [-1, 0, 1].map(o => clamp(whale.x + o * 95, 60, W - 60));
+              popups.push({ x: clamp(whale.x, 120, W - 120), y: 130, text: 'THE WHALE BREATHES', colour: '#9ed7c6', life: 1.2, size: 13 });
+              tone(523.25, .3, 'sine', .05);
+            }
+          }
+        } else if (time > WHALE_AT + 42) {
+          finish('The Umbra Whale dives home, humming your tune.', 1.6, true);
+        }
+      }
+      // Mission bookkeeping for the current weather.
+      const mission = currentMission();
+      if (mission && !missionDone) {
+        if (mission.id === 'calm') missionProgress = Math.min(mission.target, time - Math.max(lastHitTime, stageStartTime(dashStageIndex)));
+        if (missionProgress >= mission.target) {
+          missionDone = true;
+          scoreAt(300, W / 2, H * .4, 'MISSION COMPLETE +300');
+          banner('MISSION COMPLETE', '#a9d3be', 18);
+          motif([[659.26, 0, .14], [880, .1, .14], [1046.5, .2, .3]], .05);
+          // The observatory thanks you with a gift, dropped safely mid-sky.
+          const def = powerUps.dash[(dashStageIndex + 2) % powerUps.dash.length];
+          falling.push({ x: W / 2, y: -30, speed: 130, bad: false, kind: 'pickup', pickupId: def.id, r: 16, wait: 0, spin: 0, taken: false, wind: 0 });
+          notify();
+        }
+      }
+      if (spawn <= 0 && remaining > 3 && !whale) { spawnWave(); spawn = Math.max(.72, 1.45 - time * .008) * (stage?.spawn || 1); }
       const fallFactor = slow > 0 ? .55 : 1;
       for (const f of falling) {
         if (phase !== 'running') break;
         f.wait -= dt; if (f.wait > 0) continue;
         f.y += f.speed * dt * fallFactor; f.spin += dt;
+        if (f.wind) f.x = clamp(f.x + Math.sin(time * .7 + f.spin) * f.wind * dt, 20, W - 20);
         if (!f.bad && Math.hypot(f.x - catcher.x, f.y - (H - 72)) < magnetReach()) {
           f.x += (catcher.x - f.x) * dt * (has('lodestone') ? 3.8 : 2.8); f.attracted = true;
         }
-        const atHeight = Math.abs(f.y - (H - 72)) < f.r + 10;
+        const atHeight = Math.abs(f.y - (H - 72)) < f.r + (activePower?.id === 'prism-net' ? 34 : 10);
         const directCatch = atHeight && Math.abs(f.x - catcher.x) < basketWidth() + f.r * .7;
         const echoCatch = !f.bad && atHeight && echoes.some(e => Math.abs(f.x - e.x) < basketWidth() + f.r * .7);
         // A meteor that brushes the rim gets its own adrenaline bookkeeping.
@@ -782,6 +919,7 @@ window.AetherArcade = (() => {
         }
         if (!f.taken && (directCatch || echoCatch)) {
           f.taken = true;
+          missionCatch(f);
           if (f.bad) { hurt(catcher.x, H - 72); catcher.tilt = (f.x < catcher.x ? 1 : -1) * .38; }
           else if (f.kind === 'pickup') collectPickup(f);
           else {
@@ -802,7 +940,13 @@ window.AetherArcade = (() => {
               motif([[659.26, 0, .1], [783.99, .07, .1], [1046.5, .14, .2]], .055);
               light('237,241,155', .06 + multiplier * .01, .4);
             }
-            scoreAt(10 * multiplier, f.x, f.y - 25, f.kind === 'jelly' ? 'STAR MAGNET!' : `+${10 * multiplier}`);
+            // Star Prism: the next five catches score triple.
+            let prismMult = 1;
+            if (activePower?.id === 'star-prism' && activePower.charges > 0) {
+              prismMult = 3; activePower.charges--;
+              if (!activePower.charges) activePower.remaining = 0;
+            }
+            scoreAt(10 * multiplier * prismMult, f.x, f.y - 25, f.kind === 'jelly' ? 'STAR MAGNET!' : `+${10 * multiplier * prismMult}`);
             if (f.kind === 'jelly') { magnet = Math.max(magnet, 6); lives = Math.min(3, lives + 1); light('187,167,237', .08, .5); kick = .5; motif([[659.26, 0, .14], [783.99, .07, .14], [1046.5, .14, .25]], .05); }
             else light('237,241,155', .035, .18);
             burst(f.x, f.y, f.kind === 'jelly' ? '#bba7ed' : '#edf19b', 13);
@@ -853,6 +997,9 @@ window.AetherArcade = (() => {
       if (has('twin-comet')) splitHits++;
       charge = Math.min(100, charge + (has('chrono-coil') ? 20 : 12));
       scoreAt(25 * Math.min(8, combo), b.x, b.y - 20); burst(b.x, b.y, colours[b.tier], b.hp ? 7 : 22); shake = 2;
+      // Families: pulse crystals exhale slow time; the heart gives a life back.
+      if (!b.hp && b.family === 'pulse') { slowTime = Math.max(slowTime, 1.2); relicField(b.x, b.y, 120, '#a6d9ec', .6); banner('PULSE — TIME THICKENS', '#a6d9ec', 14); }
+      if (!b.hp && b.family === 'heart') { lives = Math.min(3, lives + 1); relicField(b.x, b.y, 90, '#f5a08c', .8); banner('THE HEART REMEMBERS · +1', '#f5a08c', 14); }
       // Dents dip; shatters stop the world a moment, longer in a cascade.
       punch(b.hp ? .3 : 0, b.hp ? .025 : .05 + Math.min(combo, 10) * .004);
       light(rgbOf(colours[b.tier]), b.hp ? .03 : .07, b.hp ? .12 : .3);
@@ -1182,7 +1329,9 @@ window.AetherArcade = (() => {
       if (gateX > -20 && gateX < W + 20) {
         ctx.strokeStyle = '#edf19b'; ctx.globalAlpha = reduced ? .3 : .18 + Math.sin(visualTime * 4) * .1;
         ctx.setLineDash([8, 14]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gateX, 0); ctx.lineTo(gateX, H); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-        text('NEXT SECTOR', gateX, 24, 9, '#edf19b');
+        text('STORM', gateX, H * .16, 9, '#f5a08c');
+        text('GOLD', gateX, H * .5, 9, '#edf19b');
+        text('MOON', gateX, H * .84, 9, '#a9d3be');
       }
       for (const w of worlds) {
         const x = w.x - camera;
@@ -1278,6 +1427,7 @@ window.AetherArcade = (() => {
       }
       const reach = magnetReach();
       if (reach) { ctx.strokeStyle = has('lodestone') ? '#bba7ed77' : '#bba7ed55'; ctx.setLineDash([5, 8]); ctx.beginPath(); ctx.arc(catcher.x, H - 72, reach + Math.sin(visualTime * 3) * 5, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+      if (activePower?.id === 'prism-net') { ctx.strokeStyle = '#e29eb777'; ctx.setLineDash([4, 7]); ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(catcher.x, H - 72, basketWidth() + 10, 44, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
       if (slow > 0) { ctx.fillStyle = 'rgba(158,215,198,.055)'; ctx.fillRect(0, 0, W, H); }
       // Active power-up chip: canvas-first so it is visible even when the DOM
       // build panel is scrolled away on a phone.
@@ -1288,7 +1438,7 @@ window.AetherArcade = (() => {
         ctx.fillStyle = activePower.colour; ctx.font = '15px "Cormorant Garamond", serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillText(activePower.glyph, px + 9, py + 16); ctx.textBaseline = 'alphabetic';
         text(activePower.name.toUpperCase(), px + 30, py + 12, 9, '#e8dfc8', 'left');
-        text(`${Math.ceil(activePower.remaining)}s`, px + pw - 8, py + 12, 10, activePower.colour, 'right');
+        text(activePower.charges ? `${activePower.charges}×` : `${Math.ceil(activePower.remaining)}s`, px + pw - 8, py + 12, 10, activePower.colour, 'right');
         ctx.fillStyle = activePower.colour + '33'; ctx.fillRect(px + 30, py + 21, pw - 70, 3);
         ctx.fillStyle = activePower.colour; ctx.fillRect(px + 30, py + 21, (pw - 70) * clamp(activePower.remaining / activePower.duration, 0, 1), 3);
       }
@@ -1325,12 +1475,41 @@ window.AetherArcade = (() => {
       // Bow spray when the boat tears across the sea.
       sprayT -= 1 / 60;
       if (!reduced && Math.abs(catcher.vx) > 420 && sprayT <= 0) { sprayT = .12; burst(catcher.x + Math.sign(catcher.vx) * basketWidth() * .8, H - 66, '#9ed7c6', 3, 45); }
-      text(`${Math.ceil(remaining)}s`, W - 27, 35, 22, remaining <= 10 ? '#edf19b' : '#eee7d4', 'right');
+      // The Umbra Whale: a friendly silhouette swimming the upper sky.
+      if (whale) {
+        const wy = 74 + (reduced ? 0 : Math.sin(visualTime * .8) * 6);
+        ctx.save(); ctx.translate(whale.x, wy);
+        ctx.globalAlpha = .94; ctx.fillStyle = '#0b1522';
+        ctx.beginPath(); ctx.ellipse(0, 0, 150, 46, 0, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(140, 0); ctx.quadraticCurveTo(190, -34, 210, -46); ctx.quadraticCurveTo(188, -8, 186, 0); ctx.quadraticCurveTo(188, 8, 210, 46); ctx.quadraticCurveTo(190, 34, 140, 0); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-30, 30, 60, 18, .3, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#9ed7c644'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -4, 150, 44, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+        ctx.fillStyle = '#edf19b'; ctx.beginPath(); ctx.arc(-104, -8, 3.5, 0, TAU); ctx.fill();
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        // Breath lanes, telegraphed before the stars fall.
+        for (const laneX of breathLanes) {
+          ctx.strokeStyle = '#9ed7c6'; ctx.globalAlpha = .35 + (reduced ? 0 : Math.sin(visualTime * 6) * .15);
+          ctx.setLineDash([6, 10]); ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(laneX, 120); ctx.lineTo(laneX, H - 90); ctx.stroke(); ctx.setLineDash([]);
+          text('⌄', laneX, 138, 20, '#9ed7c6');
+          ctx.globalAlpha = 1;
+        }
+      }
+      if (expedition) {
+        const mission = currentMission();
+        if (mission) {
+          text(`${missionDone ? '✓ ' : ''}${mission.text.toUpperCase()} · ${Math.floor(missionProgress)}/${mission.target}`, 26, 56, 10, missionDone ? '#a9d3be' : '#a9b6c3', 'left');
+        }
+        const stageName = whale ? 'THE WHALE' : dashStages[dashStageIndex]?.name;
+        if (stageName) text(stageName, W - 27, 58, 10, '#cbb287', 'right');
+      }
+      text(`${Math.ceil(remaining)}s`, W - 27, 35, 22, remaining <= 10 && !expedition ? '#edf19b' : '#eee7d4', 'right');
       text(combo > 0 ? `${combo} STREAK · ×${Math.min(8, 1 + Math.floor(combo / 5))}` : 'GOLD IS GOOD. PINK IS TROUBLE.', W / 2, 30, 11, combo > 0 ? '#edf19b' : '#b7abc9');
       ctx.fillStyle = '#9ed7c622'; ctx.fillRect(25, H - 20, W - 50, 3);
-      if (remaining <= 10) { ctx.globalAlpha = reduced ? .8 : .5 + .4 * Math.sin(visualTime * 8); ctx.fillStyle = '#edf19b'; }
+      if (remaining <= 10 && !expedition) { ctx.globalAlpha = reduced ? .8 : .5 + .4 * Math.sin(visualTime * 8); ctx.fillStyle = '#edf19b'; }
       else ctx.fillStyle = '#9ed7c6';
-      ctx.fillRect(25, H - 20, (W - 50) * remaining / 75, 3); ctx.globalAlpha = 1;
+      ctx.fillRect(25, H - 20, (W - 50) * remaining / (expedition ? EXPEDITION_LENGTH : 75), 3); ctx.globalAlpha = 1;
       // The boat carries a lantern-pool of light.
       ctx.globalAlpha = .22 + glow * .3;
       ctx.drawImage(hueCache.poolGlow, catcher.x - 70, H - 88); ctx.globalAlpha = 1;
@@ -1380,6 +1559,9 @@ window.AetherArcade = (() => {
           ctx.globalAlpha = reduced ? .45 : .3 + Math.sin(visualTime * 2.5 + b.angle) * .15;
           ctx.strokeStyle = '#271c46'; ctx.lineWidth = 2; ctx.strokeRect(-5, -5, 10, 10); ctx.globalAlpha = 1;
         }
+        // Family marks: pulse crystals breathe blue; the heart beats pink.
+        if (b.family === 'pulse') { ctx.fillStyle = '#a6d9ec'; ctx.beginPath(); ctx.arc(0, 0, 4 + (reduced ? 0 : Math.sin(visualTime * 4) * 1.5), 0, TAU); ctx.fill(); }
+        else if (b.family === 'heart') { ctx.fillStyle = '#f5a08c'; ctx.font = '13px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('♥', 0, 1); ctx.textBaseline = 'alphabetic'; }
         ctx.restore();
       }
       ctx.globalAlpha = 1;
@@ -1512,6 +1694,7 @@ window.AetherArcade = (() => {
     return { start, pause, resume, action, ability, reset,
       applyRelic: id => resolveOffer(id),
       skipRelic: () => resolveOffer(null, true),
+      startForecast(id) { forecastPick = id; reset(); start(); },
       setSound(value) { sound = value; if (!value) audio?.suspend(); },
       destroy() { destroyed = true; cancelAnimationFrame(frame); abort.abort(); audio?.close().catch(() => {}); },
     };

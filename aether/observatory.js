@@ -30,7 +30,7 @@
     const object = raw.best && typeof raw.best === 'object' ? raw.best : {};
     return {
       discoveries: Array.isArray(raw.discoveries) ? [...new Set(raw.discoveries.filter(v => typeof v === 'string' && /^[a-z0-9:-]{1,60}$/.test(v)))].slice(0, 200) : [],
-      best: Object.fromEntries(Object.entries(object).filter(([k, v]) => /^(hop|merge|dash|breaker)(:v\d+)?(:relaxed|:\d{4}-\d{2}-\d{2})?$/.test(k) && Number.isFinite(v)).map(([k, v]) => [k, clamp(v, 0, 1e9)])),
+      best: Object.fromEntries(Object.entries(object).filter(([k, v]) => /^(hop|merge|dash|breaker)(:v\d+)?(:relaxed|:exp|:\d{4}-\d{2}-\d{2})?$/.test(k) && Number.isFinite(v)).map(([k, v]) => [k, clamp(v, 0, 1e9)])),
       relics: Array.isArray(raw.relics) ? [...new Set(raw.relics.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,60}$/.test(id)))].slice(0, 60) : [],
       runs: array('runs').filter(run => games[run.game] && Number.isFinite(run.score)).slice(0, 12).map(run => ({ game: run.game, score: clamp(run.score, 0, 1e9), date: text(run.date, 40), daily: run.daily === true, relics: Array.isArray(run.relics) ? run.relics.filter(id => typeof id === 'string').slice(0, 4) : [] })),
       photos: array('photos').filter(p => targets.some(t => t.id === p.target) && typeof p.id === 'string').map(p => ({ id: text(p.id), target: p.target, developed: p.developed === true, exposure: clamp(p.exposure ?? 60, 0, 100), clarity: clamp(p.clarity ?? 65, 0, 100), warmth: clamp(p.warmth ?? 50, 0, 100), date: text(p.date), name: text(p.name), frame: p.frame && typeof p.frame === 'object' ? { x: clamp(p.frame.x, 0, 1600), y: clamp(p.frame.y, 0, 900), zoom: clamp(p.frame.zoom, .6, 3), focus: clamp(p.frame.focus, 0, 100), time: clamp(p.frame.time, 0, 1e7), version: 2 } : null })),
@@ -44,7 +44,7 @@
     };
   }
   const voyage = readVoyage();
-  let activeGame = 'merge', challenge = false, relaxed = false, gameHandle = null, challengeDate = dateKey(new Date()), lastLives = 3;
+  let activeGame = 'merge', challenge = false, relaxed = false, expedition = false, gameHandle = null, challengeDate = dateKey(new Date()), lastLives = 3, forecastOffered = false;
   let cleanups = [], controller, lastGamePhase, lastGameScore = 0, currentPhoto = voyage.photos[0]?.id;
   let telescope = { x: 800, y: 450, focus: 50, zoom: 1, target: 'saturn', open: false };
   let world = { name: 'Somewhere strange', hue: 166, size: 1, mass: 1, atmosphere: 60, tilt: 23, moons: 2, rings: true, speed: 24, marks: [] };
@@ -117,7 +117,7 @@
     return `<svg class="celestial-art game-art-${game}" viewBox="0 0 500 330" aria-hidden="true">${skyDots(8, 25)}${game === 'merge' ? '<path d="M100 120v175h265V120" fill="none" stroke="#f5a08c55" stroke-width="3"/>' : game === 'hop' ? '<ellipse cx="230" cy="180" rx="140" ry="87" transform="rotate(-27 230 180)" fill="none" stroke="#bba7ed" stroke-width="2" stroke-dasharray="5 8"/><path class="art-drift" d="m330 80 28-18-8 31-7-12-13-1Z" fill="#edf19b"/><path d="M105 266q-80-95 60-172" fill="none" stroke="#f5a08c" stroke-width="8" stroke-linecap="round"/>' : game === 'dash' ? '<path d="M160 241q90 110 180 0Z" fill="#9ed7c6"/><ellipse cx="250" cy="240" rx="90" ry="14" fill="none" stroke="#f5dfac" stroke-width="4"/><g class="art-float" fill="#edf19b"><path d="m200 80 8 26 26 8-26 8-8 26-8-26-26-8 26-8m105-8 5 17 17 5-17 5-5 17-5-17-17-5 17-5"/></g><circle cx="120" cy="182" r="20" fill="#ed8c9c"/>' : `<circle cx="250" cy="165" r="120" fill="none" stroke="#8fcdea44" stroke-width="2" stroke-dasharray="4 8"/><path d="M164 249a120 120 0 0 0 170 0" fill="none" stroke="#8fcdea" stroke-width="12" stroke-linecap="round"/>${[0,1,2,3,4,5].map((i) => `<path d="m${250 + Math.cos(i / 6 * Math.PI * 2) * 55} ${160 + Math.sin(i / 6 * Math.PI * 2) * 55 - 19} 18 18-18 18-18-18Z" fill="${window.AetherArt.colours[i + 1]}"/>`).join('')}<circle class="art-float" cx="290" cy="226" r="8" fill="#fff1bd"/>`}${spheres.map(([x,y,r,fill]) => `<g class="art-float"><circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/><ellipse cx="${x-r*.23}" cy="${y}" rx="4" ry="6" fill="#2c2338"/><ellipse cx="${x+r*.23}" cy="${y}" rx="4" ry="6" fill="#2c2338"/><path d="M${x-7} ${y+13}q7 8 14 0" fill="none" stroke="#2c2338" stroke-width="2"/></g>`).join('')}</svg>`;
   }
 
-  function gameKey() { return `${activeGame}:v3${challenge ? ':' + challengeDate : relaxed && activeGame === 'hop' ? ':relaxed' : ''}`; }
+  function gameKey() { return `${activeGame}:v3${challenge ? ':' + challengeDate : expedition && activeGame === 'dash' ? ':exp' : relaxed && activeGame === 'hop' ? ':relaxed' : ''}`; }
   const relicPool = (game = activeGame) => window.AetherArcade.relics?.[game] || [];
   const relicById = id => Object.values(window.AetherArcade.relics || {}).flat().find(relic => relic.id === id);
   function relicCatalogue(game = activeGame) {
@@ -132,13 +132,13 @@
       <div class="arcade-layout"><section class="game-cabinet ${g.colour}" aria-label="${g.title}"><div class="game-topline"><span class="game-label">${icon(g.icon)} ${g.title}</span><div class="game-tools">${expButton('game-sound', voyage.sound ? 'Sound on' : 'Sound off', false, `id="game-sound" aria-pressed="${voyage.sound}"`)}${expButton('game-pause', 'Pause', false, 'id="game-pause" disabled')}${expButton('game-theatre', 'Expand', false, 'id="game-theatre" aria-pressed="false"')}</div></div>
       <div class="game-scoreboard"><div><small>SCORE</small><strong id="game-score">0</strong></div><div><small>PERSONAL BEST</small><strong id="game-best">${voyage.best[gameKey()] || 0}</strong></div><div class="game-next"><small>${activeGame === 'merge' ? 'COMING UP' : 'MISSION STATUS'}</small><strong id="game-next">READY TO GO</strong><div id="next-worlds" class="next-worlds" ${activeGame === 'merge' ? '' : 'hidden'}></div></div></div>
       <div class="relic-progress"><div><span id="relic-progress-label">First discovery ahead</span><span id="relic-count">0 / 4 relics</span></div><progress id="relic-progress" max="1" value="0" aria-label="Progress to the next relic"></progress></div>
-      <div class="game-screen" style="--game-ratio:${width}/${height};--game-aspect:${(width / height).toFixed(4)}"><canvas id="arcade-canvas" width="${width}" height="${height}" tabindex="0" role="application" aria-label="${g.title}. ${g.instruction} ${g.controls}. P pauses." aria-describedby="game-instruction"></canvas><div class="game-overlay" id="game-overlay"><span class="overlay-emblem">${activeGame === 'breaker' ? '◈' : '✦'}</span><p class="eyebrow" id="overlay-kicker">${challenge ? 'TODAY’S DAILY EXPEDITION' : 'A NEW BUILD EVERY RUN'}</p><h2 id="overlay-title">${g.title}</h2><p id="overlay-copy">${g.instruction}</p>${expButton('game-start', 'Let’s play ' + icon('play'), true, 'id="game-start"')}<p class="overlay-footnote">${g.controls}</p></div></div>
+      <div class="game-screen" style="--game-ratio:${width}/${height};--game-aspect:${(width / height).toFixed(4)}"><canvas id="arcade-canvas" width="${width}" height="${height}" tabindex="0" role="application" aria-label="${g.title}. ${g.instruction} ${g.controls}. P pauses." aria-describedby="game-instruction"></canvas><div class="game-overlay" id="game-overlay"><span class="overlay-emblem">${activeGame === 'breaker' ? '◈' : '✦'}</span><p class="eyebrow" id="overlay-kicker">${challenge ? 'TODAY’S DAILY EXPEDITION' : 'A NEW BUILD EVERY RUN'}</p><h2 id="overlay-title">${g.title}</h2><p id="overlay-copy">${g.instruction}</p>${activeGame === 'merge' ? `<div class="forecast-row" role="group" aria-label="Choose tonight’s forecast">${expButton('game-forecast', 'Low gravity · floatier worlds', false, 'data-id="lowgrav"')}${expButton('game-forecast', 'Crowded skies · busier jar', false, 'data-id="crowded"')}${expButton('game-forecast', 'Long look-ahead · four ahead', false, 'data-id="lookahead"')}</div>` : expButton('game-start', 'Let’s play ' + icon('play'), true, 'id="game-start"')}<p class="overlay-footnote">${g.controls}</p></div></div>
       <div class="game-bottom"><p id="game-instruction">${g.controls}<span>P to pause · 1 / 2 / 3 to choose a relic when offered</span></p>${g.ability ? `<button class="ability-button" data-exp="game-ability" id="game-ability" disabled><span>${g.ability}</span><b id="ability-charge">0%</b><i id="ability-fill"></i></button>` : '<span class="hold-hint">HOLD → ORBIT<br>RELEASE → FLY</span>'}</div>
       <div class="run-build"><div class="run-build-heading"><span>YOUR BUILD</span><span id="build-state">A blank page. For now.</span></div><div id="run-relics" class="run-relics"></div><div id="run-synergies" class="run-synergies" role="status"></div></div>
       <section id="run-recap" class="run-recap" aria-label="Run summary" hidden></section>
       <dialog id="relic-dialog" class="relic-dialog" aria-labelledby="relic-title" aria-describedby="relic-description"><div class="relic-dialog-heading"><span class="relic-discovery-mark" aria-hidden="true">✧</span><p class="eyebrow">SOMETHING EXTRAORDINARY, FOUND</p><h2 id="relic-title">What will you become?</h2><p id="relic-description">Choose one. It stays with you this run. Your expedition is paused.</p></div><div id="relic-choices" class="relic-choices"></div><div class="relic-dialog-footer"><span>Choose with a tap or keys 1 / 2 / 3</span>${expButton('relic-skip', 'Keep my current build')}</div></dialog>
       <p id="game-status" class="sr-only" role="status"></p></section>
-      <aside class="arcade-aside"><div class="instrument-panel game-intro"><p class="eyebrow">${g.kicker}</p><h2>${g.title}.</h2><p>${g.description}</p><div class="game-tip"><span>✳</span><p>${g.goal}</p></div><div class="mode-switch" role="group" aria-label="Game mode">${expButton('game-casual', 'Free play', false, `aria-pressed="${!challenge}"`)}${expButton('game-daily', 'Daily orbit', false, `aria-pressed="${challenge}"`)}</div><p class="tiny-note">${challenge ? `A fixed course for ${formatDate(parseDate(challengeDate))}. Local daily best; resets at midnight.` : 'Fresh possibilities every run. Your best stays on this device.'}</p>${activeGame === 'hop' && !challenge ? `<label class="check-control"><input id="relaxed-flight" type="checkbox" ${relaxed ? 'checked' : ''}> Easy orbit · wider gravity fields</label>` : ''}</div>
+      <aside class="arcade-aside"><div class="instrument-panel game-intro"><p class="eyebrow">${g.kicker}</p><h2>${g.title}.</h2><p>${g.description}</p><div class="game-tip"><span>✳</span><p>${g.goal}</p></div><div class="mode-switch" role="group" aria-label="Game mode">${expButton('game-casual', 'Free play', false, `aria-pressed="${!challenge && !expedition}"`)}${activeGame === 'dash' ? expButton('game-expedition', 'Expedition', false, `aria-pressed="${expedition && !challenge}"`) : ''}${expButton('game-daily', 'Daily orbit', false, `aria-pressed="${challenge}"`)}</div><p class="tiny-note">${challenge ? `A fixed course for ${formatDate(parseDate(challengeDate))}. Local daily best; resets at midnight.` : expedition && activeGame === 'dash' ? 'Six weathers, five missions, and one enormous whale. About four minutes.' : 'Fresh possibilities every run. Your best stays on this device.'}</p>${activeGame === 'hop' && !challenge ? `<label class="check-control"><input id="relaxed-flight" type="checkbox" ${relaxed ? 'checked' : ''}> Easy orbit · wider gravity fields</label>` : ''}</div>
       <div class="instrument-panel expedition-guide"><p class="eyebrow">A SMALL ROGUELITE. A BIG WHAT-IF.</p><h2>Make a little<br><em>trouble.</em></h2><ol><li><span>01</span>Play to earn a discovery.</li><li><span>02</span>Pick one of three relics.</li><li><span>03</span>Combine powers. Find a synergy.</li></ol><p class="tiny-note">Up to four relics per run. Discoveries stay in your field guide; powers begin fresh each time.</p><details class="relic-field-guide"><summary>Browse the six relics <span id="catalogue-count">${relicPool().filter(r => voyage.relics.includes(r.id)).length} / ${relicPool().length}</span></summary><div id="relic-catalogue">${relicCatalogue()}</div></details></div>
       ${activeGame === 'merge' ? `<div class="instrument-panel evolution"><p class="eyebrow">SMALL WORLD. BIG AMBITIONS.</p><div class="evolution-row">${window.AetherArcade.names.map((name, i) => `<span title="${name}"><i style="--orb:${window.AetherArcade.colours[i]};--size:${19 + i * 1.4}px"></i><small>${name}</small></span>`).join('')}</div></div>` : ''}<div class="arcade-share"><span>Good run? Keep the evidence.</span>${expButton('share-score', 'Score postcard ↗', false, 'id="share-score"')}</div></aside></div></div>`;
   }
@@ -416,6 +416,7 @@
     lastGamePhase = null;
     let displayedScore = -1, queueKey = '', offerKey = '', buildKey = '', synergyKey = '', pickupKey = '', incomingKey = '';
     let bestBefore = 0, recapCounted = false;
+    forecastOffered = false;
     const dialog = $('#relic-dialog');
     function closeDraft() {
       if (!dialog.open) return;
@@ -489,7 +490,7 @@
     let seed = 0;
     for (const char of challengeDate + activeGame) seed = (Math.imul(seed, 31) + char.charCodeAt(0)) >>> 0;
     gameHandle = window.AetherArcade.create($('#arcade-canvas'), {
-      game: activeGame, seed: challenge ? seed : undefined, relaxed: relaxed && !challenge, best: voyage.best[gameKey()] || 0,
+      game: activeGame, seed: challenge ? seed : undefined, relaxed: relaxed && !challenge, expedition: activeGame === 'dash' && (challenge || expedition), best: voyage.best[gameKey()] || 0,
       onUpdate(data) {
         if (displayedScore !== data.score) {
           $('#game-score').textContent = data.score;
@@ -511,11 +512,11 @@
         if (data.phase !== lastGamePhase) {
           window.AetherAmbience?.duck(data.phase === 'running');
           if (data.phase === 'running' && lastGamePhase === 'ready') { bestBefore = voyage.best[gameKey()] || 0; recapCounted = false; }
-          if (data.phase === 'paused') { $('#overlay-title').textContent = 'Space to breathe.'; $('#overlay-copy').textContent = 'Right where you left it. Ready when you are.'; $('#game-start').innerHTML = 'Keep going ' + icon('arrow-right'); $('#overlay-kicker').textContent = 'PAUSED'; $('#game-status').textContent = 'Game paused. Press P or Keep going to resume.'; }
+          if (data.phase === 'paused') { $('#overlay-title').textContent = 'Space to breathe.'; $('#overlay-copy').textContent = 'Right where you left it. Ready when you are.'; $('#overlay-kicker').textContent = 'PAUSED'; $('#game-status').textContent = 'Game paused. Press P or Keep going to resume.'; const b = $('#game-start'); if (b) b.innerHTML = 'Keep going ' + icon('arrow-right'); }
           if (data.phase === 'over') {
             $('#overlay-title').textContent = 'One more orbit?';
             $('#overlay-copy').textContent = `${data.result} ${data.score.toLocaleString()} points${activeGame === 'merge' ? ' · largest world: ' + data.largest : ''}.`;
-            $('#overlay-kicker').textContent = data.score > 0 && data.score >= (voyage.best[gameKey()] || 0) ? 'PERSONAL BEST. NICE.' : 'A VERY RESPECTABLE DISTRACTION'; $('#game-start').innerHTML = 'Go again ' + icon('play');
+            $('#overlay-kicker').textContent = data.score > 0 && data.score >= (voyage.best[gameKey()] || 0) ? 'PERSONAL BEST. NICE.' : 'A VERY RESPECTABLE DISTRACTION'; { const b = $('#game-start'); if (b) b.innerHTML = 'Go again ' + icon('play'); }
             $('#game-status').textContent = `Round complete. ${data.score} points. Your best is ${voyage.best[gameKey()] || 0}.`;
             const recap = $('#run-recap'); recap.hidden = false;
             const relics = data.relics || [], synergies = data.synergies || [];
@@ -547,7 +548,7 @@
               }
             }
           }
-          if (data.phase === 'ready') { $('#run-recap').hidden = true; $('#overlay-title').textContent = games[activeGame].title; $('#overlay-copy').textContent = games[activeGame].instruction; $('#game-start').innerHTML = 'Let’s play ' + icon('play'); pickupKey = ''; incomingKey = ''; }
+          if (data.phase === 'ready') { $('#run-recap').hidden = true; $('#overlay-title').textContent = games[activeGame].title; $('#overlay-copy').textContent = games[activeGame].instruction; { const b = $('#game-start'); if (b) b.innerHTML = 'Let’s play ' + icon('play'); } pickupKey = ''; incomingKey = ''; }
           if (data.phase === 'running') {
             $('#game-status').textContent = lastGamePhase === 'paused' ? 'Resumed. Back to it.' : 'Game started. Press P to pause.';
             if (lastGamePhase !== 'paused') lastLives = 3;
@@ -920,6 +921,13 @@
     switch (action) {
       case 'relic-pick': if (gameHandle?.applyRelic(id)) { const relic = relicById(id); $('#game-status').textContent = `${relic?.name || 'The relic'} joins your build. The expedition continues.`; } break;
       case 'relic-skip': if (gameHandle?.skipRelic()) $('#game-status').textContent = 'You keep your current build. The expedition continues.'; break;
+      case 'game-forecast': {
+        forecastOffered = true;
+        const row = $('.forecast-row');
+        if (row) row.outerHTML = `<button type="button" class="button button-primary" data-exp="game-start" id="game-start">Let’s play ${icon('play')}</button>`;
+        gameHandle?.startForecast(id);
+        break;
+      }
       case 'inspect-relic': {
         const relic = relicById(id); if (!relic) break;
         gameHandle?.pause();
@@ -955,7 +963,8 @@
         else $('#arcade-canvas')?.focus({ preventScroll: true });
         break;
       }
-      case 'game-casual': challenge = false; redraw(); break;
+      case 'game-casual': challenge = false; expedition = false; redraw(); break;
+      case 'game-expedition': expedition = true; challenge = false; redraw(); break;
       case 'game-daily': challenge = true; redraw(); break;
       case 'share-score': gameHandle?.pause(); downloadPrint('game-' + activeGame, games[activeGame].title, `${Math.max(lastGameScore, voyage.best[gameKey()] || 0)} points · ${challenge ? 'Daily expedition · ' + challengeDate : 'Personal best · Æther relic expeditions'}`); break;
       case 'exploration-mode': voyage.mode = button.dataset.mode; save(); redraw(); toast(`Your instruments now use ${voyage.mode} mode.`); break;

@@ -34,6 +34,10 @@
 .recap-hook { font-size: 13px; color: #d8c491; margin: 12px 0 16px; }
 .recap-hook em { font-family: var(--serif); font-size: 17px; }
 .recap-side .button { width: 100%; }
+.forecast-row { display: grid; gap: 9px; margin: 22px 0 14px; pointer-events: auto; }
+.forecast-row .button { min-height: 46px; font-size: 12px; background: #c4ac7910; }
+.forecast-row .button:hover { background: #c4ac7924; border-color: var(--gold); }
+
 @media (max-width: 720px) { .recap-grid { grid-template-columns: 1fr; } .recap-score { font-size: 46px; } .recap-tiles { grid-template-columns: repeat(2, 1fr); } }
 .recap-relics { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 16px 0; list-style: none; }
 .recap-relics li { border: 1px solid #c4ac7944; border-radius: 3px; padding: 5px 10px; font-size: 11px; color: #e0cca6; }
