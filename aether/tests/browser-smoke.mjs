@@ -32,6 +32,8 @@ try {
   await expectText(page, 'THE GRAND TOUR');
   await page.getByRole('link', { name: /begin your expedition/i }).waitFor({ state: 'visible' });
 
+  await page.goto(`${base}/index.html`, { waitUntil: 'networkidle' });
+  await assertVisible(page, '.cartridge-cabinet');
   await page.goto(`${base}/index.html?standalone=1&cartridge=shooter#voyage`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(300);
   if (!await page.locator('.cartridge-stage .tour-hunt-frame canvas').count()) throw new Error(`Shooter cartridge did not mount: ${await page.locator('#main').innerText()}\n${browserErrors.join('\n')}`);

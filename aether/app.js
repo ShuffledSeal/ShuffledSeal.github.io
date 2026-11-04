@@ -356,11 +356,11 @@ function handleRoute() {
   closeMenu();
   if (modal.open) closeModal();
   if (route === 'main') {
-    if (!main.hasChildNodes()) { state.view = 'overview'; render(); }
+    if (!main.hasChildNodes()) { state.view = 'voyage'; render(); }
     return;
   }
-  if (route && !Object.hasOwn(renderers, route)) history.replaceState(null, '', '#overview');
-  state.view = Object.hasOwn(renderers, route) ? route : 'overview';
+  if (route && !Object.hasOwn(renderers, route)) history.replaceState(null, '', '#voyage');
+  state.view = Object.hasOwn(renderers, route) ? route : 'voyage';
   render();
   window.scrollTo({ top: 0, behavior: 'instant' });
   // User-initiated route changes move focus into the new view so keyboard users

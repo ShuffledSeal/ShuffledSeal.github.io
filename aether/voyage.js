@@ -148,7 +148,7 @@ window.AetherVoyage = (() => {
   }
 
   function renderLanding() {
-    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · THE CARTRIDGE CABINET</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Three complete games with separate score chases and clean restarts. The Grand Tour remains below for players who want the longer expedition.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<a class="cartridge-card cartridge-${id}" href="${cartridgeHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>PLAY NOW</b><small>BEST ${cartridgeRecords.best[id] || '—'}</small></footer></a>`).join('')}</section><div class="tour-expedition-divider"><span>THE LONG-FORM OPTION</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
+    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · GAME CARTRIDGES</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Three complete games with separate score chases and clean restarts. Pick a cartridge and play immediately.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<a class="cartridge-card cartridge-${id}" href="${cartridgeHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>PLAY NOW</b><small>BEST ${cartridgeRecords.best[id] || '—'}</small></footer></a>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
     <div class="tour-landing"><div>
       <p class="section-label">THE HANGAR · CHOOSE YOUR SKIFF</p><p class="tour-feature-lead">A twelve-leg odyssey across living starfields. Every instrument bends the rules. Every death writes another story.</p>
       <div class="hangar">${Object.entries(HULLS).map(([id, h]) => {
@@ -441,8 +441,8 @@ window.AetherVoyage = (() => {
   }
   function unmount() { teardown(); controller?.abort(); controller = null; }
 
-  viewNames.voyage = 'The Grand Tour';
+  viewNames.voyage = 'Game cartridges';
   renderers.voyage = renderVoyage;
-  searchItems.push({ id: 'voyage', name: 'The Grand Tour', kind: 'page', subtitle: 'A run to Neptune', icon: 'meteor' });
+  searchItems.push({ id: 'voyage', name: 'Game cartridges', kind: 'page', subtitle: 'Three complete Æther games', icon: 'meteor' });
   return { mount, unmount };
 })();
