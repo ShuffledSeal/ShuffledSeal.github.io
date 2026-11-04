@@ -1,0 +1,69 @@
+/* Final shared art direction: cathedral ink, tarnished brass, and local spectral colour. */
+:root {
+  --ink-deep: #080d0d;
+  --ink: #101814;
+  --ink-raised: #172019;
+  --vellum: #eee5d1;
+  --brass: #d1b277;
+  --brass-light: #f0d9a2;
+  --spectral: #87ad9b;
+  --veil: #d1b2771c;
+  --edge: #d7bd8840;
+}
+body { background: var(--ink-deep); color: var(--vellum); }
+body[data-observatory-theme="midnight"] { --bg: #101814; --sidebar: #0a100e; --panel: #172019; --muted: #a6afa0; --line: #d1b27729; --gold: #bcb5da; --gold-bright: #e1d6fa; --exp-muted: #b0baac; --exp-border: #c7bee23d; --spectral: #a9a0d2; }
+body[data-observatory-theme="rose"] { --bg: #171311; --sidebar: #100c0c; --panel: #211916; --muted: #b6a69e; --line: #d1b27730; --gold: #d6ae91; --gold-bright: #f0d0bb; --exp-muted: #c1afa6; --exp-border: #d9b79d42; --spectral: #c89286; }
+body[data-observatory-theme="midnight"] .workspace { background: radial-gradient(ellipse at 84% 0, #aaa0d21a, transparent 36%), radial-gradient(ellipse at 0 55%, #7785bf0d, transparent 46%); }
+body[data-observatory-theme="rose"] .workspace { background: radial-gradient(ellipse at 84% 0, #c8867418, transparent 36%), radial-gradient(ellipse at 0 55%, #803e3d0c, transparent 46%); }
+.workspace { background: radial-gradient(ellipse at 80% 0, #d5ad6515, transparent 37%), radial-gradient(ellipse at 0 58%, #476e590d, transparent 49%), var(--bg); }
+.sidebar, .topbar { background-color: color-mix(in srgb, var(--sidebar) 92%, #000); }
+.sidebar { border-right-color: var(--edge); }
+.topbar { border-bottom-color: #d1b2771c; }
+.instrument-panel, .room-card, .destination-card, .home-creation, .keepsake, .tour-manifest {
+  background: linear-gradient(145deg, var(--veil), transparent 48%), linear-gradient(180deg, var(--ink-raised), var(--ink));
+  border-color: var(--edge);
+  box-shadow: inset 0 1px #fff3cf08, 0 16px 36px #0000001f;
+}
+.instrument-stage, .game-cabinet, .game-theatre .game-cabinet, .tour-stage {
+  background: linear-gradient(145deg, #d1b2770d, transparent 35%), linear-gradient(155deg, #16221e, #0a1110 78%);
+  border-color: var(--edge);
+  box-shadow: inset 0 0 0 1px #f8e6be05, 0 24px 54px #00000042;
+}
+.game-screen { background: #09100f; border-inline-color: #d1b2772e; }
+.game-overlay { background: radial-gradient(circle at 50% 20%, #c79d5c1c, transparent 42%), linear-gradient(#111b18ee, #080d0de8); }
+.game-theatre .game-cabinet { background: linear-gradient(145deg, #1a2722, #090f0e 72%); }
+.theatre-scrim { background: #050807bf; }
+.scope-readout, .brush-toolbar { background: linear-gradient(90deg, #0b1210, #172019, #0b1210); }
+.darkroom-stage { background: radial-gradient(ellipse at 50% 0, #7f3b2b24, transparent 64%), #0e1412; }
+.world-stage { background: radial-gradient(ellipse at 40% 35%, #65776223, transparent 65%), #0e1513; }
+.orchestra-stage { background: radial-gradient(ellipse at 30% 50%, #735a8a20, transparent 70%), #101714; }
+.history-sky, .signal-stage { background: radial-gradient(ellipse at 50% 40%, #92754422, transparent 60%), #0a1110; }
+.cartridge-cabinet { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.cartridge-card {
+  min-height: 296px;
+  border-color: var(--edge);
+  background: linear-gradient(145deg, #d1b27710, transparent 47%), linear-gradient(160deg, #18231e, #0a1211 78%);
+  color: var(--vellum);
+  box-shadow: inset 0 1px #fff0c808, 0 16px 34px #00000026;
+}
+.cartridge-card::after { content: ''; position: absolute; inset: 9px; pointer-events: none; border: 1px solid #dec48b18; }
+.cartridge-card::before { background: radial-gradient(circle at 82% 0%, #9ab7a325, transparent 55%); }
+.cartridge-card:hover { border-color: var(--brass); box-shadow: inset 0 1px #fff0c812, 0 24px 48px #00000056; }
+.cartridge-card:focus-visible { outline-color: var(--brass-light); }
+.cartridge-bastion::before { background: radial-gradient(circle at 82% 0%, #d58c562b, transparent 57%); }
+.cartridge-labyrinth::before { background: radial-gradient(circle at 82% 0%, #a67cc72b, transparent 57%); }
+.cartridge-starforge::before { background: radial-gradient(circle at 82% 0%, #e0a55230, transparent 57%); }
+.cartridge-card p, .cartridge-card footer small, .cartridge-footer, .cartridge-playbill span, .cartridge-record span { color: #aebbad; }
+.cartridge-card > span:not(.cartridge-icon) { color: #c8c5b4; }
+.cartridge-card h2, .cartridge-icon, .cartridge-card footer, .cartridge-playbill, .cartridge-record strong, .cartridge-recap h2, .cartridge-recap dd { color: var(--brass-light); }
+.cartridge-stage { border-color: var(--edge); background: radial-gradient(circle at 50% -20%, #d1b27716, transparent 45%), linear-gradient(155deg, #121b18, #070c0c 78%); box-shadow: inset 0 0 0 5px #d1b27708, 0 28px 65px #00000066; }
+.cartridge-record { border-left-color: var(--edge); background: #d1b2770c; }
+.cartridge-playbill { border-color: var(--edge); background: linear-gradient(90deg, #281d14, #121d19 50%, #281d14); }
+.cartridge-recap { background: radial-gradient(circle at 50% 0%, #d1b27720, transparent 55%), #101814; border-color: var(--edge); }
+.trial-frame canvas, .cartridge-stage .tour-hunt-frame canvas { border-color: #d1b27755; background: #070e0d; }
+.arcade-choice, .tour-node, .tour-cache-card, .target-chip, .mystery-letter, .cabinet-passport { border-color: var(--edge); background-color: #d1b27708; }
+.arcade-choice:hover, .tour-node.reachable, .tour-cache-card:hover { border-color: var(--brass); background-color: #d1b27712; }
+.room-number, .room-arrow, .keepsake-image > span { background: #0b1210dd; border-color: var(--edge); }
+.button:not(.button-primary), .mode-switch .button { background: #d1b2770a; border-color: #d1b27745; color: #dfd5bd; }
+.button:not(.button-primary):hover, .mode-switch .button:hover { background: #d1b27717; border-color: var(--brass); }
+@media (max-width: 760px) { .cartridge-cabinet { grid-template-columns: 1fr; } }

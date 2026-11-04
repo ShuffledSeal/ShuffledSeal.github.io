@@ -1,0 +1,17 @@
+.starforge-shell { max-width: 960px; margin: 0 auto; color: #e7dbc0; }
+.starforge-status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(223, 197, 140, .2); border: 1px solid rgba(223, 197, 140, .34); }
+.starforge-status > div { min-height: 79px; padding: 13px 16px; background: #111b1d; display: flex; flex-direction: column; gap: 3px; }
+.starforge-status span, .starforge-status small { color: #aeb8a9; font: 10px/1.2 "DM Sans", sans-serif; letter-spacing: .12em; }
+.starforge-status strong { font: 600 16px/1.1 "DM Sans", sans-serif; color: #f3d596; }
+.starforge-status meter { width: 100%; height: 7px; accent-color: #e67559; }
+.starforge-canvas { display: block; width: 100%; height: auto; border: 1px solid rgba(223, 197, 140, .34); border-top: 0; cursor: crosshair; background: #080e13; }
+.starforge-tools, .starforge-scenarios { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 0; }
+.starforge-tools button, .starforge-scenarios button { border: 1px solid rgba(230, 206, 155, .34); background: #152022; color: #d7d6c5; padding: 8px 11px; font: 600 11px "DM Sans", sans-serif; letter-spacing: .05em; }
+.starforge-tools button[aria-pressed="true"], .starforge-scenarios button[aria-pressed="true"] { border-color: #f0ce87; background: #3b3120; color: #fff0c8; }
+.starforge-tools button b { font: 17px Georgia, serif; margin-right: 6px; }
+.starforge-scenarios button:disabled { opacity: .35; cursor: not-allowed; }
+.starforge-scenarios button span { color: #f0cd88; margin-right: 6px; }
+.starforge-actions { display: flex; align-items: center; gap: 10px; padding: 4px 0 10px; }
+.starforge-actions span { color: #aeb8a9; font-size: 12px; }
+.starforge-actions kbd { color: #e7d09a; }
+@media (max-width: 640px) { .starforge-status { grid-template-columns: repeat(2, 1fr); } .starforge-actions { align-items: flex-start; flex-wrap: wrap; } .starforge-tools button { padding: 7px 8px; } }

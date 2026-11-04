@@ -55,6 +55,26 @@ try {
   await page.goto(`${base}/index.html?standalone=1&cartridge=labyrinth#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-stage .trial-frame canvas');
   await page.waitForFunction(canvas => canvas.dataset.mode === 'endless', await page.locator('.cartridge-stage .trial-frame canvas').elementHandle());
+  await page.goto(`${base}/index.html?standalone=1&cartridge=starforge#voyage`, { waitUntil: 'networkidle' });
+  const starforge = page.locator('.starforge-canvas');
+  await assertVisible(page, '.starforge-canvas');
+  await page.waitForFunction(canvas => canvas.dataset.scenario === '1', await starforge.elementHandle());
+  if (await page.locator('[data-star-tool]').count() < 4) throw new Error('Starforge did not expose its first contract tools');
+  const starforgeBox = await starforge.boundingBox();
+  assert.ok(starforgeBox, 'the Starforge canvas needs a measurable layout box');
+  const socket = (x, y) => ({ x: starforgeBox.width * x, y: starforgeBox.height * y });
+  await page.locator('[data-star-tool="mirror"]').click();
+  await starforge.click({ position: socket(.5, .175) });
+  await page.locator('[data-star-tool="conductor"]').click();
+  await starforge.click({ position: socket(.702, .5) });
+  await page.locator('[data-star-tool="furnace"]').click();
+  await starforge.click({ position: socket(.5, .825) });
+  await page.locator('[data-star-tool="regulator"]').click();
+  await starforge.click({ position: socket(.298, .5) });
+  await page.locator('[data-starforge="run"]').click();
+  await page.waitForFunction(canvas => Number(canvas.dataset.energy) >= 3, await starforge.elementHandle(), { timeout: 12000 });
+  await page.waitForSelector('.cartridge-recap', { timeout: 4000 });
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('aether-starforge-v1')).completed), 1, 'a sealed Starforge contract must unlock the next contract');
 
   await page.goto(`${base}/index.html?standalone=1#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-cabinet');
@@ -164,7 +184,7 @@ try {
   const saveErrors = [];
   safePage.on('pageerror', error => saveErrors.push(error.message));
   await safePage.addInitScript(() => {
-    for (const key of ['aether-observatory-v1', 'aether-grand-tour-v2', 'aether-cartridge-records-v1', 'aether-wonder-rooms-v1', 'aether-planet-puzzles-v1']) {
+    for (const key of ['aether-observatory-v1', 'aether-grand-tour-v2', 'aether-cartridge-records-v1', 'aether-wonder-rooms-v1', 'aether-planet-puzzles-v1', 'aether-starforge-v1']) {
       localStorage.setItem(key, '{not valid json');
     }
   });
@@ -191,7 +211,7 @@ try {
 
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, Wonder Room pointer recovery, retreat cost, and Bastion range upgrades.');
+  console.log('Browser smoke passed: landing, cabinet routes, Starforge contract persistence, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, Wonder Room pointer recovery, retreat cost, and Bastion range upgrades.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});

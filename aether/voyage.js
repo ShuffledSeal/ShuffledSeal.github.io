@@ -17,6 +17,7 @@ window.AetherVoyage = (() => {
     shooter: { name: 'Starfall Skirmish', eyebrow: '01 · ACTION', icon: '✦', brief: 'An endless arena vigil. Read telegraphs, dash through pressure, and push your FLOW score.', controls: 'MOUSE PILOT · HOLD CLICK FIRE · SPACE / RIGHT CLICK DASH', trial: null },
     bastion: { name: 'Aether Bastion', eyebrow: '02 · STRATEGY', icon: '◇', brief: 'An endless siege board. Build, specialize, and outlast escalating crystal tides.', controls: '1–4 BUILD · CLICK PLACE / SELECT · Q / E UPGRADE · SPACE PULSE', trial: 'bastion' },
     labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · STEALTH', icon: '◈', brief: 'A looping infiltration. Study sentry cones, collect starkeys, and survive sharper circuits.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL', trial: 'labyrinth' },
+    starforge: { name: 'Starforge', eyebrow: '04 · FACTORY', icon: '✦', brief: 'Build an orbital factory. Align moving machinery, route starlight, and contain the heat you create.', controls: 'SELECT DEVICE · CLICK ORBIT · SPACE IGNITES / PAUSES', trial: null },
   };
 
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
@@ -148,7 +149,7 @@ window.AetherVoyage = (() => {
   }
 
   function renderLanding() {
-    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · GAME CARTRIDGES</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Three complete games with separate score chases and clean restarts. Pick a cartridge and play immediately.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<a class="cartridge-card cartridge-${id}" href="${cartridgeHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>PLAY NOW</b><small>BEST ${cartridgeRecords.best[id] || '—'}</small></footer></a>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
+    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · GAME CARTRIDGES</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Four distinct games with separate score chases and clean restarts. Pick a cartridge and play immediately.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<a class="cartridge-card cartridge-${id}" href="${cartridgeHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>PLAY NOW</b><small>BEST ${cartridgeRecords.best[id] || '—'}</small></footer></a>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
     <div class="tour-landing"><div>
       <p class="section-label">THE HANGAR · CHOOSE YOUR SKIFF</p><p class="tour-feature-lead">A twelve-leg odyssey across living starfields. Every instrument bends the rules. Every death writes another story.</p>
       <div class="hangar">${Object.entries(HULLS).map(([id, h]) => {
@@ -279,6 +280,9 @@ window.AetherVoyage = (() => {
     if (id === 'shooter') {
       stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> ENDLESS VIGIL</span><strong>STARFALL SKIRMISH</strong><span class="flight-controls">${card.controls}</span></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Build FLOW</span></div>`;
       gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: true, hull: 'kite', instruments: [], seed: (Date.now() ^ 0x5f3759df) >>> 0, difficulty: 'standard', onEnd({ won, score }) { end({ won, score }); } });
+    } else if (id === 'starforge') {
+      stage.innerHTML = `<div class="cartridge-playbill"><span>ORBITAL FACTORY</span><strong>THE LAST CELESTIAL FOUNDRY</strong></div><div class="starforge-frame"></div>`;
+      gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { onEnd: end });
     } else {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ENDLESS CARTRIDGE</span><strong>${id === 'bastion' ? 'THE CITADEL HAS NO DAWN' : 'THE ARCHIVE REWRITES ITSELF'}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
       trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: true, verbs: new Set(), onEnd: end });
