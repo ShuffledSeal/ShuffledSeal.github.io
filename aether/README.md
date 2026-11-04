@@ -34,6 +34,19 @@ Eight field guides — one per planet — each pairing illustrated plates and ro
 - **Uranus · Axis shift** — tilt the tray; every capsule slides together until something stops it.
 - **Neptune · Storm runner** — inertia navigation on limited fuel, visiting buoys in order.
 
+## The Grand Tour
+
+A seeded roguelite voyage from the inner worlds to Neptune — one run threading everything in the observatory together. Twelve legs across three sectors: planetary puzzle surveys hosted live from the atlas, full arcade expeditions with relic drafts, and eight standalone trials between the stars. Hull is finite; refuges repair it; caches draft run-long artifacts; records and an in-progress tour persist in local storage.
+
+- **Solar Shield** — parry flares from four directions inside the gold window.
+- **Syzygy** — drag the moon over the sun and hold totality three times.
+- **Debris Field** — steer, thrust and break three waves of asteroids.
+- **Ice Tail** — grow a comet's tail without crossing it.
+- **Deep Field** — chart a minesweeper sky of hidden supernovae.
+- **Free Return** — aim a gravity-assist slingshot between two gravity wells.
+- **The Descent** — a careful, fuelled landing on a marked pad.
+- **Shepherd** — return every moonlet drifting out of the ring band.
+
 ## The cosmic arcade
 
 Four hand-rolled canvas games with saved expedition records, a shared daily seed, pause, optional sound, theatre view, charge-up abilities, and a small roguelite layer. During a run you earn up to four picks from twenty-four mechanical relics; picks visibly change play, and paired relics unlock named synergies. Discoveries stay in a permanent field guide while powers begin fresh each run.

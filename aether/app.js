@@ -190,7 +190,7 @@ function renderOverview() {
     <section class="playground-hero hero" aria-labelledby="hero-title">
       <img class="hero-painting" src="assets/celestial-landscape.webp" alt="" fetchpriority="high" />
       <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span><span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
-      <div class="hero-copy playground-copy"><p class="eyebrow"><span class="hero-kicker-star" aria-hidden="true">✦</span> THE PLANETARY ATLAS</p><h2 id="hero-title">Eight worlds.<br><em>A closer look<br>at each.</em></h2><p class="hero-description">Trace a watershed. Plan a rover’s route.<br>Work your way through forty planetary puzzles.</p><div class="hero-cta"><a href="#planetarium" class="button button-primary">Open the atlas ${icon('arrow-right')}</a><a href="#arcade" class="text-link">Visit the arcade ${icon('arrow-up-right')}</a></div></div>
+      <div class="hero-copy playground-copy"><p class="eyebrow"><span class="hero-kicker-star" aria-hidden="true">✦</span> THE PLANETARY ATLAS</p><h2 id="hero-title">Eight worlds.<br><em>A closer look<br>at each.</em></h2><p class="hero-description">Trace a watershed. Plan a rover’s route.<br>Work your way through forty planetary puzzles.</p><div class="hero-cta"><a href="#planetarium" class="button button-primary">Open the atlas ${icon('arrow-right')}</a><a href="#voyage" class="text-link">Begin the Grand Tour ${icon('arrow-up-right')}</a></div></div>
       <div class="cosmic-scene" role="group" aria-label="Floating worlds and strange companions"><div class="scene-grid" aria-hidden="true"></div><img class="scene-astrolabe" src="assets/celestial-dial.svg" width="600" height="600" alt="" /><div class="scene-orbit orbit-a" aria-hidden="true"></div><span class="scene-coordinate">FIG. 01 <span>THE PLAYFUL SKY</span></span><a class="scene-saturn" href="#worlds" aria-label="Make a world">${art('saturn')}<span class="scene-tag"><span aria-hidden="true">✧</span> MAKE A WORLD ${icon('arrow-up-right')}</span></a><a class="scene-jelly" href="#telescope" aria-label="Something’s out there">${art('orion')}<span class="scene-tag">SOMETHING’S OUT THERE ↗</span></a><button class="scene-sun" data-exp="poke-sun" aria-label="Wake the sun — the sun says hello">☀<span>the sun says hello.</span></button><a class="scene-music" href="#orchestra" aria-label="The Orrery Orchestra"><span>♪</span><small>THE ORRERY<br>ORCHESTRA ↗</small></a><span class="scene-spark spark-one" aria-hidden="true">✦</span><span class="scene-spark spark-two" aria-hidden="true">✧</span><span class="scene-handnote" aria-hidden="true">a perfectly ordinary<br>place for extraordinary things.</span><div id="sun-reaction" role="status"></div></div>
       <div class="hero-colophon"><span><i aria-hidden="true"></i> FIELD NOTES, PUZZLES & OBSERVATIONS</span><span>THE PLANETARY ATLAS <span aria-hidden="true">✧</span> VOL. MMXXVI</span></div>
     </section>
@@ -313,6 +313,7 @@ function render() {
   hideToast();
   window.AetherPlanets?.unmount();
   window.AetherExperiences?.unmount();
+  window.AetherVoyage?.unmount();
   document.body.dataset.view = state.view;
   main.innerHTML = renderers[state.view]();
   if (state.suppressEnter) main.querySelector('.view-enter')?.classList.add('instant');
@@ -333,6 +334,7 @@ function render() {
   document.title = `${viewNames[state.view]} · Æther Observatory`;
   window.AetherExperiences?.mount(state.view);
   window.AetherPlanets?.mount(state.view);
+  window.AetherVoyage?.mount(state.view);
 }
 
 function navigate(view) {

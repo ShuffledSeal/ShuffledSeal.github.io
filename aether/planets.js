@@ -4,6 +4,7 @@ window.AetherPlanets = (() => {
   const P=window.AetherPuzzles, notes=window.AetherPlanetNotes;
   const KEY='aether-planet-puzzles-v1', ids=planets.map(p=>p.id), sessions=new Map();
   let controller, hintController, genController, current, reverse=false, painting=false, lastPaint=-1, gesture=null, ignoreClickUntil=0, observer;
+  let hostHooks = {};
   const progress={records:{},drafts:{},levels:{},endless:{}};
   let storageOK=true;
   try {
@@ -150,7 +151,7 @@ window.AetherPlanets = (() => {
     document.querySelector('#puzzle-status').textContent=message||P.progress(s.id,s.def,s.board);
     const result=document.querySelector('#puzzle-result');
     result.hidden=!won;
-    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p><div><button class="button button-primary" data-puzzle="${s.mode==='endless'?'next-round':s.index<4?'next':'replay'}">${s.mode==='endless'?'Next board →':s.index<4?'Next level →':'Replay this level'}</button><a class="button" href="#planet/${ids[(ids.indexOf(s.id)+1)%8]}">Try ${planets[(ids.indexOf(s.id)+1)%8].name}’s puzzle ↗</a></div>`;
+    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${s.hosted?'<div><button class="button button-primary" data-puzzle="host-done">Continue the tour →</button></div>':`<div><button class="button button-primary" data-puzzle="${s.mode==='endless'?'next-round':s.index<4?'next':'replay'}">${s.mode==='endless'?'Next board →':s.index<4?'Next level →':'Replay this level'}</button><a class="button" href="#planet/${ids[(ids.indexOf(s.id)+1)%8]}">Try ${planets[(ids.indexOf(s.id)+1)%8].name}’s puzzle ↗</a></div>`}`;
     if(focus)document.querySelector(focus)?.focus({preventScroll:true});
   }
   function recordWin(s) {
@@ -178,7 +179,8 @@ window.AetherPlanets = (() => {
     if(s.id==='mercury')s.changed=new Set(s.board.lights.flatMap((v,i)=>v!==before.lights[i]?[i]:[]));
     else if(s.id==='venus')s.changed=new Set([action.value]);
     else if(s.id==='earth') {const flat=s.board.paths.flat(),prev=before.paths.flat();s.changed=new Set(flat.filter(p=>!prev.includes(p)).slice(-1));}
-    const won=P.won(s.id,s.def,next);if(won)recordWin(s);
+    const won=P.won(s.id,s.def,next);
+    if(won) { recordWin(s); if(s.hosted) hostHooks.onSolve?.({moves:s.moves,hints:s.hints,par:s.par}); }
     stash(s);
     let message;
     if(s.id==='neptune' && !won && s.moves>=s.par+3)message='Out of fuel. Undo a leg or restart to try a shorter route.';
@@ -250,6 +252,7 @@ window.AetherPlanets = (() => {
     const s=current;if(!s)return;
     if(action==='hint'){hint();return;}
     if(action==='next-round'){chooseLevel('endless');return;}
+    if(action==='host-done'){hostHooks.onDone?.();return;}
     hintController?.abort();s.hintCell=-1;
     if(action==='reverse'){reverse=!reverse;paint();return;}
     if(action==='next'){chooseLevel(Math.min(4,s.index+1));return;}
@@ -297,9 +300,25 @@ window.AetherPlanets = (() => {
     controller=new AbortController();const signal=controller.signal;
     const savedMode=progress.levels[id]===undefined?0:progress.levels[id];
     current=session(id,savedMode);chooseLevel(savedMode,false);
+    attachInput(signal);
+  // Gentle plate parallax on fine pointers only.
+    const plate=main.querySelector('.planet-plate');
+    if(plate && matchMedia('(prefers-reduced-motion: no-preference)').matches && matchMedia('(pointer: fine)').matches) {
+      main.querySelector('.atlas-hero').addEventListener('pointermove',event=>{
+        const box=plate.getBoundingClientRect(),dx=(event.clientX-(box.left+box.width/2))/box.width,dy=(event.clientY-(box.top+box.height/2))/box.height;
+        plate.style.transform=`perspective(900px) rotateY(${dx*4}deg) rotateX(${-dy*4}deg)`;
+      },{signal});
+      main.querySelector('.atlas-hero').addEventListener('pointerleave',()=>{plate.style.transform='';},{signal});
+    }
+    // Sections fade up as they enter view.
+    observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('revealed');observer.unobserve(entry.target);}},{threshold:.12});
+    main.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+  }
+  function attachInput(signal) {
     main.addEventListener('click',onClick,{signal});
+    document.addEventListener('click',event=>{if(event.target.closest('.puzzle-host'))onClick(event);},{signal});
     main.addEventListener('keydown',event=>{
-      if(!event.target.closest('#planet-game') || modal.open || event.ctrlKey||event.metaKey||event.altKey)return;
+      if(!event.target.closest('#planet-game, .puzzle-host') || modal.open || event.ctrlKey||event.metaKey||event.altKey)return;
       if(['z','y'].includes(event.key.toLowerCase())){event.preventDefault();tool(event.key.toLowerCase()==='z'?'undo':'redo');return;}
       const d=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].indexOf(event.key);if(d<0)return;
       if(['mars','saturn','uranus','neptune'].includes(current.id)){event.preventDefault();move(d);return;}
@@ -350,20 +369,24 @@ window.AetherPlanets = (() => {
       gesture=null;painting=false;lastPaint=-1;
     },{signal});
     document.addEventListener('pointercancel',()=>{gesture=null;painting=false;lastPaint=-1;},{signal});
-    // Gentle plate parallax on fine pointers only.
-    const plate=main.querySelector('.planet-plate');
-    if(plate && matchMedia('(prefers-reduced-motion: no-preference)').matches && matchMedia('(pointer: fine)').matches) {
-      main.querySelector('.atlas-hero').addEventListener('pointermove',event=>{
-        const box=plate.getBoundingClientRect(),dx=(event.clientX-(box.left+box.width/2))/box.width,dy=(event.clientY-(box.top+box.height/2))/box.height;
-        plate.style.transform=`perspective(900px) rotateY(${dx*4}deg) rotateX(${-dy*4}deg)`;
-      },{signal});
-      main.querySelector('.atlas-hero').addEventListener('pointerleave',()=>{plate.style.transform='';},{signal});
-    }
-    // Sections fade up as they enter view.
-    observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('revealed');observer.unobserve(entry.target);}},{threshold:.12});
-    main.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
   }
-  function unmount() {controller?.abort();hintController?.abort();genController?.abort();observer?.disconnect();controller=null;current=null;painting=false;gesture=null;}
+  function host(container,id,index,hooks={}) {
+    controller?.abort();hintController?.abort();genController?.abort();
+    controller=new AbortController();
+    hostHooks=hooks;
+    container.classList.add('puzzle-host');
+    current=session(id,index);current.hosted=true;
+    if(hooks.parScale && current.par)current.par=Math.ceil(current.par*hooks.parScale);
+    container.innerHTML=gameShell(current);
+    attachInput(controller.signal);
+    paint();
+    if(current.id==='jupiter' && current.par===null) {
+      const s=current,signal=controller.signal;
+      P.solve(s.id,s.def,s.initial,signal).then(path=>{if(!path||signal.aborted)return;s.par=path.length;if(current===s)paint();});
+    }
+    return { destroy(){controller?.abort();controller=null;current=null;painting=false;gesture=null;hostHooks={};container.classList.remove('puzzle-host');} };
+  }
+  function unmount() {controller?.abort();hintController?.abort();genController?.abort();observer?.disconnect();controller=null;current=null;painting=false;gesture=null;hostHooks={};}
   for(const id of ids) {viewNames[`planet/${id}`]=planets.find(p=>p.id===id).name;renderers[`planet/${id}`]=()=>renderPage(id);}
-  return {mount,unmount,renderIndex};
+  return {mount,unmount,renderIndex,host};
 })();
