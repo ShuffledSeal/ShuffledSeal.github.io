@@ -37,7 +37,7 @@
 
 - `for f in ./*.js; do node --check "$f" || exit 1; done` passed before the current documentation increment.
 - `npm run test:trials` verifies 16 registered Grand Tour trials.
-- `npm run test:browser` verifies root cartridge landing, direct cartridge mounting, valid legacy-save loading, Tour pointer flight, retreat persistence across reload, corrupt-save recovery, scaled Comet Surf cancellation, and Bastion upgrades.
+- `npm run test:browser` verifies root cartridge landing, direct cartridge mounting, valid legacy-save loading, Tour pointer flight, retreat persistence across reload, corrupt-save recovery, scaled Comet Surf cancellation, Wonder Room pointer recovery, and Bastion upgrades.
 
 ## Confirmed Gaps
 

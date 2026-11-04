@@ -123,6 +123,39 @@ try {
   assert.equal(await hop.getAttribute('data-tethered'), 'true', 'a cancelled Comet Surf pointer press must preserve its orbit');
   await page.evaluate(() => { window.__hopSmoke.destroy(); document.querySelector('#hop-smoke').remove(); });
 
+  await page.goto(`${base}/index.html#telescope`, { waitUntil: 'networkidle' });
+  await page.locator('[data-exp="open-dome"]').click();
+  const scope = page.locator('#scope-canvas');
+  await scope.scrollIntoViewIfNeeded();
+  const scopeBox = await scope.boundingBox();
+  assert.ok(scopeBox, 'the telescope canvas needs a measurable layout box');
+  await page.mouse.move(scopeBox.x + scopeBox.width * .5, scopeBox.y + scopeBox.height * .5);
+  await page.mouse.down();
+  await page.mouse.move(scopeBox.x + scopeBox.width * .62, scopeBox.y + scopeBox.height * .5);
+  await scope.dispatchEvent('lostpointercapture', { pointerId: 1 });
+  await page.mouse.up();
+  const scopeAfterLoss = await page.locator('#scope-coordinates').textContent();
+  await page.mouse.move(scopeBox.x + scopeBox.width * .4, scopeBox.y + scopeBox.height * .5);
+  await page.mouse.down();
+  await page.mouse.move(scopeBox.x + scopeBox.width * .28, scopeBox.y + scopeBox.height * .5);
+  await page.mouse.up();
+  assert.notEqual(await page.locator('#scope-coordinates').textContent(), scopeAfterLoss, 'a fresh telescope drag must work after lost pointer capture');
+
+  await page.goto(`${base}/index.html#worlds`, { waitUntil: 'networkidle' });
+  const world = page.locator('#world-canvas');
+  await world.scrollIntoViewIfNeeded();
+  const worldBox = await world.boundingBox();
+  assert.ok(worldBox, 'the world canvas needs a measurable layout box');
+  await page.mouse.move(worldBox.x + worldBox.width * .5, worldBox.y + worldBox.height * .5);
+  await page.mouse.down();
+  await world.dispatchEvent('lostpointercapture', { pointerId: 1 });
+  await page.mouse.up();
+  const marksAfterLoss = await page.locator('#world-brush-status').textContent();
+  await page.mouse.move(worldBox.x + worldBox.width * .6, worldBox.y + worldBox.height * .5);
+  await page.mouse.down();
+  await page.mouse.up();
+  assert.notEqual(await page.locator('#world-brush-status').textContent(), marksAfterLoss, 'a fresh world-paint gesture must work after lost pointer capture');
+
   const safePage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const saveErrors = [];
   safePage.on('pageerror', error => saveErrors.push(error.message));
@@ -154,7 +187,7 @@ try {
 
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, retreat cost, and Bastion upgrades.');
+  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, Wonder Room pointer recovery, retreat cost, and Bastion upgrades.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});

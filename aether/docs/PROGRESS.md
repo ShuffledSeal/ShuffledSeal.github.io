@@ -1,5 +1,11 @@
 # Æther Progress
 
+## 2026-11-04 - Wonder Room lifecycle fix
+
+- Fixed lost-capture and blur recovery for telescope, darkroom, and world-paint gestures.
+- Prevented an in-flight offline orchestra export from downloading or toasting after navigation.
+- Fixed `AetherRoomPlay` cleanup when its host signal aborts.
+
 ## 2026-11-04 - Comet Surf input fix
 
 - Fixed `pointercancel` and `lostpointercapture` so they preserve a Comet Surf orbit instead of launching it.

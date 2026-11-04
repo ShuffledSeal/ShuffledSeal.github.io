@@ -109,7 +109,7 @@
   let telescope = { x: 800, y: 450, focus: 50, zoom: 1, target: 'saturn', open: false };
   let world = { name: 'Somewhere strange', hue: 166, size: 1, mass: 1, atmosphere: 60, tilt: 23, moons: 2, rings: true, speed: 24, marks: [] };
   let music = studio.normalise();
-  let musicPlayer = null, musicStep = -1, historyIndex = 0, historyPlate = 0, blinkTimer, cabinetFilter = 'all';
+  let musicPlayer = null, musicStep = -1, historyIndex = 0, historyPlate = 0, blinkTimer, cabinetFilter = 'all', exportGeneration = 0;
   let worldBrush = 'land', worldRenderer = null, plateDeveloping = false, plateProgress = 0;
   let historyCompared = new Set([0]), historySelection = -1;
   const signalRoutes = [
@@ -425,6 +425,7 @@
 
   // Each room mounts only its own listeners, timers, and render loops.
   function unmount() {
+    exportGeneration++;
     $('#relic-dialog')?.close();
     controller?.abort(); cleanups.forEach(fn => fn()); cleanups = [];
     gameHandle?.destroy(); gameHandle = null; stopMusic(); clearInterval(blinkTimer); blinkTimer = null;
@@ -721,8 +722,13 @@
     const queue = () => draw();
     on(canvas, 'pointerdown', e => { if (!telescope.open || scopePointer !== null) return; travel = null; dragging = true; scopePointer = e.pointerId; previous = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
     on(canvas, 'pointermove', e => { if (!dragging || e.pointerId !== scopePointer) return; const bounds = canvas.getBoundingClientRect(); telescope.x = clamp(telescope.x - (e.clientX - previous.x) * 760 / bounds.width / telescope.zoom, 0, 1600); telescope.y = clamp(telescope.y - (e.clientY - previous.y) * 500 / bounds.height / telescope.zoom, 0, 900); previous = { x: e.clientX, y: e.clientY }; queue(); });
-    const releaseScope = e => { if (e.pointerId === scopePointer) { dragging = false; scopePointer = null; } };
-    on(canvas, 'pointerup', releaseScope); on(canvas, 'pointercancel', releaseScope);
+    const releaseScope = e => {
+      if (!e || e.pointerId === scopePointer) {
+        if (scopePointer !== null && canvas.hasPointerCapture?.(scopePointer)) canvas.releasePointerCapture(scopePointer);
+        dragging = false; scopePointer = null;
+      }
+    };
+    on(canvas, 'pointerup', releaseScope); on(canvas, 'pointercancel', releaseScope); on(canvas, 'lostpointercapture', releaseScope); on(window, 'blur', () => releaseScope());
     on(canvas, 'keydown', e => { if (!telescope.open || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '-', '='].includes(e.key)) return; e.preventDefault(); travel = null; telescope.x = clamp(telescope.x + (e.key === 'ArrowRight' ? 20 : e.key === 'ArrowLeft' ? -20 : 0), 0, 1600); telescope.y = clamp(telescope.y + (e.key === 'ArrowDown' ? 20 : e.key === 'ArrowUp' ? -20 : 0), 0, 900); if (['+', '-', '='].includes(e.key)) { telescope.zoom = Math.round(clamp(telescope.zoom + (e.key === '-' ? -.1 : .1), .6, 3) * 10) / 10; $('#scope-zoom').value = telescope.zoom; $('#scope-zoom-value').textContent = telescope.zoom + '×'; } queue(); });
     on(main, 'input', e => { if (e.target.id === 'scope-focus') { telescope.focus = Number(e.target.value); queue(); } if (e.target.id === 'scope-zoom') { telescope.zoom = Number(e.target.value); queue(); } });
     on(main, 'click', e => {
@@ -799,7 +805,13 @@
     on(handle, 'pointerdown', e => { if (plateDeveloping) return; pointer = e.pointerId; startY = e.clientY; moved = false; handle.setPointerCapture(e.pointerId); });
     on(handle, 'pointermove', e => { if (e.pointerId !== pointer) return; const travel = clamp(e.clientY - startY, 0, 120); moved ||= travel > 5; $('#glass-plate').style.transform = `translateY(${travel * .35}px) rotate(${2 - travel / 30}deg)`; if (travel > 70) { pointer = null; developPlate(); } });
     on(handle, 'pointerup', e => { if (e.pointerId !== pointer) return; pointer = null; $('#glass-plate').style.transform = ''; if (moved) developPlate(); });
-    on(handle, 'pointercancel', () => { pointer = null; $('#glass-plate').style.transform = ''; });
+    const cancelPlate = e => {
+      if (!e || e.pointerId === pointer) {
+        if (pointer !== null && handle.hasPointerCapture?.(pointer)) handle.releasePointerCapture(pointer);
+        pointer = null; moved = false; $('#glass-plate').style.transform = '';
+      }
+    };
+    on(handle, 'pointercancel', cancelPlate); on(handle, 'lostpointercapture', cancelPlate); on(window, 'blur', () => cancelPlate());
     on(handle, 'click', () => { if (!moved) developPlate(); });
   }
   function developPlate() {
@@ -846,8 +858,13 @@
     function point(e) { const box = canvas.getBoundingClientRect(); brushPoint = { x: (e.clientX - box.left) / box.width * 760, y: (e.clientY - box.top) / box.height * 500 }; }
     on(canvas, 'pointerdown', e => { if (pointer !== null) return; e.preventDefault(); pointer = e.pointerId; canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); undo.push(structuredClone(world.marks)); lastMark = null; showBrush = true; point(e); paint(true); });
     on(canvas, 'pointermove', e => { if (pointer !== null && pointer !== e.pointerId) return; point(e); showBrush = true; if (pointer !== null) paint(); });
-    const release = e => { if (pointer === e.pointerId) { pointer = null; lastMark = null; } };
-    on(canvas, 'pointerup', release); on(canvas, 'pointercancel', release);
+    const release = e => {
+      if (!e || pointer === e.pointerId) {
+        if (pointer !== null && canvas.hasPointerCapture?.(pointer)) canvas.releasePointerCapture(pointer);
+        pointer = null; lastMark = null;
+      }
+    };
+    on(canvas, 'pointerup', release); on(canvas, 'pointercancel', release); on(canvas, 'lostpointercapture', release); on(window, 'blur', () => release());
     on(canvas, 'pointerleave', () => { if (pointer === null) showBrush = false; });
     on(canvas, 'keydown', e => {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter'].includes(e.key)) return;
@@ -922,13 +939,15 @@
   async function exportMusic() {
     const button = $('[data-exp="music-export"]');
     if (button?.disabled) return;
+    const generation = exportGeneration;
     if (button) { button.disabled = true; button.textContent = 'Rendering your score…'; }
     try {
       const buffer = await studio.recording(music);
+      if (generation !== exportGeneration || controller?.signal.aborted) return;
       downloadFile('aether-celestial-score.wav', buffer, 'audio/wav');
       toast('Your stereo orchestra recording is ready. Four full loops, including the echoes.');
-    } catch { toast('This browser could not render an offline recording. Your score is still safe.'); }
-    finally { if (button?.isConnected) { button.disabled = false; button.innerHTML = 'Download stereo WAV ' + icon('download'); } }
+    } catch { if (generation === exportGeneration && !controller?.signal.aborted) toast('This browser could not render an offline recording. Your score is still safe.'); }
+    finally { if (generation === exportGeneration && button?.isConnected) { button.disabled = false; button.innerHTML = 'Download stereo WAV ' + icon('download'); } }
   }
 
   function stopBlink() {

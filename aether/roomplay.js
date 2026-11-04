@@ -36,7 +36,7 @@ window.AetherRoomPlay = (() => {
       timers.forEach(clearTimeout); frames.forEach(cancelAnimationFrame);
       timers.clear(); frames.clear(); disposers.reverse().forEach(fn => fn());
     }
-    api.signal.addEventListener('abort', cleanup, { once: true, signal: api.signal });
+    api.signal.addEventListener('abort', cleanup, { once: true });
     rooms[view](api, life);
     return cleanup;
   }
