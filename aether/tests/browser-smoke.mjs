@@ -95,10 +95,11 @@ try {
   assert.ok(bastionBox, 'the Bastion canvas needs a measurable layout box');
   const cell = { x: bastionBox.width * .2, y: bastionBox.height * .27 };
   await bastion.hover({ position: cell });
-  await page.waitForFunction(canvas => canvas.dataset.previewRange === '280', await bastion.elementHandle());
+  await page.waitForFunction(canvas => canvas.dataset.previewRange === '350', await bastion.elementHandle());
   await page.waitForFunction(canvas => Number(canvas.dataset.incoming) > 0, await bastion.elementHandle(), { timeout: 5000 });
   await bastion.click({ position: cell });
   await page.waitForFunction(canvas => canvas.dataset.towerCount === '1', await bastion.elementHandle());
+  await page.waitForFunction(canvas => canvas.dataset.selectedSite === 'lens', await bastion.elementHandle());
   await bastion.press('q');
   await page.waitForFunction(canvas => canvas.dataset.selectedTier === '1' && canvas.dataset.selectedPath === 'left', await bastion.elementHandle());
   await page.evaluate(() => window.__bastionSmoke.destroy());

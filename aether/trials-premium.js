@@ -22,6 +22,11 @@
       {name:'Prism',icon:'◇',cost:90,cool:1.7,damage:21,range:480,color:'#e5b7f3',detail:'Pierces a full lane',paths:{left:['Focal glass','Brighter lane damage'],right:['Quick refraction','Faster beam cycles']}},
       {name:'Sunmine',icon:'◎',cost:55,cool:0,damage:90,range:65,color:'#f5ba77',detail:'One-use blast trap',paths:{left:['Star charge','Bigger detonation'],right:['Salvage core','Alloy from every blast']}},
     ];
+    const SITES=[
+      {col:0,row:0,id:'lens',name:'Astral lens',note:'+25% range',color:'#d8d9a0'},
+      {col:3,row:2,id:'coil',name:'Vesper coil',note:'18% faster cadence',color:'#a7e7e1'},
+      {col:5,row:4,id:'vault',name:'Sun vault',note:'+25% mine blast',color:'#f4bd78'},
+    ];
     let towers=[],enemies=[],bolts=[],sparks=[],telegraphs=[],credits=175,core=8,kills=0,over=false,ended=false,selectedTower=null;
     let selected=0,hover=null,t=0,spawn=2.5,wave=1,slowTime=0,pulseCd=0,flash=0,shake=0,showHelp=10;
     let messages=[{t:3,text:'INSTALL A DEFENCE · 1–4 SELECT · CLICK A HEX'}];
@@ -35,6 +40,7 @@
     }
     function burstAt(x,y,color,n=12){burst(x,y,color,n,170);}
     function announce(str){messages.unshift({text:str,t:2.8});messages=messages.slice(0,4);}
+    const siteAt=(col,row)=>SITES.find(site=>site.col===col&&site.row===row)||null;
     function enemySpec(){
       const row=Math.floor(rand()*N),stage=endless?1+Math.floor(t/24):Math.min(3,1+Math.floor(t/23));
       const armored=stage>1&&rand()<Math.min(.48,.14+stage*.05);
@@ -91,13 +97,14 @@
           const close=enemies.filter(e=>Math.hypot(e.x-tower.x,e.y-tower.y)<110);
           if(close.length){
             const tier=tower.tier||0,blast=def.damage*(1+tier*.5+(tower.path==='left'?tier*.3:0))*(verb.has('cinder')?1.25:1);
-            const radius=68+tier*(tower.path==='left'?13:5);
+            const radius=(68+tier*(tower.path==='left'?13:5))*(tower.site==='vault'?1.25:1);
             for(const e of close.filter(e=>Math.hypot(e.x-tower.x,e.y-tower.y)<radius)){damage(e,blast);if(tower.path==='right')credits+=tier*3;}
             burstAt(tower.x,tower.y,'#f7ba71',32);tower.dead=true;shake=6;tone(210,.24,'sawtooth',.045);
           }
         }else if(tower.cool<=0){
-          const nearby=enemies.filter(e=>(tower.type===1?Math.abs(e.row-tower.row)<=1:e.row===tower.row)&&e.x>tower.x-15&&Math.hypot(e.x-tower.x,e.y-tower.y)<def.range).sort((a,b)=>a.x-b.x);
-          if(nearby.length){tower.cool=def.cool*(tower.path==='right'?Math.pow(.76,tower.tier||0):1);shoot(tower,nearby[0]);}
+          const range=def.range*(tower.site==='lens'?1.25:1);
+          const nearby=enemies.filter(e=>(tower.type===1?Math.abs(e.row-tower.row)<=1:e.row===tower.row)&&e.x>tower.x-15&&Math.hypot(e.x-tower.x,e.y-tower.y)<range).sort((a,b)=>a.x-b.x);
+          if(nearby.length){tower.cool=def.cool*(tower.path==='right'?Math.pow(.76,tower.tier||0):1)*(tower.site==='coil'?.82:1);shoot(tower,nearby[0]);}
         }
       }
       towers=towers.filter(t=>!t.dead);
@@ -134,7 +141,7 @@
     function previewTower(){
       if(selectedTower&&towers.includes(selectedTower))return selectedTower;
       if(!hover||hover.occupied)return null;
-      return {x:colX(hover.col),y:rowY(hover.row),type:selected,preview:true};
+      return {x:colX(hover.col),y:rowY(hover.row),type:selected,site:siteAt(hover.col,hover.row)?.id||null,preview:true};
     }
     function purchase(pt){
       if(over)return;
@@ -148,7 +155,9 @@
       if(existing){selectedTower=existing;const d=TOWERS[existing.type];announce(`${d.name.toUpperCase()} SELECTED · Q ${d.paths.left[0].toUpperCase()} / E ${d.paths.right[0].toUpperCase()}`);tone(410,.07,'triangle',.025);return;}
       if(credits<cost){announce('NOT ENOUGH ALLOY');tone(155,.06,'square',.018);return;}
       credits-=cost;
-      selectedTower={x:colX(col),y:rowY(row),col,row,type:selected,cool:.12,tier:0,path:null};towers.push(selectedTower);
+      const site=siteAt(col,row);
+      selectedTower={x:colX(col),y:rowY(row),col,row,type:selected,cool:.12,tier:0,path:null,site:site?.id||null};towers.push(selectedTower);
+      if(site)announce(`${site.name.toUpperCase()} · ${site.note.toUpperCase()}`);
       burstAt(colX(col),rowY(row),TOWERS[selected].color,10);tone(510,.12,'triangle',.04);
     }
     function upgrade(path){
@@ -186,6 +195,7 @@
       canvas.dataset.towerCount=towers.length;
       canvas.dataset.selectedTier=selectedTower?.tier||0;
       canvas.dataset.selectedPath=selectedTower?.path||'';
+      canvas.dataset.selectedSite=selectedTower?.site||'';
       canvas.dataset.mode=endless?'endless':'mission';
       canvas.dataset.incoming=telegraphs.length;
       ctx.fillStyle='#06111c';ctx.fillRect(0,0,W,H);
@@ -199,12 +209,13 @@
         for(let col=0;col<C;col++){
           const x=colX(col);ctx.strokeStyle='#d6bd8855';ctx.lineWidth=.9;
           ctx.beginPath();for(let i=0;i<6;i++){const a=i*TAU/6;const xx=x+29*Math.cos(a), yy=y+29*Math.sin(a);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}ctx.closePath();ctx.stroke();
-          ctx.fillStyle='#83b7c91c';circ(ctx,x,y,2);ctx.fill();
-        }
-      }
+           ctx.fillStyle='#83b7c91c';circ(ctx,x,y,2);ctx.fill();
+         }
+       }
+      for(const site of SITES){const x=colX(site.col),y=rowY(site.row);ctx.save();ctx.translate(x,y);ctx.rotate(time*.18);ctx.strokeStyle=site.color;ctx.shadowColor=site.color;ctx.shadowBlur=10;ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<4;i++){const a=Math.PI/4+i*TAU/4;const xx=Math.cos(a)*23,yy=Math.sin(a)*23;i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}ctx.closePath();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=site.color;circ(ctx,0,0,3);ctx.fill();ctx.restore();}
       const preview=previewTower();
       if(preview){
-        const d=TOWERS[preview.type],radius=preview.type===3?110:d.range;
+        const d=TOWERS[preview.type],radius=(preview.type===3?110:d.range)*(preview.site==='lens'?1.25:1);
         canvas.dataset.previewRange=String(radius);
         ctx.save();ctx.globalAlpha=preview.preview?.18:.26;ctx.strokeStyle=d.color;ctx.fillStyle=d.color;ctx.lineWidth=1.4;ctx.setLineDash([5,5]);
         if(preview.type===2){ctx.fillRect(preview.x,preview.y-25,Math.min(radius,W-preview.x),50);ctx.strokeRect(preview.x,preview.y-25,Math.min(radius,W-preview.x),50);}
@@ -229,7 +240,8 @@
          if(q.type===3){ctx.strokeStyle=d.color;ctx.lineWidth=3;circ(ctx,0,0,13+Math.sin(t*5)*2);ctx.stroke();ctx.fillStyle=d.color;circ(ctx,0,0,4);ctx.fill();}
          ctx.restore();
          if(q===selectedTower){ctx.strokeStyle='#fff1bb';ctx.lineWidth=2;circ(ctx,q.x,q.y,27);ctx.stroke();}
-         if(q.tier){txt(ctx,`${q.path==='left'?'Q':'E'}${q.tier}`,q.x,q.y+36,10,d.color,'center');}
+          if(q.tier){txt(ctx,`${q.path==='left'?'Q':'E'}${q.tier}`,q.x,q.y+36,10,d.color,'center');}
+          if(q.site)txt(ctx,'✦',q.x,q.y-34,10,SITES.find(site=>site.id===q.site).color,'center');
       }
       // Enemy hulls, shield strength, velocity trail.
       for(const e of enemies){
@@ -260,7 +272,7 @@
       txt(ctx,`ALLOY ✦ ${credits}`,240,29,17,'#f6da9e');txt(ctx,`KILLS  ${kills}`,240,52,12,'#b9c4c2');
        txt(ctx,`CORE ${core} / 8`,425,28,17,core<=2?RED:TEAL);
        txt(ctx,endless?`SURVIVED ${Math.floor(t)}s`:`TIME ${Math.max(0,Math.ceil(TOTAL-t))}s`,425,51,12,'#b9c4c2');
-       if(preview){const d=TOWERS[preview.type],range=preview.type===3?110:d.range;txt(ctx,`${d.name.toUpperCase()} · ${range} RANGE${preview.type===3?' TRIGGER':''}`,590,51,11,d.color,'center');}
+       if(preview){const d=TOWERS[preview.type],range=(preview.type===3?110:d.range)*(preview.site==='lens'?1.25:1);txt(ctx,`${d.name.toUpperCase()} · ${range} RANGE${preview.type===3?' TRIGGER':''}`,590,51,11,d.color,'center');}
       ctx.fillStyle=pulseCd>0?'#24313a':'#29584e';ctx.strokeStyle='#a8e6d355';ctx.fillRect(722,15,164,62);ctx.strokeRect(722,15,164,62);
       txt(ctx,pulseCd>0?`PULSE ${Math.ceil(pulseCd)}s`:'PULSE READY · SPACE',804,42,12,TEAL,'center');
       txt(ctx,'STUN + SHOCK',804,60,10,'#d4dfda','center');
