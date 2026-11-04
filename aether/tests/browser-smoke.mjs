@@ -96,6 +96,7 @@ try {
   const cell = { x: bastionBox.width * .2, y: bastionBox.height * .27 };
   await bastion.hover({ position: cell });
   await page.waitForFunction(canvas => canvas.dataset.previewRange === '280', await bastion.elementHandle());
+  await page.waitForFunction(canvas => Number(canvas.dataset.incoming) > 0, await bastion.elementHandle(), { timeout: 5000 });
   await bastion.click({ position: cell });
   await page.waitForFunction(canvas => canvas.dataset.towerCount === '1', await bastion.elementHandle());
   await bastion.press('q');

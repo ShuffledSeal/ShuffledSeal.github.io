@@ -1,5 +1,10 @@
 # Æther Progress
 
+## 2026-11-04 - Bastion lane telegraphs
+
+- Added lit entry gates before enemies enter their lanes, including an extended titan warning.
+- Browser smoke verifies that an incoming lane is visible before its enemy spawns.
+
 ## 2026-11-04 - Bastion range preview
 
 - Added ghost placement and exact targeting envelopes for the selected Bastion tower.

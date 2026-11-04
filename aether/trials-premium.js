@@ -22,7 +22,7 @@
       {name:'Prism',icon:'◇',cost:90,cool:1.7,damage:21,range:480,color:'#e5b7f3',detail:'Pierces a full lane',paths:{left:['Focal glass','Brighter lane damage'],right:['Quick refraction','Faster beam cycles']}},
       {name:'Sunmine',icon:'◎',cost:55,cool:0,damage:90,range:65,color:'#f5ba77',detail:'One-use blast trap',paths:{left:['Star charge','Bigger detonation'],right:['Salvage core','Alloy from every blast']}},
     ];
-    let towers=[],enemies=[],bolts=[],sparks=[],credits=175,core=8,kills=0,over=false,ended=false,selectedTower=null;
+    let towers=[],enemies=[],bolts=[],sparks=[],telegraphs=[],credits=175,core=8,kills=0,over=false,ended=false,selectedTower=null;
     let selected=0,hover=null,t=0,spawn=2.5,wave=1,slowTime=0,pulseCd=0,flash=0,shake=0,showHelp=10;
     let messages=[{t:3,text:'INSTALL A DEFENCE · 1–4 SELECT · CLICK A HEX'}];
     const g=frame(container,W,H,{label:`Aether Bastion: tactical tower defence. Press 1 to 4 to select a tower, click an empty cell to place it, click an installed tower then press Q or E to choose an upgrade path, right click to sell for a partial refund. Space fires an emergency pulse. Keep the eight-heart observatory core alive${endless?' through an endless siege.':' through three waves.'}`,sound:options.sound,step,draw});
@@ -35,15 +35,20 @@
     }
     function burstAt(x,y,color,n=12){burst(x,y,color,n,170);}
     function announce(str){messages.unshift({text:str,t:2.8});messages=messages.slice(0,4);}
-    function spawnEnemy(){
+    function enemySpec(){
       const row=Math.floor(rand()*N),stage=endless?1+Math.floor(t/24):Math.min(3,1+Math.floor(t/23));
       const armored=stage>1&&rand()<Math.min(.48,.14+stage*.05);
       const boss=endless?stage>=4&&stage%4===0&&titanStage!==stage&&!enemies.some(e=>e.boss):t>67&&!enemies.some(e=>e.boss)&&!bossSpawned;
       if(boss){bossSpawned=true;titanStage=stage;}
       const hp=(boss?170+stage*18:armored?77+stage*10:23+stage*9)*(verb.has('lure')?1.24:1);
-      enemies.push({x:872,y:rowY(row),row,v:boss?28+stage*2:armored?37+stage*2:54+stage*8,hp,maxHp:hp,
-        armored,boss,slow:0,hit:0,tick:rand()*TAU,gold:boss?70:armored?26:17});
-      if(boss)announce('A TITAN OF CRYSTAL APPROACHES');
+      return {row,v:boss?28+stage*2:armored?37+stage*2:54+stage*8,hp,maxHp:hp,armored,boss,slow:0,hit:0,tick:rand()*TAU,gold:boss?70:armored?26:17};
+    }
+    function telegraphEnemy(){
+      const enemy=enemySpec();telegraphs.push({...enemy,wait:enemy.boss?1.25:.68});
+      if(enemy.boss)announce('TITAN FORECAST · FORTIFY THE LANE');
+    }
+    function spawnEnemy(enemy){
+      enemies.push({...enemy,x:872,y:rowY(enemy.row)});
     }
     let bossSpawned=false,titanStage=0;
     function shoot(from,enemy) {
@@ -77,8 +82,9 @@
       if(t>=TOTAL) {if(enemies.length===0)return finish(true);}
       if(t<TOTAL-2){
         spawn-=dt;
-        if(spawn<=0){spawnEnemy();spawn=(endless?Math.max(.54,1.7-wave*.09):t<25?1.85:t<49?1.34:1.10)*(verb.has('gyro')?.94:1);}
+        if(spawn<=0){telegraphEnemy();spawn=(endless?Math.max(.54,1.7-wave*.09):t<25?1.85:t<49?1.34:1.10)*(verb.has('gyro')?.94:1);}
       }
+      for(const incoming of [...telegraphs]){incoming.wait-=dt;if(incoming.wait<=0){telegraphs.splice(telegraphs.indexOf(incoming),1);spawnEnemy(incoming);}}
       for(const tower of towers){
         const def=TOWERS[tower.type];tower.cool=Math.max(0,tower.cool-dt);
         if(tower.type===3){
@@ -181,6 +187,7 @@
       canvas.dataset.selectedTier=selectedTower?.tier||0;
       canvas.dataset.selectedPath=selectedTower?.path||'';
       canvas.dataset.mode=endless?'endless':'mission';
+      canvas.dataset.incoming=telegraphs.length;
       ctx.fillStyle='#06111c';ctx.fillRect(0,0,W,H);
       const cloud=ctx.createRadialGradient(680,260,20,680,260,500);
       cloud.addColorStop(0,'#28536c44');cloud.addColorStop(1,'#06111c00');ctx.fillStyle=cloud;ctx.fillRect(0,0,W,H);stars();
@@ -236,7 +243,11 @@
         if(e.slow>0){ctx.strokeStyle='#91e5ec';ctx.lineWidth=3;circ(ctx,0,0,r+8);ctx.stroke();}
         ctx.restore();
         ctx.fillStyle='#060d19';ctx.fillRect(e.x-22,e.y-26,44,4);ctx.fillStyle=color;ctx.fillRect(e.x-22,e.y-26,44*Math.max(0,e.hp/e.maxHp),4);
-      }
+       }
+       // Every threat arrives through a lit gate before it enters the board.
+       for(const incoming of telegraphs){const y=rowY(incoming.row),color=incoming.boss?'#ffe3a5':incoming.armored?'#efb6e9':'#f3a58f',pulse=.45+Math.sin((1-incoming.wait)*12)*.25;
+         ctx.save();ctx.globalAlpha=Math.max(.18,pulse);ctx.strokeStyle=color;ctx.fillStyle=color+'22';ctx.lineWidth=2;ctx.fillRect(842,y-28,38,56);ctx.strokeRect(842,y-28,38,56);ctx.beginPath();ctx.moveTo(842,y);ctx.lineTo(760,y);ctx.stroke();ctx.restore();
+       }
       for(const b of bolts){
         ctx.strokeStyle=b.color;ctx.lineWidth=b.beam?5:3;ctx.shadowColor=b.color;ctx.shadowBlur=9;
         ctx.beginPath();if(b.beam){ctx.moveTo(b.x,b.y);ctx.lineTo(b.toX,b.toY);}else{ctx.moveTo(b.x-8,b.y);ctx.lineTo(b.x+5,b.y);}ctx.stroke();ctx.shadowBlur=0;
