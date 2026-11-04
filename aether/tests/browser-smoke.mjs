@@ -5,6 +5,17 @@ import { chromium } from 'playwright';
 
 const port = 4174;
 const base = `http://127.0.0.1:${port}`;
+const legacySaveFixture = {
+  'aether-observatory-v1': { name: 'Fixture Keeper', location: 'kyoto', saved: ['saturn'], journal: [] },
+  'aether-grand-tour-v2': {
+    records: { tours: 2, wins: 0, kills: 8, bestDust: 40, bossWins: 0, highScore: 900, bestChain: 3 },
+    // Older active-run records did not carry these optional score fields.
+    active: { seed: 4242, step: 0, hull: 3, maxHull: 3, dust: 10, instruments: [], hullId: 'kite', done: {}, path: [], kills: 0 },
+  },
+  'aether-cartridge-records-v1': { best: { shooter: 321, bastion: 99, labyrinth: 44 } },
+  'aether-wonder-rooms-v1': { discoveries: ['arcade:merge-3'], best: { merge: 120 } },
+  'aether-planet-puzzles-v1': { records: {}, drafts: {}, levels: { saturn: 1 }, endless: {} },
+};
 const server = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], {
   cwd: new URL('..', import.meta.url),
   stdio: 'ignore',
@@ -67,6 +78,10 @@ try {
   await page.locator('.tour-chart').waitFor({ state: 'visible' });
   const hullAfterRetreat = await page.evaluate(() => JSON.parse(localStorage.getItem('aether-grand-tour-v2')).active.hull);
   assert.equal(hullAfterRetreat, 2, 'aborting a hunt must cost one hull');
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.tour-chart').waitFor({ state: 'visible' });
+  const hullAfterReload = await page.evaluate(() => JSON.parse(localStorage.getItem('aether-grand-tour-v2')).active.hull);
+  assert.equal(hullAfterReload, 2, 'a saved Tour hull must survive a reload');
 
   await page.evaluate(() => {
     const host = document.createElement('div');
@@ -85,9 +100,38 @@ try {
   await page.waitForFunction(canvas => canvas.dataset.selectedTier === '1' && canvas.dataset.selectedPath === 'left', await bastion.elementHandle());
   await page.evaluate(() => window.__bastionSmoke.destroy());
 
+  const safePage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const saveErrors = [];
+  safePage.on('pageerror', error => saveErrors.push(error.message));
+  await safePage.addInitScript(() => {
+    for (const key of ['aether-observatory-v1', 'aether-grand-tour-v2', 'aether-cartridge-records-v1', 'aether-wonder-rooms-v1', 'aether-planet-puzzles-v1']) {
+      localStorage.setItem(key, '{not valid json');
+    }
+  });
+  await safePage.goto(`${base}/index.html#overview`, { waitUntil: 'networkidle' });
+  await assertVisible(safePage, '.playground-home');
+  await safePage.waitForTimeout(150);
+  assert.deepEqual(saveErrors, [], `corrupt saves must fall back safely: ${saveErrors.join('\n')}`);
+  await safePage.close();
+
+  const fixturePage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const fixtureErrors = [];
+  fixturePage.on('pageerror', error => fixtureErrors.push(error.message));
+  await fixturePage.addInitScript(fixture => {
+    for (const [key, value] of Object.entries(fixture)) localStorage.setItem(key, JSON.stringify(value));
+  }, legacySaveFixture);
+  await fixturePage.goto(`${base}/index.html#overview`, { waitUntil: 'networkidle' });
+  assert.equal(await fixturePage.locator('#profile-name').textContent(), 'Fixture Keeper', 'a valid Observatory profile must load');
+  await fixturePage.goto(`${base}/index.html#voyage`, { waitUntil: 'networkidle' });
+  await expectText(fixturePage, 'Leg 1 of 12');
+  await fixturePage.goto(`${base}/index.html?standalone=1&cartridge=shooter#voyage`, { waitUntil: 'networkidle' });
+  assert.equal((await fixturePage.locator('.cartridge-record strong').textContent())?.trim(), '321', 'a valid cartridge record must load');
+  assert.deepEqual(fixtureErrors, [], `legacy saves must load safely: ${fixtureErrors.join('\n')}`);
+  await fixturePage.close();
+
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cabinet routes, standalone tour, hunt mount, pointer flight, retreat cost, and Bastion upgrades.');
+  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, retreat cost, and Bastion upgrades.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});
