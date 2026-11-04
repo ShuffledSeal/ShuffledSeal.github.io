@@ -1,6 +1,6 @@
 # Æther Grand Tour — Development Roadmap
 
-**Build:** Cartographer's Edition, 4 November 2026  
+**Build:** Cartographer's Edition, 4 November 2026
 **Status:** Playable browser prototype / substantial vertical-slice upgrade. **Not** a finished commercial £90 game.
 
 This roadmap distinguishes what is playable **today** from proposed work. It deliberately avoids treating content quantity or a high price tag as proof of quality.
