@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080f1b" />
+  <meta name="description" content="Æther: The Grand Tour. Twelve legs through the cosmic dark. Twin-stick hunts, tactical defence, stealth expeditions and sixteen run-changing instruments in a complete browser arcade." />
+  <title>Æther — The Grand Tour | Enter the Expedition</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <style>
+    @font-face{font-family:Cormorant;src:url('assets/cormorant-regular.woff2') format('woff2');font-display:swap}
+    @font-face{font-family:Cormorant;src:url('assets/cormorant-italic.woff2') format('woff2');font-display:swap;font-style:italic}
+    @font-face{font-family:DM;src:url('assets/dm-sans-regular.woff2') format('woff2');font-display:swap}
+    :root{color-scheme:dark;font-family:DM,Arial,sans-serif;background:#080f19;color:#e9e4d7;--gold:#dec58f;--teal:#a9e7d4}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;overflow-x:hidden;min-height:100vh;background:radial-gradient(ellipse at 74% 4%,#38536945,transparent 38%),radial-gradient(ellipse at 30% 39%,#50406128,transparent 49%),#080f19}
+    body:before{content:'';position:fixed;inset:0;z-index:-1;opacity:.3;pointer-events:none;background-image:radial-gradient(#e7f0ff 0.75px,transparent 1px);background-size:57px 53px;background-position:15px 20px}
+    a{color:inherit}button,a{outline-offset:4px}a:focus-visible,button:focus-visible{outline:2px solid var(--teal)}
+    .site-nav{min-height:91px;margin:auto;padding:16px clamp(22px,5vw,80px);max-width:1600px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dbccaa44;gap:18px}
+    .mark{font:28px Cormorant,Georgia,serif;letter-spacing:.19em;text-decoration:none;color:#f0dfb8;display:flex;align-items:center;gap:15px}.mark-star{font-size:28px;color:var(--gold)}
+    .nav-links{display:flex;gap:28px;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:#c3d4d0}
+    .nav-links a{text-decoration:none}.nav-links a:hover{color:var(--gold)}
+    .page{max-width:1600px;margin:auto;padding:0 clamp(22px,5vw,80px)}
+    .hero{min-height:660px;display:grid;grid-template-columns: .9fr 1.1fr;gap:clamp(30px,5vw,82px);align-items:center;padding:72px 0 92px;position:relative}
+    .hero:after{content:'✶';position:absolute;bottom:6px;left:45%;font:32px Cormorant,serif;color:#ceb884}
+    .eyebrow{text-transform:uppercase;letter-spacing:.29em;font-size:10px;color:var(--gold);font-weight:700;margin:0 0 24px}
+    .hero h1{font:clamp(66px,8.2vw,135px)/.84 Cormorant,Georgia,serif;letter-spacing:-.045em;margin:0 0 27px;color:#f6efdf;text-wrap:balance}
+    .hero h1 em{font-weight:400;color:var(--gold)}
+    .intro{font:clamp(20px,2.2vw,27px)/1.35 Cormorant,Georgia,serif;color:#e2d7c5;max-width:620px;margin:0 0 20px}
+    .support{font-size:12px;line-height:1.95;color:#afbcb9;max-width:510px;margin:0 0 32px}
+    .button-row{display:flex;align-items:center;gap:17px;flex-wrap:wrap}
+    .button{display:inline-flex;justify-content:center;align-items:center;gap:14px;padding:17px 25px;min-height:57px;background:var(--gold);color:#14212a;text-decoration:none;text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:800;transition:transform .2s,background .2s}
+    .button:hover{transform:translateY(-3px);background:#f2d9a4}
+    .button-ghost{border:1px solid #c5c6b077;background:transparent;color:#d9e6da}.button-ghost:hover{background:#1e2e36}
+    .fineprint{color:#98afad;font-size:10px;letter-spacing:.06em;line-height:1.8;margin-top:18px}
+    .hero-visual{position:relative;min-width:0;align-self:center}
+    .art-frame{padding:15px;background:linear-gradient(135deg,#1a2b39,#0e1726);border:1px solid #d7c59888;box-shadow:0 0 0 7px #c3a87312,0 29px 70px #030609bb;transform:rotate(1deg);transition:transform .45s}
+    .art-frame:hover{transform:rotate(0deg) translateY(-7px)}
+    .art-frame img{width:100%;display:block;aspect-ratio:8/5;object-fit:cover;border:1px solid #dbc9a148}
+    .art-footer{display:flex;justify-content:space-between;gap:15px;font-size:9px;letter-spacing:.15em;color:#e3d2a8;padding:13px 0 0}
+    .seal{position:absolute;right:-22px;bottom:-37px;width:121px;aspect-ratio:1;border:1px solid #e5d39aa6;outline:6px solid #091521;display:grid;place-content:center;text-align:center;border-radius:50%;background:linear-gradient(150deg,#1d3540,#152126);transform:rotate(12deg);box-shadow:0 6px 24px #050b13a8}
+    .seal strong{font:35px Cormorant,serif;color:var(--gold)}.seal small{font-size:7px;letter-spacing:.15em;color:#c4d3d0}
+    .statbar{border-top:1px solid #cbbb9966;border-bottom:1px solid #cbbb9966;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:24px 0;gap:25px}
+    .stat{padding:7px 0 9px;border-right:1px solid #ceba9740}.stat:last-child{border:0}
+    .stat strong{display:block;font:46px/.95 Cormorant,Georgia,serif;color:#f0dcac}.stat small{font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:#a4bdb8;display:block;margin-top:10px}
+    .section{padding:105px 0 34px}.section-head{display:flex;justify-content:space-between;gap:40px;align-items:end;margin-bottom:30px}
+    .section h2{font:clamp(42px,5.3vw,80px)/.93 Cormorant,Georgia,serif;letter-spacing:-.025em;margin:0;color:#f1e5cc}
+    .section-head p:last-child{font-size:12px;max-width:380px;line-height:1.8;color:#a9bdb8}
+    .experiences{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+    .experience{border:1px solid #c0b68c66;background:linear-gradient(155deg,#172731,#0b1722);overflow:hidden;min-width:0;transition:transform .25s,border-color .25s}
+    .experience:hover{transform:translateY(-6px);border-color:#f1d59e}
+    .experience img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-bottom:1px solid #c0b68c55}
+    .experience .content{padding:22px 23px 29px}.experience .number{font-size:10px;letter-spacing:.22em;color:var(--gold)}
+    .experience h3{font:clamp(28px,2.8vw,40px) Cormorant,serif;color:#f1e2c0;margin:12px 0}
+    .experience p{font-size:12px;color:#b4c8c3;line-height:1.75;margin:0}
+    .manifesto{margin:90px 0;display:grid;grid-template-columns:1fr 1fr;gap:30px 65px;padding:55px clamp(25px,4vw,65px);border:1px solid #d7bf8f66;background:radial-gradient(ellipse at 25% 0%,#45506b35,transparent 60%),#101f2b}
+    .manifesto h2{font:clamp(42px,4.9vw,72px)/1 Cormorant,serif;color:#f2e5c9;margin:0}
+    .manifesto p{font-size:13px;line-height:1.95;color:#c1cfc9;margin:0}
+    .manifesto ul{margin:0;padding-left:17px;line-height:2.2;font-size:12px;color:#d8d7c3}
+    .finale{text-align:center;padding:80px 0 115px}.finale h2{font:clamp(54px,6.9vw,105px)/.9 Cormorant,Georgia,serif;margin:0 auto 30px;max-width:860px;color:#e9debF}.finale .button{margin:auto}
+    .footer{display:flex;justify-content:space-between;gap:25px;border-top:1px solid #ccb78e55;padding:26px 0 50px;color:#91a8a6;font-size:10px;letter-spacing:.1em;line-height:1.8}
+    @media(max-width:930px){.hero{grid-template-columns:1fr;min-height:0;gap:45px}.hero h1{font-size:clamp(70px,14vw,115px)}.hero-visual{max-width:750px}.experiences{grid-template-columns:1fr 1fr}.manifesto{grid-template-columns:1fr}.section-head{display:block}.section-head p:last-child{max-width:560px}}
+    @media(max-width:650px){.nav-links{gap:12px;font-size:9px}.nav-links a:first-child{display:none}.mark{font-size:22px}.hero{padding:50px 0}.seal{width:88px;right:-8px;bottom:-20px}.seal strong{font-size:25px}.statbar{grid-template-columns:1fr 1fr}.stat:nth-child(2){border:0}.stat strong{font-size:38px}.experiences{grid-template-columns:1fr}.section{padding-top:80px}.manifesto{margin:60px 0}.footer{flex-direction:column}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <header class="site-nav"><a class="mark" href="grand-tour.html"><span class="mark-star">✧</span> ÆTHER <span aria-hidden="true">/</span> GRAND TOUR</a><nav class="nav-links" aria-label="Primary"><a href="#cartridges">THE CARTRIDGES</a><a href="#manifesto">FIELD NOTES</a><a href="index.html#overview">THE OBSERVATORY</a></nav></header>
+  <div class="page">
+    <main>
+      <section class="hero"><div>
+        <p class="eyebrow">THE GRAND TOUR · THE CARTOGRAPHER'S EDITION</p>
+        <h1>The sky<br />is <em>not</em><br />empty.</h1>
+        <p class="intro">A twelve-leg voyage through impossible skies, strange machinery, and the distant edge of everything.</p>
+        <p class="support">Pilot a hand-built starship. Fight creatures made of light. Outsmart watchers in the ruins of old observatories. Forge ridiculous machines to hold the last star. Every decision bends the next journey.</p>
+        <div class="button-row"><a class="button" href="index.html?standalone=1#voyage">BEGIN YOUR EXPEDITION <span aria-hidden="true">✦</span></a><a class="button button-ghost" href="#cartridges">DISCOVER THE GAMES</a></div>
+        <p class="fineprint">PLAY IN YOUR BROWSER · NO INSTALLER · LOCAL SAVE · KEYBOARD AND MOUSE</p>
+      </div><div class="hero-visual"><div class="art-frame"><img src="assets/combat-preview.webp" alt="An actual Grand Tour encounter: a painted starfield, planetary rings, enemy ships and the player skiff." /><div class="art-footer"><span>FLIGHT RECORDER · 01 / 12</span><span>THE INNER WORLDS · EXPEDITION ARCHIVE</span></div></div><div class="seal"><strong>Æ</strong><small>THE STAR<br />KEEPERS' GUILD</small></div></div></section>
+        <div class="statbar" aria-label="Game content"><div class="stat"><strong>12</strong><small>Legs of the voyage</small></div><div class="stat"><strong>16</strong><small>Different trials</small></div><div class="stat"><strong>16</strong><small>Run-changing instruments</small></div><div class="stat"><strong>4</strong><small>Distinct ship hulls</small></div></div>
+      <section id="cartridges" class="section"><div class="section-head"><div><p class="eyebrow">NOT ONE KIND OF GAME</p><h2>Three ways to<br /><em>lose yourself.</em></h2></div><p>Each encounter is a game in its own right, with its own mastery curve. These images are captured from the playable build, not concept illustrations.</p></div>
+      <div class="experiences">
+        <article class="experience"><img src="assets/combat-preview.webp" alt="Starship battling crystalline enemies beneath a giant planet" loading="lazy"/><div class="content"><span class="number">01 · ACTION</span><h3>Dance between stars.</h3><p>Mouse-piloted combat. Read hostile telegraphs, chain kills into FLOW, and dodge sector hazards in a clean score-attack cartridge.</p><p><a href="index.html?standalone=1&cartridge=shooter#voyage">PLAY STARFALL SKIRMISH →</a></p></div></article>
+        <article class="experience"><img src="assets/bastion-preview.webp" alt="Five-lane tactical defence board with installed needles and frost towers" loading="lazy"/><div class="content"><span class="number">02 · STRATEGY</span><h3>Build the last defence.</h3><p>Aether Bastion is a three-wave siege. Build, specialize, sell, and hold the core against the crystal titan.</p><p><a href="index.html?standalone=1&cartridge=bastion#voyage">PLAY AETHER BASTION →</a></p></div></article>
+        <article class="experience"><img src="assets/labyrinth-preview.webp" alt="An overhead stealth labyrinth with guards casting search cones" loading="lazy"/><div class="content"><span class="number">03 · ADVENTURE</span><h3>Steal the light back.</h3><p>Three chambers of shifting patrols. Read visible sentry cones, cloak through fields, collect starkeys, and reach the sealed archive.</p><p><a href="index.html?standalone=1&cartridge=labyrinth#voyage">PLAY GLASS LABYRINTH →</a></p></div></article>
+      </div></section>
+        <section id="manifesto" class="manifesto"><div><p class="eyebrow">THE SHAPE OF A JOURNEY</p><h2>No two skies<br /><em>quite alike.</em></h2></div><p>One run takes you from Mercury's warm light to Neptune's dead-cold relay. Between hunts you'll find puzzles, instruments, a chandlery, strange bargains and sanctuaries. A dead ship resets the expedition; your records, unlocked hulls and the stories you've gathered carry forward.</p><ul><li>Three selectable difficulties, from Wanderer to Eclipse.</li><li>Rule-altering instruments: gravity wells, piercing beams, aurora healing and more.</li><li>Sixteen playable trials, including stealth, strategy, puzzle and timing expeditions.</li><li>Permanent records, discoverable builds, and four ship profiles.</li><li>Hand-drawn procedural atmosphere and synthesised sound, entirely offline.</li></ul><p>Designed as an exploratory browser game, with no account or telemetry. Your progress stays on your device.</p></section>
+      <section class="finale"><p class="eyebrow">THE OBSERVATORY IS WAITING</p><h2>Even the dark<br /><em>has something to say.</em></h2><a class="button" href="index.html?standalone=1#voyage">ENTER THE GRAND TOUR <span aria-hidden="true">✦</span></a></section>
+    </main>
+    <footer class="footer"><span>ÆTHER · A GAME OF DISTANT PLACES</span><span>AN ORIGINAL, OFFLINE-FIRST BROWSER EXPERIENCE</span><a href="index.html#overview">RETURN TO THE OBSERVATORY</a></footer>
+  </div>
+</body>
+</html>

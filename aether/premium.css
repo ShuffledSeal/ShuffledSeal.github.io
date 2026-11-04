@@ -1,0 +1,65 @@
+/* The Grand Tour — Cartographer's Edition. Scope to the existing game view. */
+.tour-page{--tour-accent:#d9b67c;--tour-line:#d8b87b44}
+.tour-page .view-header h1{font-size:clamp(42px,5.4vw,76px);line-height:.98;letter-spacing:-.035em;max-width:900px;text-wrap:balance}
+.tour-page .view-header h1 em{font-weight:400;color:#d9bb81}
+.tour-page .view-header{position:relative;padding-bottom:24px}
+.tour-page .view-header .eyebrow{color:#dfc48b;letter-spacing:.22em}
+.tour-page .tour-feature-lead{font-family:var(--serif,Georgia,serif);font-size:clamp(18px,2.3vw,25px);line-height:1.45;color:#e3d3b2;margin:14px 0 28px;max-width:650px}
+.tour-page .tour-landing{gap:clamp(22px,3.8vw,50px)}
+.tour-page .hangar{gap:12px}
+.tour-page .hangar-card{position:relative;overflow:hidden;background:radial-gradient(ellipse at 75% -20%,#8fbeb221,transparent 70%),linear-gradient(155deg,#1b292c,#0e171b);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.tour-page .hangar-card:hover:not(:disabled){transform:translateY(-5px);box-shadow:0 12px 35px #05070bad}
+.tour-page .hangar-card[aria-pressed="true"]{border-color:#dfc38d;box-shadow:inset 0 0 0 1px #dfc38d55,0 10px 28px #05070b66}
+.tour-page .hangar-card:before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(130deg,#ffffff08,transparent 55%)}
+.tour-page .tour-manifest{background:radial-gradient(circle at 85% 0%,#d2bb7c1a,transparent 55%),linear-gradient(145deg,#172321,#101817);border:1px solid #bfb18c55;box-shadow:0 18px 45px #0003}
+.tour-page .tour-manifest .button-primary,.tour-page .tour-recap-actions .button-primary{background:#dac28c;color:#121c21;font-weight:700;letter-spacing:.02em}
+.tour-page .tour-manifest .button-primary:hover,.tour-page .tour-recap-actions .button-primary:hover{background:#f0dbaa}
+.tour-page .tour-rules{margin-top:28px}
+.tour-page .tour-rules article{border-color:#d4c19b33}
+.tour-page .tour-rules h3{color:#f0dcb5}
+.tour-page .tour-chart{border:1px solid #adbdc366;background:radial-gradient(ellipse at 70% -40%,#547c7540,transparent 65%),linear-gradient(120deg,#101a22,#0d131b);box-shadow:0 14px 32px #060a0d66}
+.tour-page .tour-node{border-color:#aab5a13d;background:#172229}
+.tour-page .tour-node.reachable{background:linear-gradient(135deg,#334034,#132229);border-color:#ebc78e99}
+.tour-page .tour-node.won{background:#1a3431}
+.tour-page .tour-node-copy strong{color:#f5e4c3}
+.tour-page .tour-stage{background:linear-gradient(160deg,#0c131e,#101c21);padding:clamp(8px,2vw,24px);border:1px solid #b6aa8b77;box-shadow:0 24px 65px #0006;overflow:hidden}
+.tour-page .tour-hunt-frame{max-width:960px;margin:auto}
+.tour-page .tour-hunt-frame canvas{width:100%;height:auto;display:block;border:1px solid #c7b58577;background:#060d1a;border-radius:5px;box-shadow:0 16px 48px #02050a99;cursor:crosshair;image-rendering:auto}
+.tour-page .tour-hunt-frame canvas:focus-visible{outline:2px solid #a5f5e2;outline-offset:4px}
+.tour-page .flight-brief{max-width:960px;margin:0 auto 12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;color:#e6dbbc;font-size:11px;letter-spacing:.11em}
+.tour-page .flight-brief strong{font-family:var(--serif,Georgia,serif);font-size:19px;letter-spacing:.03em;font-weight:400}
+.tour-page .flight-controls{margin-left:auto;color:#a8c6c2;font-size:9px;letter-spacing:.065em}
+.tour-page .flight-status{font-size:9px;letter-spacing:.16em;color:#c8e8d9;display:flex;align-items:center;gap:7px}
+.tour-page .flight-status-dot{width:7px;height:7px;background:#8bf6c5;border-radius:50%;box-shadow:0 0 0 3px #8bf6c520,0 0 12px #8bf6c5b0;animation:flight-beacon 2s ease-in-out infinite}
+.tour-page .flight-legend{max-width:960px;margin:11px auto 2px;display:flex;gap:10px 24px;flex-wrap:wrap;font-size:10px;color:#abbebc}
+.tour-page .flight-legend b{color:#ecd39c;font-size:13px}
+.tour-page .tour-refuge,.tour-page .tour-oddity,.tour-page .tour-cache{background:radial-gradient(ellipse at 50% 0%,#d7b68115,transparent 63%);border-radius:4px}
+.tour-page .tour-cache-card{background:radial-gradient(circle at 20% -10%,#b5c3a218,transparent 70%),linear-gradient(155deg,#1d2a2e,#121d21);border:1px solid #c4ac7950;position:relative}
+.tour-page .tour-cache-card:hover:not(:disabled){box-shadow:0 0 0 1px #dfc08677,0 18px 36px #0008}
+.tour-page .tour-cache-card strong{color:#f4e4bf}
+.tour-page .tour-cache-card:focus-visible,.tour-page .hangar-card:focus-visible{outline:2px solid #e8d09d;outline-offset:3px}
+.tour-page .tour-recap{padding:38px clamp(10px,5vw,42px);background:radial-gradient(circle at 50% 0%,#cdae6b20,transparent 50%),linear-gradient(155deg,#142023,#0c1119);border:1px solid #b2aa8d55;max-width:820px}
+.tour-page .tour-recap h1{color:#f3e4c4}
+@keyframes flight-beacon{50%{opacity:.5;box-shadow:0 0 0 5px #8bf6c522,0 0 18px #8bf6c5c5}}
+@media(max-width:800px){.tour-page .flight-controls{margin-left:0;flex-basis:100%;line-height:1.6}.tour-page .tour-landing{grid-template-columns:1fr}.tour-page .tour-hunt-frame canvas{touch-action:none}.tour-page .flight-legend{gap:7px 14px}}
+@media(prefers-reduced-motion:reduce){.tour-page .flight-status-dot{animation:none}.tour-page .hangar-card{transition:none}}
+
+.tour-page .tour-difficulty{display:grid;gap:6px;margin:14px 0 26px}
+.tour-page .tour-difficulty button{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:10px;color:#d6dbca;border:1px solid #a4b2a13b;background:#102024;padding:12px 13px;transition:border-color .15s,background .15s}
+.tour-page .tour-difficulty button[aria-pressed="true"]{border-color:#e7c990;background:linear-gradient(115deg,#35473a,#1b2e30);box-shadow:inset 3px 0 0 #e3c58a}
+.tour-page .tour-difficulty button:hover{border-color:#e7c990}
+.tour-page .tour-difficulty b{font-family:var(--serif,Georgia,serif);font-size:17px;font-weight:500;color:#e9d4aa}
+.tour-page .tour-difficulty small{font-size:9px;color:#bacac2}
+.tour-page .tour-difficulty-note{font-size:10px;letter-spacing:.15em;color:#d5c18f;margin:8px 0 16px}
+
+/* Standalone cartridge mode: the same save, the same game, without the portfolio chrome. */
+.standalone-game .sidebar,.standalone-game .topbar,.standalone-game .page-footer,.standalone-game .mobile-scrim{display:none!important}
+.standalone-game .workspace{margin-left:0!important;width:100%!important;max-width:none!important}
+.standalone-game #main{width:100%!important;max-width:none!important;margin:0 auto!important;padding:0 22px 55px!important;min-height:100vh}
+.standalone-game body{background:radial-gradient(ellipse at 75% 0%,#314c5b25,transparent 50%),#08111a}
+.standalone-game .tour-page{max-width:1280px;margin:auto}
+.standalone-game .tour-standalone-nav{max-width:1280px;margin:auto;min-height:74px;border-bottom:1px solid #c9b58755;display:flex;align-items:center;justify-content:space-between;gap:20px;color:#dec896;font-size:10px;letter-spacing:.16em}
+.standalone-game .tour-standalone-nav a{color:#ecd8aa;text-decoration:none}
+.standalone-game .tour-standalone-nav a:hover{text-decoration:underline}
+.standalone-game .tour-page .view-header{padding-top:35px}
+@media(max-width:700px){.standalone-game .tour-standalone-nav span{display:none}.standalone-game #main{padding-left:12px!important;padding-right:12px!important}}

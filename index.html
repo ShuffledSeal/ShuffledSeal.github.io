@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>ShuffledSeal</title>
+  <meta name="description" content="Welcome page for my portfolio.">
+  <meta name="author" content="Abdoodles">
+
+  <meta property="og:title" content="Absolute poggers.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ShuffledSeal.github.io/">
+  <meta property="og:description" content="According to all known laws of aviation, there is no way a bee should be able to fly.
+  Its wings are too small to get its fat little body off the ground.
+  The bee, of course, flies anyway because bees don't care what humans think is impossible.">
+  <meta property="og:image" content="https://pbs.twimg.com/media/EObUEVuXsAI99lc.jpg">
+
+  <link rel="icon" href="favicon.ico">
+
+  <link rel="stylesheet" href="CSS/styles.css">
+
+</head>
+
+<body>
+
+  <main>
+    <div class="moon"></div>
+    <img class="cloud x1" src="welcome/clouds.png" alt="">
+    <img class="cloud x2" src="welcome/clouds.png" alt="">
+    <img class="cloud x3" src="welcome/clouds.png" alt="">
+    <img class="cloud x4" src="welcome/clouds.png" alt="">
+    <img class="cloud x5" src="welcome/clouds.png" alt="">
+    <img class="cloud x6" src="welcome/clouds.png" alt="">
+    <img class="cloud x7" src="welcome/clouds.png" alt="">
+    <img class="cloud x8" src="welcome/clouds.png" alt="">
+    <img class="cloud x9" src="welcome/clouds.png" alt="">
+    <img class="cloud x10" src="welcome/clouds.png" alt="">
+
+    <p class="site-id"><span class="site-name">shuffledseal</span><span class="site-line">websites &amp; little worlds</span></p>
+
+    <div id="background">
+      <nav class="trapezoid" aria-label="Main menu">
+        <ul>
+          <li><button id="topBtn" class="button myBtn menu-link size-s" aria-haspopup="dialog">About Me</button></li>
+          <li><button class="button myBtn menu-link size-m" onclick="location.href='portfolio.html'" type="button">Portfolio</button></li>
+          <li><button id="bottomBtn" class="button myBtn menu-link size-l" aria-haspopup="dialog">Contact Me</button></li>
+        </ul>
+      </nav>
+    </div>
+  </main>
+
+  <!-- About modal -->
+  <dialog id="topModal" class="modal" aria-labelledby="about-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="about-title">About Me</h2>
+        <button class="close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>I&rsquo;m ShuffledSeal &mdash; I make playful things for the web and games worth getting lost in.</p>
+        <p>Current obsession: <strong>&AElig;ther Observatory</strong>, a cosmic playground of arcade games and wonder rooms &mdash; you&rsquo;ll find it on the portfolio page. This corner of the internet is where the experiments live.</p>
+      </div>
+      <div class="modal-footer">
+        <h3>Thanks for stopping by</h3>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Contact modal -->
+  <dialog id="bottomModal" class="modal" aria-labelledby="contact-title">
+    <div class="modal-content2">
+      <div class="modal-header">
+        <h2 id="contact-title">Contact Details</h2>
+        <button class="close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><a href="https://www.instagram.com/shuffledseal/">@shuffledseal on instagram</a></p>
+        <p><a href="mailto:realpolarizedbear@gmail.com">realpolarizedbear@gmail.com</a></p>
+      </div>
+      <div class="modal-footer">
+        <h3>Thanks for checking out the website</h3>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="JS/Welcome.js"></script>
+</body>
+
+</html>

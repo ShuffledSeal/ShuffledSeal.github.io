@@ -1,0 +1,82 @@
+/* Eight-world orchestra — an instrument, not a decorative music box. */
+.music-orbits { isolation: isolate; }
+.music-orbit { opacity: .83; border-color: #b8ae8850; }
+.music-orbit.orbit-0 { --orbit: 68px; --duration: 3.5s; }
+.music-orbit.orbit-1 { --orbit: 102px; --duration: 5s; }
+.music-orbit.orbit-2 { --orbit: 142px; --duration: 7s; }
+.music-orbit.orbit-3 { --orbit: 180px; --duration: 9s; }
+.music-orbit.orbit-4 { --orbit: 219px; --duration: 11s; }
+.music-orbit.orbit-5 { --orbit: 258px; --duration: 15s; }
+.music-orbit.orbit-6 { --orbit: 297px; --duration: 18s; }
+.music-orbit.orbit-7 { --orbit: 333px; --duration: 23s; }
+.music-mood-line { margin-top: 15px; font-size: 11px; color: #f1dcaa; letter-spacing: .08em; text-transform: uppercase; }
+.music-explainer { display: flex; gap: 15px; align-items: baseline; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 15px; background: #c4ac790c; border: 1px solid #c4ac7933; font-size: 11px; color: #bfcbc3; }
+.music-explainer strong { flex-shrink: 0; letter-spacing: .13em; color: #e5d2a7; font-size: 10px; }
+.sequence-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 12px; scrollbar-width: thin; scrollbar-color: #c4ac7970 transparent; }
+.sequence-scroll:focus-visible { outline: 2px solid #ead091; outline-offset: 3px; }
+.sequence-grid { min-width: 1030px; }
+.sequence-count, .sequence-track { display: grid; grid-template-columns: 176px repeat(16, minmax(39px, 1fr)); gap: 6px; align-items: center; }
+.sequence-count { font-variant-numeric: tabular-nums; color: #c2c9bd; }
+.sequence-count > span:not(:first-child) { padding: 7px 0; border-bottom: 1px solid #c4ac7925; }
+.sequence-count > span:nth-child(4n + 2) { color: #efd5a0; border-color: #c4ac7980; }
+.sequence-track { margin-bottom: 9px; }
+.sequence-track > span { display: none; }
+.sequence-track.is-muted .sequence-note { opacity: .37; }
+.sequence-voice { display: flex; flex-direction: column; gap: 5px; min-width: 0; text-align: left; }
+.sequence-voice-name { display: flex; gap: 7px; align-items: baseline; }
+.sequence-voice-name strong { color: #eee1c5; font-size: 11px; font-weight: 600; }
+.sequence-voice-name small { color: #bbc4bd; font-size: 9px; white-space: nowrap; }
+.sequence-voice-controls { display: flex; gap: 7px; align-items: center; }
+.music-mute { min-width: 48px; height: 24px; border: 1px solid #c4ac7950; color: #c7d7c8; border-radius: 3px; font: 10px var(--sans); }
+.music-mute[aria-pressed="true"] { background: #ae748329; color: #f2b1b9; }
+.music-level { width: 88px; max-width: 100%; accent-color: #c8b088; cursor: pointer; }
+.sequence-note { min-height: 40px; height: 40px; border-radius: 4px; }
+.sequence-note.on { background: color-mix(in srgb, var(--track-colour) 24%, transparent); border-color: color-mix(in srgb, var(--track-colour) 75%, transparent); }
+.sequence-note.on i { background: var(--track-colour); box-shadow: 0 0 12px var(--track-colour); }
+.sequence-note:nth-child(4n + 2) { border-left-color: #c4ac7988; }
+.sequence-note:focus-visible, .music-mute:focus-visible { outline: 2px solid #f1dda5; outline-offset: 2px; }
+.music-studio-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; border-top: 1px solid #c4ac7933; margin-top: 20px; padding-top: 20px; }
+.music-studio-controls .instrument-control { width: 100%; min-width: 0; }
+.music-studio-controls .exp-select { width: 100%; }
+.music-harmony-control .field-label { margin: 0 0 7px; }
+.music-bottom { border-top: 1px solid #c4ac7925; margin-top: 20px; padding-top: 20px; display: flex; align-items: start; }
+.music-bottom > div { flex: 1; }
+.music-bottom .button-row { display: flex; gap: 7px; flex-wrap: wrap; }
+.music-bottom .tiny-note { width: min(300px, 35%); line-height: 1.7; }
+.music-quest { margin-top: 20px; }
+.music-quest-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 17px; }
+.music-quest-heading h2 { font: 32px var(--serif); color: #f0e2c8; margin-top: 8px; }
+.music-quest-heading > span { font-size: 11px; color: #a7d4c4; font-variant-numeric: tabular-nums; }
+#music-story-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.music-story { display: flex; flex-direction: column; justify-content: space-between; min-height: 142px; padding: 18px; border: 1px solid #c4ac793b; background: #14252b; }
+.music-story.ready { border-color: #bad89b9c; background: #9ac79f10; }
+.music-story.earned { border-color: #e2c28a9e; }
+.music-story strong { font: 24px var(--serif); color: #e8dec6; }
+.music-story p { font-size: 11px; line-height: 1.5; color: #bbc6bd; margin: 8px 0 14px; }
+.music-story button, .music-story-seal { align-self: start; padding: 8px 11px; border: 1px solid #c4ac7970; color: #efdfb2; font-size: 10px; letter-spacing: .04em; }
+.music-story button:disabled { color: #9caaa5; border-color: #c4ac792c; cursor: not-allowed; }
+.music-story-seal { color: #aad8b9; border-color: #aad8b970; }
+.rp-pad-4 .rp-pad-orb { background: #d9b879; }
+.rp-pad-5 .rp-pad-orb { background: #c89184; }
+.rp-pad-6 .rp-pad-orb { background: #91c6e1; }
+.rp-pad-7 .rp-pad-orb { background: #a9addd; }
+.rp-pad { min-height: 103px; }
+.rp-pad strong { font-size: 19px; }
+@media (max-width: 1050px) {
+  .music-studio-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #music-story-cards { grid-template-columns: 1fr; }
+  .music-story { min-height: auto; display: flex; flex-direction: row; align-items: center; gap: 15px; }
+  .music-story p { margin-bottom: 0; }
+}
+@media (max-width: 700px) {
+  .sequence-count, .sequence-track { grid-template-columns: 176px repeat(16, minmax(39px, 1fr)); gap: 6px; }
+  .sequence-track > span { display: none; }
+  .sequence-count > span:first-child { display: block; }
+  .music-studio-controls { gap: 13px; }
+  .music-bottom .tiny-note { width: 100%; }
+  .music-story { align-items: start; flex-direction: column; }
+  .music-transport { flex-wrap: wrap; }
+  .orchestra-title h2 { font-size: clamp(30px, 8vw, 44px); }
+}
+@media (prefers-reduced-motion: reduce) { .music-orbit { animation: none !important; } .sequence-note { transition: none !important; } }
+.music-story-link { border-top: 1px solid #c4ac792e; margin-top: 17px; padding-top: 14px; font-size: 12px; color: #bbc9c0; line-height: 1.7; }

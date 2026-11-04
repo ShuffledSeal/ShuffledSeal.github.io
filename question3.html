@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<title>ShuffledSeal</title>
+
+	<meta name="description" content="Noughts and Crosses with a smart AI that will always win.">
+	<meta name="author" content="Abdoodles">
+	<meta property="og:title" content="Unbeatable AI">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://ShuffledSeal.github.io/portfolio.html">
+	<meta property="og:description" content="Noughts and Crosses with a smart AI that will always win.">
+	<meta property="og:image" content="https://i.redd.it/lcw2ysgeq9b51.png">
+
+	<link rel="icon" href="favicon.ico">
+
+
+
+	<style>
+		* {
+			font-family: "Lucida Console", "Courier New", monospace;
+			color: #976391;
+		}
+
+		body {
+			text-align: center;
+			margin: auto;
+			width: 23%;
+			background-color: #4C4C9D;
+			overflow: hidden;
+		}
+
+		.row {
+			clear: both;
+		}
+
+		.box {
+			font-size: xx-large;
+			margin-left: 20px;
+			font-weight: 900;
+			text-align: center;
+			background-color: #712F79;
+		}
+
+		.row div {
+			padding: 30px;
+			margin-top: 20px;
+			border: 1px solid black;
+			height: 30px;
+			width: 30px;
+			float: left;
+		}
+
+		button {
+			background-color: #712F79;
+			border: none;
+
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<h1 style="font-size:3vw">Tic-Tac-Toe</h1>
+	<div id="gameBoard">
+		<div class="row">
+			<div class="box" id="one" onclick="update(this)"></div>
+			<div class="box" id="two" onclick="update(this)"></div>
+			<div class="box" id="three" onclick="update(this)"></div>
+		</div>
+		<div class="row">
+			<div class="box" id="four" onclick="update(this)"></div>
+			<div class="box" id="five" onclick="update(this)"></div>
+			<div class="box" id="six" onclick="update(this)"></div>
+		</div>
+		<div class="row">
+			<div class="box" id="seven" onclick="update(this)"></div>
+			<div class="box" id="eight" onclick="update(this)"></div>
+			<div class="box" id="nine" onclick="update(this)"></div>
+		</div>
+	</div>
+	<div class="row">
+		<button name="button" value="OK" type="button" onclick="reset()">Click Here</button>
+	</div>
+	<script>
+		var boxes = document.getElementsByClassName("box");
+		var currentPlayer = "X";
+		var currentColor = "#48639C";
+		var huPlayer = "x";
+		var aiPlayer = "0";
+		function update(box) {
+			console.log(box);
+			if (box.innerText != "") return;
+			box.style.backgroundColor = currentColor;
+			box.innerText = currentPlayer;
+			if (currentPlayer == "O") {
+				currentPlayer = "X";
+				currentColor = "#48639C";
+				box.style.color = "#F7996E";
+			}
+			else {
+				currentPlayer = "O";
+				currentColor = "#F7996E";
+				box.style.color = "#48639C";
+
+			}
+		}
+
+		function reset() {
+			for (var i = 0; i < boxes.length; i++) {
+				boxes[i].innerText = "";
+				boxes[i].style.backgroundColor = "#712F79";
+			}
+			currentPlayer = "X";
+			currentColor = "#48639C";
+		}
+
+
+		function winning(board, player) {
+			if (
+				(boxes[0].innerText == currentPlayer && boxes[1].innerText == currentPlayer && boxes[2].innerText == currentPlayer) ||
+				(boxes[3].innerText == currentPlayer && boxes[4].innerText == currentPlayer && boxes[5].innerText == currentPlayer) ||
+				(boxes[6].innerText == currentPlayer && boxes[7].innerText == currentPlayer && boxes[8].innerText == currentPlayer) ||
+				(boxes[0].innerText == currentPlayer && boxes[3].innerText == currentPlayer && boxes[6].innerText == currentPlayer) ||
+				(boxes[1].innerText == currentPlayer && boxes[4].innerText == currentPlayer && boxes[7].innerText == currentPlayer) ||
+				(boxes[2].innerText == currentPlayer && boxes[5].innerText == currentPlayer && boxes[8].innerText == currentPlayer) ||
+				(boxes[0].innerText == currentPlayer && boxes[4].innerText == currentPlayer && boxes[8].innerText == currentPlayer) ||
+				(boxes[2].innerText == currentPlayer && boxes[4].innerText == currentPlayer && boxes[6].innerText == currentPlayer)
+			) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		function emptyIndexes(board) {
+			for (var i = 0; i < boxes.length; i++) {
+				if (boxes[i].innerText = "")
+					empty.push(i);
+			}
+			return empty;
+		}
+
+		function minimax(newBoard, player) {
+			var empty = emptyIndexes(newBoard);
+			if (winning(newBoard, huPlayer)) {
+				return { score: -10 };
+			}
+			else if (winning(newBoard, aiPlayer)) {
+				return { score: 10 };
+			}
+			else if (empty.length === 0) {
+				return { score: 0 };
+			}
+			var moves = [];
+			// loop through available spots
+			for (var i = 0; i < empty.length; i++) {
+				//create an object for each and store the index of that spot 
+				var move = {};
+				move.index = newBoard[empty[i]];
+
+				// set the empty spot to the current player
+				newBoard[empty[i]] = player;
+
+				/*collect the score resulted from calling minimax 
+				  on the opponent of the current player*/
+				if (player == aiPlayer) {
+					var result = minimax(newBoard, huPlayer);
+					move.score = result.score;
+				}
+				else {
+					var result = minimax(newBoard, aiPlayer);
+					move.score = result.score;
+				}
+
+				// reset the spot to empty
+				newBoard[empty[i]] = move.index;
+
+				// push the object to the array
+				moves.push(move);
+				// if it is the computer's turn loop over the moves and choose the move with the highest score
+				var bestMove;
+				if (player === aiPlayer) {
+					var bestScore = -10000;
+					for (var i = 0; i < moves.length; i++) {
+						if (moves[i].score > bestScore) {
+							bestScore = moves[i].score;
+							bestMove = i;
+						}
+					}
+				} else {
+
+					// else loop over the moves and choose the move with the lowest score
+					var bestScore = 10000;
+					for (var i = 0; i < moves.length; i++) {
+						if (moves[i].score < bestScore) {
+							bestScore = moves[i].score;
+							bestMove = i;
+						}
+					}
+				}
+
+				// return the chosen move (object) from the moves array
+				return moves[bestMove];
+			}
+		}
+
+
+	</script>
+</body>
+
+</html>

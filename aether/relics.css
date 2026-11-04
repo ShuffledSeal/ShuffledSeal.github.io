@@ -1,0 +1,143 @@
+/* Relic expeditions — a field guide that grows with each run. */
+.relic-progress { padding: 13px 20px 12px; border-bottom: 1px solid var(--exp-border); background: #101c1f; }
+.relic-progress > div { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: #d4dccd; font-size: 11px; }
+#relic-count { color: #e8cf9a; white-space: nowrap; }
+.relic-progress progress { appearance: none; border: 0; display: block; width: 100%; height: 4px; border-radius: 2px; overflow: hidden; background: #c4ac791c; color: var(--accent, var(--gold)); }
+.relic-progress progress::-webkit-progress-bar { background: #c4ac791c; }
+.relic-progress progress::-webkit-progress-value { background: var(--accent, var(--gold)); transition: width .3s; }
+.relic-progress progress::-moz-progress-bar { background: var(--accent, var(--gold)); }
+.run-build { border-top: 1px solid var(--exp-border); padding: 16px 20px; background: #111c20; }
+.run-build-heading { display: flex; justify-content: space-between; gap: 12px; color: #d0d8cb; font-size: 10px; }
+.run-build-heading > span:first-child { color: #e0c58e; letter-spacing: 1.5px; }
+.run-relics { display: flex; flex-wrap: wrap; gap: 8px; }
+.run-relics:not(:empty) { margin-top: 12px; }
+.relic-chip { display: flex; align-items: center; gap: 8px; border: 1px solid #c4ac7944; border-radius: 3px; padding: 8px 12px; min-height: 44px; font-size: 11px; color: #e4d8ba; text-align: left; background: #c4ac7909; }
+.relic-chip:hover { background: #c4ac791b; border-color: var(--gold); }
+.relic-chip > span { color: #e4c98f; font-size: 21px; line-height: 1; }
+.run-synergies:not(:empty) { padding-top: 12px; display: grid; gap: 7px; }
+.synergy-note { padding: 10px 12px; border-left: 2px solid #a8d4c3; background: #a8d4c309; font-size: 11px; color: #c5dbd0; }
+.synergy-note strong { display: block; color: #e1ebdf; font-weight: 500; margin-bottom: 3px; }
+.run-recap { padding: 24px; border-top: 1px solid #c4ac7955; background: linear-gradient(120deg, #c4ac7913, #111c20); }
+.run-recap h3 { font-size: 30px; margin: 9px 0 12px; }
+.run-recap > p:not(.eyebrow) { font-size: 12px; line-height: 1.8; color: #bec9bb; }
+.recap-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 26px; align-items: start; }
+.recap-score { font: 500 64px/1 var(--sans); letter-spacing: 1px; color: #f1e7ce; font-variant-numeric: tabular-nums; margin: 10px 0 4px; }
+.recap-delta { font-size: 12px; color: #cdbf9e; }
+.recap-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+.recap-tile { border: 1px solid #c4ac7933; border-radius: 3px; padding: 10px 12px; background: #c4ac7907; }
+.recap-tile small { display: block; font-size: 9px; letter-spacing: 1px; color: #a9b6a5; }
+.recap-tile strong { display: block; font: 22px var(--serif); font-weight: 400; color: #e8dcc2; margin-top: 4px; overflow-wrap: anywhere; }
+.recap-side .run-relics { margin-top: 0; margin-bottom: 12px; }
+.recap-side .synergy-note { margin-bottom: 8px; }
+.recap-timeline { font-size: 11px; color: #b3c0af; line-height: 1.8; margin: 10px 0; }
+.recap-standing { font-size: 11px; color: #a9b6a5; margin: 10px 0; }
+.recap-hook { font-size: 13px; color: #d8c491; margin: 12px 0 16px; }
+.recap-hook em { font-family: var(--serif); font-size: 17px; }
+.recap-side .button { width: 100%; }
+.forecast-row { display: grid; gap: 9px; margin: 22px 0 14px; pointer-events: auto; }
+.forecast-row .button { min-height: 46px; font-size: 12px; background: #c4ac7910; }
+.forecast-row .button:hover { background: #c4ac7924; border-color: var(--gold); }
+
+@media (max-width: 720px) { .recap-grid { grid-template-columns: 1fr; } .recap-score { font-size: 46px; } .recap-tiles { grid-template-columns: repeat(2, 1fr); } }
+.recap-relics { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 16px 0; list-style: none; }
+.recap-relics li { border: 1px solid #c4ac7944; border-radius: 3px; padding: 5px 10px; font-size: 11px; color: #e0cca6; }
+.expedition-guide h2 { font-size: 35px; }
+.expedition-guide ol { padding: 0; margin: 22px 0; list-style: none; display: grid; gap: 13px; color: #c0c8b9; font-size: 12px; }
+.expedition-guide li { display: flex; align-items: center; gap: 11px; }
+.expedition-guide li > span { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #c4ac7955; color: var(--gold); border-radius: 50%; font: 16px var(--serif); flex-shrink: 0; }
+.relic-field-guide { margin-top: 20px; border-top: 1px solid var(--exp-border); }
+.relic-field-guide summary { min-height: 48px; padding: 14px 0; cursor: pointer; font-size: 12px; color: #dbcca9; }
+.relic-field-guide summary > span { float: right; font-size: 11px; color: #a5b1a1; }
+.relic-entry { display: flex; gap: 13px; padding: 17px 0; border-top: 1px solid #c4ac7925; }
+.relic-entry strong { display: block; font: 23px var(--serif); color: #e2dcc8; }
+.relic-entry p { font-size: 11px; line-height: 1.75; color: #b2bfaf; margin: 6px 0; }
+.relic-entry small { font-size: 9px; letter-spacing: .6px; color: #a9afa0; }
+.relic-entry.catalogued small { color: #a8d4c3; }
+.relic-glyph { color: var(--gold); font: 29px var(--serif); width: 34px; text-align: center; flex-shrink: 0; }
+
+.relic-dialog { width: min(880px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 30px; border: 1px solid #c4ac7988; border-radius: 6px; background: radial-gradient(ellipse at 50% 0, #a9874c19, transparent 60%), #151e19; color: var(--text); box-shadow: 0 30px 120px #0009; overflow-y: auto; overscroll-behavior: contain; }
+.relic-dialog::backdrop { background: #070f14d6; backdrop-filter: blur(6px); }
+.relic-dialog[open] { animation: dialog-in .25s ease both; }
+.relic-dialog-heading { text-align: center; padding: 4px 12px 26px; }
+.relic-discovery-mark { display: block; font-size: 43px; line-height: 1.2; color: #e2c88e; text-shadow: 0 0 28px #c4ac7955; }
+.relic-dialog-heading .eyebrow { justify-content: center; margin-top: 12px; font-size: 10px; }
+.relic-dialog h2 { font-size: clamp(32px, 5vw, 47px); margin: 14px 0; }
+.relic-dialog-heading > p:last-child { color: #b9c2b0; font-size: 12px; line-height: 1.8; }
+.relic-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+.relic-choice { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: flex-start; padding: 23px 20px; min-height: 305px; text-align: left; border: 1px solid #c4ac7960; border-radius: 4px; background: linear-gradient(150deg, #c4ac7910, #c4ac7902); transition: transform .2s, border-color .2s, background .2s; animation: card-arrive .4s ease both; }
+.relic-choice::before { content: ''; position: absolute; inset: 6px; pointer-events: none; border: 1px solid #c4ac791a; border-radius: 2px; }
+.relic-choice:nth-child(2) { animation-delay: .07s; }
+.relic-choice:nth-child(3) { animation-delay: .14s; }
+.relic-choice:hover, .relic-choice:focus-visible { border-color: #e2c88e; background: linear-gradient(150deg, #c4ac7923, #c4ac7905); transform: translateY(-4px); }
+.relic-choice-number { position: absolute; top: 17px; right: 17px; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #c4ac7966; border-radius: 50%; color: var(--gold); font: 18px var(--serif); }
+.relic-choice-art { display: grid; place-items: center; width: 62px; height: 62px; margin-bottom: 20px; border: 1px solid #c4ac7966; outline: 1px solid #c4ac7920; outline-offset: 5px; border-radius: 50%; color: #e9cb8f; background: radial-gradient(#c4ac791e, transparent); font: 36px var(--serif); }
+.relic-choice-tag { color: #c5b181; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; }
+.relic-choice strong { font: 29px/1.1 var(--serif); color: #f1e7ce; margin: 11px 0; }
+.relic-choice-effect { display: block; font-size: 12px; line-height: 1.8; color: #bbc8b4; }
+.relic-choice-pair { display: block; font-size: 10px; line-height: 1.7; color: #b4bca9; margin-top: auto; padding-top: 18px; }
+.relic-choice-pair.ready { color: #c6e7d8; }
+.relic-choice-pair.ready::before { content: '✦ '; color: #a8d4c3; }
+.relic-dialog-footer { margin-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #acb7a4; font-size: 11px; }
+.relic-dialog-footer .button { font-size: 11px; min-height: 44px; }
+.game-theatre .game-screen { width: min(100%, calc((100dvh - 360px) * var(--game-aspect, .8))); }
+.game-theatre .run-build, .game-theatre .relic-progress { flex-shrink: 0; }
+.game-theatre .run-recap { flex-shrink: 0; }
+.game-theatre .game-bottom { margin-top: 0; }
+
+.expedition-archive { padding: 26px; margin: 0 0 28px; border: 1px solid var(--exp-border); border-radius: 5px; background: linear-gradient(120deg, #c4ac790a, transparent); }
+.expedition-archive > header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 15px; margin-bottom: 22px; }
+.expedition-archive h2 { font-size: 33px; margin-top: 8px; }
+.expedition-archive header > p { font-size: 12px; color: #b7c1ad; }
+.expedition-archive-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.expedition-record { padding: 18px; border: 1px solid #c4ac7933; border-radius: 3px; background: #101c1c; }
+.expedition-record > small { font-size: 10px; color: #a9b6a5; }
+.expedition-record h3 { font-size: 24px; margin-top: 8px; }
+.expedition-record > strong { font: 28px var(--serif); color: var(--gold); }
+.expedition-record p { font-size: 11px; color: #b3c0af; line-height: 1.8; margin-top: 10px; }
+.expedition-archive details { margin-top: 20px; }
+.expedition-archive summary { cursor: pointer; padding-block: 10px; font-size: 12px; color: var(--gold); }
+.archive-catalogue { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+.signal-route-select { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.signal-route-select .button { min-height: 44px; font-size: 11px; }
+.signal-route-select .button[aria-pressed=true] { color: #e8d8b5; border-color: var(--gold); background: #c4ac7916; }
+.signal-route-select .route-number { font: 22px var(--serif); color: var(--gold); }
+.signal-controls .button-row { flex-shrink: 0; }
+.route-achievement { padding: 0 22px 18px; font-size: 11px; color: #b6dec7; position: relative; z-index: 1; }
+.signal-mirror { width: 44px; height: 44px; }
+.signal-mirror small { pointer-events: none; }
+
+@media (max-width: 1000px) { .expedition-archive-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .relic-dialog { padding: 20px; width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .relic-dialog-heading { padding: 0 0 18px; }
+  .relic-discovery-mark { display: none; }
+  .relic-dialog-heading .eyebrow { font-size: 9px; }
+  .relic-dialog h2 { font-size: 32px; margin: 9px 0; }
+  .relic-choices { grid-template-columns: 1fr; gap: 10px; }
+  .relic-choice { min-height: 0; padding: 16px 40px 16px 66px; }
+  .relic-choice-art { position: absolute; width: 34px; height: 34px; left: 17px; top: 20px; font-size: 24px; outline-offset: 3px; }
+  .relic-choice-number { width: 22px; height: 22px; top: 12px; right: 12px; font-size: 15px; }
+  .relic-choice strong { font-size: 25px; margin: 6px 0; }
+  .relic-choice-effect { font-size: 11px; line-height: 1.65; }
+  .relic-choice-pair { font-size: 10px; padding-top: 8px; }
+  .relic-dialog-footer { flex-direction: column; margin-top: 18px; gap: 10px; }
+  .relic-dialog-footer .button { width: 100%; }
+  .relic-progress { padding-inline: 16px; }
+  .relic-progress > div { font-size: 10px; }
+  .run-build { padding: 14px 16px; }
+  .run-build-heading { font-size: 9px; }
+  .run-relics { gap: 6px; }
+  .relic-chip { font-size: 10px; padding: 8px 9px; }
+  .archive-catalogue { grid-template-columns: 1fr; }
+  .expedition-archive { padding: 20px; }
+  .expedition-archive-grid { grid-template-columns: 1fr; }
+  .signal-route-select { display: grid; grid-template-columns: 1fr 1fr; }
+  .signal-route-select .button { justify-content: flex-start; text-align: left; font-size: 10px; padding: 8px 10px; }
+  .signal-controls .button-row { width: 100%; }
+  #signal-canvas { min-height: 250px; }
+  .game-tools .button { font-size: 10px; min-height: 44px; }
+  .ability-button > b { font-size: 10px; }
+}
+@media (max-height: 650px) { .relic-dialog { padding: 18px; } .relic-discovery-mark { display: none; } .relic-choice { min-height: 230px; } .relic-choice-art { margin-bottom: 10px; } }
+@media (max-width: 720px), (prefers-reduced-motion: reduce) { .relic-dialog::backdrop { backdrop-filter: none; } }
+@media (prefers-reduced-motion: reduce) { .relic-dialog, .relic-choice { animation: none !important; transition: none !important; } .relic-progress progress::-webkit-progress-value { transition: none; } }
