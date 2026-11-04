@@ -733,10 +733,20 @@ window.AetherTrials = (() => {
     { id: 'shepherd', name: 'Shepherd', place: 'The ring band', brief: 'Return every moonlet that drifts toward the edge.' },
   ];
   const creators = { flare, eclipse, asteroids, comet, deepfield, freereturn, lander, shepherd };
+  // Extension point: additional trial files self-register their games here.
+  function register(def) {
+    if (!def?.id || creators[def.id]) return;
+    list.push({ id: def.id, name: def.name, place: def.place, brief: def.brief });
+    creators[def.id] = def.create;
+  }
   return {
     list,
     create(id, container, options = {}) {
       return creators[id](container, { sound: options.sound !== false, speedScale: options.speedScale || 1, verbs: options.verbs || new Set(), onEnd: options.onEnd || (() => {}) });
     },
+    register,
+    // Shared machinery for registered trials: fixed-timestep canvas frame,
+    // particles, tones, starfields — the house machinery.
+    frame, TAU, clamp, reduced,
   };
 })();

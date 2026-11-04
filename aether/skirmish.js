@@ -264,7 +264,12 @@ window.AetherSkirmish = (() => {
         const dx = p.x - m.x, dy = p.y - m.y, d = Math.hypot(dx, dy) || 1;
         if (d < 130) { m.vx += dx / d * 700 * dt; m.vy += dy / d * 700 * dt; }
         m.x += m.vx * dt; m.y += m.vy * dt; m.vx *= .96; m.vy *= .96; m.life -= dt;
-        if (d < 16) { motes.splice(i, 1); dust += 2; popup(p.x, p.y - 20, '+2', sector.mote); tone(880, .05, 'sine', .03); }
+        if (d < 16) {
+          motes.splice(i, 1);
+          if (m.kind === 'repair') { player.hp = Math.min(player.maxHp, player.hp + 8); popup(p.x, p.y - 20, '+8 PLATING', '#9ed7c6'); tone(620, .15, 'sine', .05); }
+          else if (m.kind === 'magnet') { for (const o of motes) if (!o.kind) { const dx2 = p.x - o.x, dy2 = p.y - o.y, dd = Math.hypot(dx2, dy2) || 1; o.vx = dx2 / dd * 900; o.vy = dy2 / dd * 900; } popup(p.x, p.y - 20, 'THE MOTES COME HOME', '#b3a0d8'); tone(740, .18, 'sine', .05); }
+          else { dust += 2; popup(p.x, p.y - 20, '+2', sector.mote); tone(880, .05, 'sine', .03); }
+        }
         else if (m.life <= 0) motes.splice(i, 1);
       }
       // Waves
@@ -364,6 +369,9 @@ window.AetherSkirmish = (() => {
         tone(e.kind === 'maw' ? 98 : 180, .18, 'sawtooth', .05);
         const drops = (def?.motes || 2) * (e.gilded ? 4 : 1);
         for (let i = 0; i < drops; i++) motes.push({ x: e.x + (rand() - .5) * 30, y: e.y + (rand() - .5) * 30, vx: (rand() - .5) * 120, vy: (rand() - .5) * 120, life: 9 });
+        // Rare supply drops: repair plating, or a charm that pulls every mote home.
+        if (rand() < .09) motes.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 12, kind: 'repair' });
+        else if (rand() < .08) motes.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 12, kind: 'magnet' });
         if (e === bossEnt) { /* boss handles its own death */ }
         enemies = enemies.filter(o => o.hp > 0);
       }
@@ -505,7 +513,12 @@ window.AetherSkirmish = (() => {
       for (const f of freezes) { ctx.globalAlpha = Math.min(.5, f.life); ctx.fillStyle = '#bfe3ea'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
       for (const t of trails) { ctx.globalAlpha = t.life * .7; ctx.fillStyle = '#f2a66c'; ctx.beginPath(); ctx.arc(t.x, t.y, 6 * t.life + 2, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
       // Motes
-      for (const m of motes) { ctx.fillStyle = sector.mote; ctx.globalAlpha = Math.min(1, m.life); ctx.beginPath(); ctx.arc(m.x, m.y, 3, 0, TAU); ctx.fill(); }
+      for (const m of motes) {
+        ctx.globalAlpha = Math.min(1, m.life);
+        if (m.kind === 'repair') { ctx.fillStyle = '#9ed7c6'; ctx.fillRect(m.x - 4, m.y - 1.5, 8, 3); ctx.fillRect(m.x - 1.5, m.y - 4, 3, 8); }
+        else if (m.kind === 'magnet') { ctx.strokeStyle = '#b3a0d8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(m.x, m.y, 5, .6, TAU - .6); ctx.stroke(); }
+        else { ctx.fillStyle = sector.mote; ctx.beginPath(); ctx.arc(m.x, m.y, 3, 0, TAU); ctx.fill(); }
+      }
       ctx.globalAlpha = 1;
       // Orbs
       for (const o of orbs) {

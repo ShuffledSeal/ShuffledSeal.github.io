@@ -250,7 +250,6 @@ window.AetherVoyage = (() => {
     const trial = window.AetherTrials.list.find(t => t.id === node.trial);
     stage.innerHTML = `<div class="trial-cabinet"><div class="trial-frame"></div></div>`;
     trialHandle = window.AetherTrials.create(node.trial, $('.trial-frame', stage), {
-      speedScale: has('lodestone-chart') ? .85 : 1,
       verbs: new Set(run.instruments.flatMap(id => I[id].verbs || [])),
       onEnd({ won, score }) {
         const gain = Math.round((score / 8 + (won ? 30 : 0)) * dustMul());
