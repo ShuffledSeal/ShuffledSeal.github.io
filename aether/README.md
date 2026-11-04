@@ -36,7 +36,7 @@ npm run test:trials
 npm run test:browser
 ```
 
-The browser smoke test starts a local server and verifies the Grand Tour landing page, standalone route, hunt mount, scaled-canvas pointer flight, and uncaught browser errors.
+The browser smoke test starts a local server and verifies cartridge persistence, all registered trials, arcade selection, calendar/journal/puzzle interactions, Wonder Room routes, scaled-canvas pointer recovery, narrow-screen layout, corrupt saves, and uncaught browser errors.
 
 ## Explore
 
@@ -69,7 +69,7 @@ The Voyage landing is now a cartridge-first anthology. These direct, replayable 
 
 - `index.html?standalone=1&cartridge=shooter#voyage` — Starfall Skirmish score attack.
 - `index.html?standalone=1&cartridge=bastion#voyage` — Aether Bastion strategy run.
-- `index.html?standalone=1&cartridge=labyrinth#voyage` — Glass Labyrinth stealth run.
+- `index.html?standalone=1&cartridge=labyrinth#voyage` — Glass Labyrinth endless stealth run. Four authored chambers loop with sharper Watchers; the Triune Archive offers three routes but needs only two keys.
 - `index.html?standalone=1&cartridge=starforge#voyage` — Starforge orbital factory contracts. Align moving Mirror, Conductor, Furnace, and cooling devices with their gate marks, deliver ember units, use a one-time emergency vent, survive eclipses, and defeat the Dying Clock.
 
 The twelve-leg Grand Tour remains available as the optional long-form expedition below the cabinet. Aborting a hunt or trial costs one hull; non-combat locations provide a clear no-reward exit.

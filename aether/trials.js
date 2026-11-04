@@ -766,7 +766,7 @@ window.AetherTrials = (() => {
   return {
     list,
     create(id, container, options = {}) {
-      return creators[id](container, { sound: options.sound !== false, speedScale: options.speedScale || 1, endless: options.endless === true, verbs: options.verbs || new Set(), onEnd: options.onEnd || (() => {}) });
+      return creators[id](container, { ...options, sound: options.sound !== false, speedScale: options.speedScale || 1, endless: options.endless === true, verbs: options.verbs || new Set(), onEnd: options.onEnd || (() => {}) });
     },
     register,
     // Shared machinery for registered trials: fixed-timestep canvas frame,

@@ -15,7 +15,7 @@
 
 | Area | Current entry | Input / loop |
 | --- | --- | --- |
-| Game Cartridges | `/aether/#voyage` | Starfall Skirmish, Aether Bastion, and Glass Labyrinth; standalone score records. |
+| Game Cartridges | `/aether/#voyage` | Starfall Skirmish, Aether Bastion, Glass Labyrinth, and Starforge; standalone score records. |
 | Grand Tour | cabinet's optional long-form mode | Seeded 12-leg route, hunts, trials, instruments, boss, saved active run. |
 | Cosmic Arcade | `#arcade` | Planet Drop, Comet Surf, Stardust Dash, and Orbit Breaker. |
 | Trials | Grand Tour route | 16 registered Canvas trials. |

@@ -311,7 +311,7 @@
     const verbs=options.verbs||new Set();
     const endless=options.endless===true;
     const g=frame(container,W,H,{
-      label:`Glass Labyrinth: a ${endless?'looping':'three-chamber'} stealth adventure. Pilot toward the mouse or use WASD, collect two starkeys in each chamber, then reach the illuminated exit. Space or right click to cloak and disable nearby sentries. Avoid their light cones.${endless?' Each completed circuit sharpens the Watchers.':' Escape with the Observatory archive.'}`,
+      label:`Glass Labyrinth: a ${endless?'looping':'four-chamber'} stealth adventure. Pilot toward the mouse or use WASD, collect the required starkeys in each chamber, then reach the illuminated exit. The final chamber offers three routes but needs only two keys. Space or right click to cloak and disable nearby sentries. Avoid their light cones.${endless?' Each completed circuit sharpens the Watchers.':' Escape with the Observatory archive.'}`,
       sound:options.sound,step,draw});
     const {ctx,canvas,listen,tone,burst,starfield}=g,stars=starfield(981,90);
     canvas.style.touchAction='none';canvas.focus({preventScroll:true});
@@ -323,8 +323,10 @@
     const layouts=[
       {bars:[[5,1,9,[4,5]],[11,1,9,[7]],[14,2,6,[4]]],keys:[[3,2],[10,7]],bonus:[[8,2],[15,8]],patrol:[[3,4,1,8,'v'],[8,5,2,9,'v'],[15,7,12,16,'h']]},
       {bars:[[4,2,9,[7]],[9,1,8,[3,4]],[13,2,9,[6]]],keys:[[7,3],[15,6]],bonus:[[2,8],[11,3]],patrol:[[2,5,1,9,'v'],[7,6,5,8,'v'],[15,8,14,16,'h']]},
-      {bars:[[6,1,9,[2,3]],[12,1,9,[7,8]],[15,2,7,[4,5]]],keys:[[3,7],[14,4]],bonus:[[8,3],[17,8]],patrol:[[4,4,2,8,'v'],[9,6,2,9,'v'],[16,7,14,16,'h'],[14,3,2,8,'v']]},
+     {bars:[[6,1,9,[2,3]],[12,1,9,[7,8]],[15,2,7,[4,5]]],keys:[[3,7],[14,4]],bonus:[[8,3],[17,8]],patrol:[[4,4,2,8,'v'],[9,6,2,9,'v'],[16,7,14,16,'h'],[14,3,2,8,'v']]},
+      {bars:[[5,1,9,[2,8]],[10,1,9,[3,7]],[14,1,9,[4,6]]],keys:[[3,2],[8,7],[12,3]],requiredKeys:2,bonus:[[12,5]],routes:[['SERVICE ROUTE',3,2,'#b6d8c9'],['CRYPT PASSAGE',8,7,'#d8c795'],['WATCHER GALLERY',12,3,'#f1a1b1']],patrol:[[3,5,1,8,'v'],[8,5,2,8,'v'],[12,6,2,8,'v'],[16,7,14,16,'h']]},
     ];
+    if(Number.isInteger(options.startChamber))chamber=clamp(options.startChamber,0,layouts.length-1);
     const inBounds=(x,y)=>x>=0&&x<COLS&&y>=0&&y<ROWS;
     const blocked=(x,y)=>{
       const t=toCell(x,y);
@@ -345,7 +347,7 @@
       }));
       player={...tile(1,5),vx:0,vy:0};cursor=null;pointerActive=false;
       found=0;roomTransition=1.3;entrance=2;cloak=0;cloakCd=0;
-      message={text:['THE IVORY ARCHIVE','THE HALL OF ECHOES','THE LAST OBSERVATORY'][chamber],t:5};
+       message={text:['THE IVORY ARCHIVE','THE HALL OF ECHOES','THE LAST OBSERVATORY','THE TRIUNE ARCHIVE'][chamber],t:5};
     }
     buildRoom();
     const alive=()=>!ended&&roomTransition<=0;
@@ -364,13 +366,14 @@
       guards.forEach(q=>q.alert=0);
     }
     function step(dt){
-      if(ended)return;
+     if(ended)return;
       clock+=dt;
+      const layout=layouts[chamber];
       entrance=Math.max(0,entrance-dt);
       roomTransition=Math.max(0,roomTransition-dt);
       cloak=Math.max(0,cloak-dt);cloakCd=Math.max(0,cloakCd-dt);
       message.t=Math.max(0,message.t-dt);
-      if(!endless&&clock>=116)return end(false);
+       if(!endless&&clock>=150)return end(false);
       if(roomTransition>0)return;
       let mx=(keys.has('d')||keys.has('ArrowRight')?1:0)-(keys.has('a')||keys.has('ArrowLeft')?1:0);
       let my=(keys.has('s')||keys.has('ArrowDown')?1:0)-(keys.has('w')||keys.has('ArrowUp')?1:0);
@@ -388,7 +391,8 @@
       for(const k of collectibles)if(!k.taken&&Math.hypot(player.x-k.x,player.y-k.y)<22){
         k.taken=true;found++;score+=250;
         burst(k.x,k.y,GOLD,24,180);tone(620+found*140,.15,'triangle',.05);
-        message={text:`STARKEY ${found} / 2 · ${found===2?'EXIT UNSEALED':'FIND THE OTHER'}`,t:3};
+         const required=layout.requiredKeys||2;
+         message={text:`STARKEY ${found} / ${required} · ${found===required?'EXIT UNSEALED':'FIND THE OTHER'}`,t:3};
       }
       for(const b of bonus)if(!b.taken&&Math.hypot(player.x-b.x,player.y-b.y)<20){
         b.taken=true;score+=100;burst(b.x,b.y,MINT,14,145);tone(890,.06,'sine',.035);
@@ -421,9 +425,9 @@
         if(guard.alert>=1.17)loseHeart();
       }
       // A sealed door only opens when both sigils are held.
-      if(player.x>X+16.35*S&&Math.abs(player.y-tile(17,5).y)<35&&found>=2){
+       if(player.x>X+16.35*S&&Math.abs(player.y-tile(17,5).y)<35&&found>=(layouts[chamber].requiredKeys||2)){
         score+=350;chamber++;
-        if(chamber>=3){
+         if(chamber>=layouts.length){
           if(!endless)return end(true);
           cycles++;chamber=0;hearts=Math.min(3,hearts+1);
           score+=cycles*200;
@@ -458,6 +462,10 @@
     listen(window,'blur',()=>{keys.clear();pointerActive=false;});
     function draw(ctx,dt,time){
       canvas.dataset.mode=endless?'endless':'mission';
+      canvas.dataset.chamber=String(chamber+1);
+      canvas.dataset.chamberCount=String(layouts.length);
+      canvas.dataset.keysAvailable=String(collectibles.length);
+      canvas.dataset.keysRequired=String(layouts[chamber].requiredKeys||2);
       ctx.fillStyle=['#081821','#111728','#0e1524'][chamber%3];ctx.fillRect(0,0,W,H);stars();
       const halo=ctx.createRadialGradient(500,250,20,500,250,520);
       halo.addColorStop(0,'#679f9a20');halo.addColorStop(1,'#07131b00');ctx.fillStyle=halo;ctx.fillRect(0,0,W,H);
@@ -478,16 +486,20 @@
       }
       // Exit gate and lock condition.
       const exit=tile(17,5);
-      ctx.fillStyle=found===2?'#4caa9599':'#7c515d99';ctx.fillRect(X+16.83*S,Y+5*S,10,S);
-      ctx.shadowColor=found===2?MINT:PINK;ctx.shadowBlur=22;ctx.strokeStyle=found===2?MINT:PINK;ctx.lineWidth=3;
+       const requiredKeys=layouts[chamber].requiredKeys||2;
+       ctx.fillStyle=found>=requiredKeys?'#4caa9599':'#7c515d99';ctx.fillRect(X+16.83*S,Y+5*S,10,S);
+       ctx.shadowColor=found>=requiredKeys?MINT:PINK;ctx.shadowBlur=22;ctx.strokeStyle=found>=requiredKeys?MINT:PINK;ctx.lineWidth=3;
       ctx.strokeRect(X+17*S+4,Y+5*S+4,S-8,S-8);ctx.shadowBlur=0;
       // Opt-in bonus fragments and required keys.
       for(const b of bonus){if(b.taken)continue;ctx.save();ctx.translate(b.x,b.y);ctx.rotate(time);
         ctx.strokeStyle='#9be7df';ctx.lineWidth=1.4;ctx.strokeRect(-7,-7,14,14);ctx.fillStyle='#9be7df';ctx.fillRect(-2,-2,4,4);ctx.restore();}
-      for(const k of collectibles){if(k.taken)continue;ctx.save();ctx.translate(k.x,k.y);
+       for(const k of collectibles){if(k.taken)continue;ctx.save();ctx.translate(k.x,k.y);
         ctx.rotate(-time*.7);ctx.shadowColor=GOLD;ctx.shadowBlur=19;ctx.fillStyle='#f3d79f';
         ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(12,0);ctx.lineTo(0,15);ctx.lineTo(-12,0);ctx.closePath();ctx.fill();
-        ctx.shadowBlur=0;ctx.fillStyle='#29364a';ctx.fillRect(-4,-4,8,8);ctx.restore();}
+         ctx.shadowBlur=0;ctx.fillStyle='#29364a';ctx.fillRect(-4,-4,8,8);ctx.restore();}
+       for(const [label,col,row,color] of layouts[chamber].routes||[]){
+         const p=tile(col,row);drawText(ctx,label,p.x,p.y-24,8,color,'center');
+       }
       // Sentry cones: the limits of visibility are deliberately disclosed.
       for(const guard of guards){
         ctx.save();ctx.translate(guard.x,guard.y);ctx.rotate(guard.facing);
@@ -514,20 +526,20 @@
       // Inventory/controls overlay: first eight seconds double as instruction.
       ctx.fillStyle='#07121dec';ctx.fillRect(0,0,W,66);ctx.strokeStyle='#d7c29266';ctx.beginPath();ctx.moveTo(0,65);ctx.lineTo(W,65);ctx.stroke();
       drawText(ctx,'GLASS LABYRINTH',22,27,20,GOLD);
-       drawText(ctx,endless?`CIRCUIT ${cycles+1} · CHAMBER ${chamber+1}`:`CHAMBER ${chamber+1} / 3`,23,47,11,'#a6d5cd');
-      drawText(ctx,`STARKEYS ${found}/2`,260,28,16,found===2?MINT:GOLD);
+        drawText(ctx,endless?`CIRCUIT ${cycles+1} · CHAMBER ${chamber+1}`:`CHAMBER ${chamber+1} / ${layouts.length}`,23,47,11,'#a6d5cd');
+       drawText(ctx,`STARKEYS ${found}/${requiredKeys}`,260,28,16,found>=requiredKeys?MINT:GOLD);
       drawText(ctx,`HEARTS ${'♥'.repeat(hearts)}${'♡'.repeat(3-hearts)}`,260,48,13,PINK);
       drawText(ctx,`SCORE ${score}`,472,27,14,MINT);
-       drawText(ctx,endless?`CIRCUITS ${cycles}`:`TIME ${Math.max(0,116-Math.floor(clock))}s`,472,47,11,'#b8cbc6');
+        drawText(ctx,endless?`CIRCUITS ${cycles}`:`TIME ${Math.max(0,150-Math.floor(clock))}s`,472,47,11,'#b8cbc6');
       ctx.fillStyle=cloakCd>0?'#2c3c48':'#276155';ctx.strokeStyle='#a7e6ca66';ctx.fillRect(690,11,194,46);ctx.strokeRect(690,11,194,46);
       drawText(ctx,cloakCd>0?`VEIL ${cloakCd.toFixed(1)}s`:'VEIL READY · SPACE',787,40,13,MINT,'center');
       ctx.fillStyle='#07121dec';ctx.fillRect(0,507,W,53);ctx.strokeStyle='#bdaa8e55';ctx.beginPath();ctx.moveTo(0,507);ctx.lineTo(W,507);ctx.stroke();
       drawText(ctx,'MOUSE OR WASD TO MOVE',23,527,11,'#d3e0d3');
       drawText(ctx,'SPACE / RIGHT CLICK TO CLOAK',23,545,11,'#b4d1c8');
-      drawText(ctx,found===2?'GATE OPEN · REACH THE EASTERN DOOR':'FIND THE TWO GOLDEN STARKEYS',866,532,12,GOLD,'right');
+       drawText(ctx,found>=requiredKeys?'GATE OPEN · REACH THE EASTERN DOOR':`FIND ${requiredKeys} GOLDEN STARKEYS`,866,532,12,GOLD,'right');
       if(message.t>0)drawText(ctx,message.text,450,77,13,GOLD,'center');
       if(roomTransition>0){ctx.fillStyle=`rgba(5,12,20,${Math.min(.8,roomTransition/1.3*.8)})`;ctx.fillRect(0,65,W,442);
-        drawText(ctx,layouts[chamber]&&['CHAMBER I · THE IVORY ARCHIVE','CHAMBER II · ECHO HALL','CHAMBER III · THE LAST OBSERVATORY'][chamber],450,283,23,GOLD,'center');}
+         drawText(ctx,layouts[chamber]&&['CHAMBER I · THE IVORY ARCHIVE','CHAMBER II · ECHO HALL','CHAMBER III · THE LAST OBSERVATORY','CHAMBER IV · THE TRIUNE ARCHIVE'][chamber],450,283,23,GOLD,'center');}
       if(ended){ctx.fillStyle='#07121deb';ctx.fillRect(0,65,W,442);
         drawText(ctx,win?'THE ARCHIVE IS YOURS':'THE WATCHERS REMEMBER',450,250,29,win?MINT:PINK,'center');
         drawText(ctx,`SCORE ${score.toLocaleString()}`,450,289,17,GOLD,'center');}
@@ -535,5 +547,5 @@
     }
     return g;
   }
-  AT.register({id:'labyrinth',name:'Glass Labyrinth',place:'The sealed observatory',brief:'A three-chamber stealth adventure. Avoid patrolling sentries, cloak through their fields of view, and steal two starkeys to open each gate.',create:labyrinth});
+  AT.register({id:'labyrinth',name:'Glass Labyrinth',place:'The sealed observatory',brief:'A four-chamber stealth adventure. In the Triune Archive, choose any two of three routes: safe service passages, a guarded crypt, or the bonus-rich Watcher Gallery.',create:labyrinth});
 })();

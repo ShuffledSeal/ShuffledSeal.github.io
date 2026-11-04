@@ -39,6 +39,7 @@
 ## 2026-11-04 - `d7000e1`
 
 - Added direct-cartridge endless modes for Starfall Skirmish, Aether Bastion, and Glass Labyrinth.
+- Expanded Glass Labyrinth with the Triune Archive: three visible routes, two required keys, and a bonus-rich Watcher Gallery route. The endless cartridge now loops all four authored chambers.
 - Preserved finite authored Grand Tour loops.
 - Added direct-route browser checks for endless mode activation.
 

@@ -16,7 +16,7 @@ window.AetherVoyage = (() => {
   const CARTRIDGES = {
     shooter: { name: 'Starfall Skirmish', eyebrow: '01 · ACTION', icon: '✦', brief: 'An endless arena vigil. Read telegraphs, dash through pressure, and push your FLOW score.', controls: 'MOUSE PILOT · HOLD CLICK FIRE · SPACE / RIGHT CLICK DASH', trial: null },
     bastion: { name: 'Aether Bastion', eyebrow: '02 · STRATEGY', icon: '◇', brief: 'An endless siege board. Build, specialize, and outlast escalating crystal tides.', controls: '1–4 BUILD · CLICK PLACE / SELECT · Q / E UPGRADE · SPACE PULSE', trial: 'bastion' },
-    labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · STEALTH', icon: '◈', brief: 'A looping infiltration. Study sentry cones, collect starkeys, and survive sharper circuits.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL', trial: 'labyrinth' },
+    labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · ENDLESS STEALTH', icon: '◈', brief: 'An endless infiltration. Study sentry cones, choose routes through the Triune Archive, and survive sharper circuits.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL', trial: 'labyrinth' },
     starforge: { name: 'Starforge', eyebrow: '04 · FACTORY', icon: '✦', brief: 'Build an orbital factory. Align moving machinery, route starlight, and contain the heat you create.', controls: 'SELECT DEVICE · CLICK ORBIT · SPACE IGNITES / PAUSES', trial: null },
   };
 
@@ -284,7 +284,7 @@ window.AetherVoyage = (() => {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ORBITAL FACTORY</span><strong>THE LAST CELESTIAL FOUNDRY</strong></div><div class="starforge-frame"></div>`;
       gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { onEnd: end });
     } else {
-      stage.innerHTML = `<div class="cartridge-playbill"><span>ENDLESS CARTRIDGE</span><strong>${id === 'bastion' ? 'THE CITADEL HAS NO DAWN' : 'THE ARCHIVE REWRITES ITSELF'}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
+      stage.innerHTML = `<div class="cartridge-playbill"><span>ENDLESS CARTRIDGE</span><strong>${id === 'bastion' ? 'THE CITADEL HAS NO DAWN' : 'THE ARCHIVE REWRITES ITSELF · EVERY CIRCUIT SHARPENS THE WATCHERS'}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
       trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: true, verbs: new Set(), onEnd: end });
       $('.trial-frame canvas', stage)?.focus({ preventScroll: true });
     }

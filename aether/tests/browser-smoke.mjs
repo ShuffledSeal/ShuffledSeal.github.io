@@ -55,6 +55,16 @@ try {
   await page.goto(`${base}/index.html?standalone=1&cartridge=labyrinth#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-stage .trial-frame canvas');
   await page.waitForFunction(canvas => canvas.dataset.mode === 'endless', await page.locator('.cartridge-stage .trial-frame canvas').elementHandle());
+  await page.waitForFunction(canvas => canvas.dataset.chamberCount === '4', await page.locator('.cartridge-stage .trial-frame canvas').elementHandle());
+  await page.evaluate(() => {
+    const host = document.createElement('div');
+    host.id = 'triune-smoke'; document.body.append(host);
+    window.__triuneSmoke = window.AetherTrials.create('labyrinth', host, { sound: false, startChamber: 3, onEnd() {} });
+  });
+  const triune = page.locator('#triune-smoke canvas');
+  await triune.waitFor({ state: 'attached' });
+  await page.waitForFunction(canvas => canvas.dataset.chamber === '4' && canvas.dataset.keysAvailable === '3' && canvas.dataset.keysRequired === '2', await triune.elementHandle());
+  await page.evaluate(() => window.__triuneSmoke.destroy());
   await page.goto(`${base}/index.html?standalone=1&cartridge=starforge#voyage`, { waitUntil: 'networkidle' });
   const starforge = page.locator('.starforge-canvas');
   await assertVisible(page, '.starforge-canvas');
@@ -124,6 +134,20 @@ try {
   await page.waitForFunction(canvas => canvas.dataset.selectedTier === '1' && canvas.dataset.selectedPath === 'left', await bastion.elementHandle());
   await page.evaluate(() => window.__bastionSmoke.destroy());
 
+  const trialIds = await page.evaluate(() => window.AetherTrials.list.map(trial => trial.id));
+  for (const id of trialIds) {
+    await page.evaluate(trialId => {
+      const host = document.createElement('div');
+      host.id = 'trial-smoke'; document.body.append(host);
+      window.__trialSmoke = window.AetherTrials.create(trialId, host, { sound: false, onEnd() {} });
+    }, id);
+    await page.waitForTimeout(80);
+    const trialSurface = page.locator('#trial-smoke canvas, #trial-smoke .deepfield-grid');
+    if (!await trialSurface.count()) throw new Error(`${id} did not mount an interactive surface under the shared trial host`);
+    await page.waitForFunction(surface => surface.getAttribute('role') === 'application' || surface.getAttribute('role') === 'group', await trialSurface.elementHandle());
+    await page.evaluate(() => { window.__trialSmoke.destroy(); document.querySelector('#trial-smoke').remove(); });
+  }
+
   await page.evaluate(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 900; canvas.height = 500; canvas.id = 'hop-smoke';
@@ -146,6 +170,57 @@ try {
   assert.equal(await hop.getAttribute('data-releases'), '0', 'a cancelled Comet Surf pointer press must not slingshot');
   assert.equal(await hop.getAttribute('data-tethered'), 'true', 'a cancelled Comet Surf pointer press must preserve its orbit');
   await page.evaluate(() => { window.__hopSmoke.destroy(); document.querySelector('#hop-smoke').remove(); });
+
+  await page.goto(`${base}/index.html#calendar`, { waitUntil: 'networkidle' });
+  const calendarTitle = await page.locator('.calendar-toolbar h2').textContent();
+  await page.locator('[data-action="month-next"]').click();
+  await page.waitForFunction(previous => document.querySelector('.calendar-toolbar h2').textContent !== previous, calendarTitle);
+  await page.locator('.calendar-day').first().click();
+
+  await page.goto(`${base}/index.html#journal`, { waitUntil: 'networkidle' });
+  await page.locator('.view-header [data-action="new-entry"]').click();
+  await page.locator('#entry-title').fill('Smoke-tested observation');
+  await page.locator('#entry-subject').fill('Test sky');
+  await page.locator('#entry-body').fill('A saved observation proves the field journal route persists safely.');
+  await page.locator('#journal-form button[type="submit"]').click();
+  await expectText(page, 'Smoke-tested observation');
+  assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('aether-observatory-v1')).journal.some(entry => entry.title === 'Smoke-tested observation')), 'a new journal entry must persist');
+
+  await page.goto(`${base}/index.html#planet/mercury`, { waitUntil: 'networkidle' });
+  await assertVisible(page, '#puzzle-board');
+  await page.locator('[data-puzzle-cell]').first().click();
+  await page.waitForFunction(() => Number(document.querySelector('#puzzle-moves').textContent) > 0);
+
+  await page.goto(`${base}/index.html#arcade`, { waitUntil: 'networkidle' });
+  for (const id of ['dash', 'breaker', 'hop', 'merge']) {
+    await page.locator(`[data-exp="choose-game"][data-id="${id}"]`).click();
+    await page.waitForFunction(gameId => document.querySelector(`[data-exp="choose-game"][data-id="${gameId}"]`)?.getAttribute('aria-pressed') === 'true', id);
+    await assertVisible(page, '#arcade-canvas');
+  }
+  await page.locator('[data-exp="choose-game"][data-id="dash"]').click();
+  await page.locator('[data-exp="game-start"]').click();
+  await page.waitForFunction(() => document.querySelector('#arcade-canvas').dataset.phase === 'running');
+
+  for (const [route, selector] of [
+    ['discover', '.room-grid'], ['darkroom', '.empty-experience'], ['orchestra', '[data-exp="music-note"][data-track="0"][data-step="0"]'], ['history', '.history-sky'], ['letters', '.signal-stage'], ['mystery', 'details.mystery-letter[open]'], ['cabinet', '.cabinet-passport'],
+  ]) {
+    await page.goto(`${base}/index.html#${route}`, { waitUntil: 'networkidle' });
+    await assertVisible(page, selector);
+  }
+  await page.goto(`${base}/index.html#orchestra`, { waitUntil: 'networkidle' });
+  const note = page.locator('[data-exp="music-note"]').first();
+  const noteState = await note.getAttribute('aria-pressed');
+  await note.click();
+  assert.notEqual(await note.getAttribute('aria-pressed'), noteState, 'an orchestra note must toggle through the room route');
+  await page.goto(`${base}/index.html#history`, { waitUntil: 'networkidle' });
+  await page.locator('[data-exp="history-next"]').click();
+  await page.waitForFunction(() => document.querySelector('[data-exp="history-next"]')?.textContent.includes('plate A'));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${base}/index.html?standalone=1&cartridge=starforge#voyage`, { waitUntil: 'networkidle' });
+  await assertVisible(page, '.starforge-canvas');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'the Starforge cartridge must not create horizontal overflow at 390px');
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto(`${base}/index.html#telescope`, { waitUntil: 'networkidle' });
   await page.locator('[data-exp="open-dome"]').click();
@@ -211,7 +286,7 @@ try {
 
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cabinet routes, Starforge contract persistence, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, Wonder Room pointer recovery, retreat cost, and Bastion range upgrades.');
+  console.log('Browser smoke passed: landing, cartridge persistence, all registered trials, arcade selection, calendar/journal/puzzle routes, Wonder Rooms, narrow-screen Starforge, save recovery, pointer flight, Comet Surf cancellation, retreat cost, and Bastion upgrades.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});
