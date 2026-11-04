@@ -229,7 +229,7 @@ window.AetherArcade = (() => {
       if (options.game === 'dash') spawn = Math.max(spawn, .8);
       if (options.game === 'breaker') launchTimer = Math.max(launchTimer, .6);
       if (chosen && !skip) draftTimes.push(time);
-      accumulator = 0; last = 0; clearInput(); notify();
+      accumulator = 0; last = 0; clearInput(); schedule(); notify();
       // The paused phase deliberately survives a pick made in a blurred window.
       return true;
     }
@@ -474,20 +474,20 @@ window.AetherArcade = (() => {
       // The world eases up to speed instead of slamming to full velocity.
       punch(.25, .3); if (!reduced) zoom = 1.045;
       if (sound) motif([[523.25, 0, .08], [523.25, .32, .08], [783.99, .64, .2]], .045);
-      notify(); canvas.focus({ preventScroll: true });
+      schedule(); notify(); canvas.focus({ preventScroll: true });
     }
     function pause() {
       if (phase !== 'running') return;
       phase = 'paused'; accumulator = 0; clearInput();
       motif([[440, 0, .12], [329.63, .1, .22]], .032);
       audio?.suspend();
-      notify();
+      schedule(); notify();
     }
     function resume() {
       if (phase !== 'paused' || document.hidden || destroyed) return;
       phase = 'running'; last = 0; accumulator = 0; clearInput();
       if (sound) { audio?.resume().catch(() => {}); motif([[329.63, 0, .1], [440, .08, .16]], .032); }
-      notify(); canvas.focus({ preventScroll: true });
+      schedule(); notify(); canvas.focus({ preventScroll: true });
     }
     function ability() {
       if (phase !== 'running' || suspended || charge < 100 || options.game === 'hop') return;
@@ -1621,18 +1621,26 @@ window.AetherArcade = (() => {
       }
       if (flash > 0 && !reduced) { ctx.fillStyle = `rgba(${flashTint},${flash * .6})`; ctx.fillRect(0, 0, W, H); }
     }
-    let idleDraw = 0;
+    let idleTimer = 0;
+    // Frame scheduling follows the game's actual state: full rate while a run
+    // is live, an 8 fps timer behind a draft's blurred backdrop, and no
+    // callbacks at all while paused, ready, finished, or hidden.
+    function schedule() {
+      if (destroyed) return;
+      cancelAnimationFrame(frame); clearTimeout(idleTimer); frame = 0; idleTimer = 0;
+      if (document.hidden || phase === 'paused' || phase === 'ready' || phase === 'over') return;
+      if (suspended) { idleTimer = setTimeout(() => { if (!destroyed) frame = requestAnimationFrame(tick); }, 125); return; }
+      frame = requestAnimationFrame(tick);
+    }
     function tick(now) {
       if (destroyed) return;
       const elapsed = last ? Math.min(.08, (now - last) / 1000) : 0; last = now;
-      // Behind the opaque overlay there is nothing new to see; idle at a gentle
-      // 8 fps. A suspended run (relic draft open) is covered by a modal too, so
-      // full-rate redraws there would only feed the backdrop blur.
-      if (phase === 'paused' || phase === 'ready' || phase === 'over' || suspended) {
-        idleDraw += elapsed;
-        if (idleDraw >= .12) { idleDraw = 0; draw(); }
-        frame = requestAnimationFrame(tick); return;
-      }
+      // Behind the opaque overlay there is nothing new to see; draw once and
+      // stop scheduling. A suspended run (relic draft open) repaints gently
+      // through schedule()'s timer — full-rate redraws there would only feed
+      // the backdrop blur.
+      if (document.hidden || phase === 'paused' || phase === 'ready' || phase === 'over') { draw(); frame = 0; return; }
+      if (suspended) { draw(); schedule(); return; }
       if (phase === 'running') {
         // Hit-stop starves the accumulator; nothing catches up afterwards.
         if (timeKick > 0) timeKick -= elapsed;
@@ -1647,7 +1655,7 @@ window.AetherArcade = (() => {
         musicStep();
       }
       if (phase !== 'paused') effectsStep(elapsed * Math.max(timeScale, .12), elapsed);
-      draw(); frame = requestAnimationFrame(tick);
+      draw(); schedule();
     }
     function pointer(event) {
       const rect = canvas.getBoundingClientRect();
@@ -1687,16 +1695,16 @@ window.AetherArcade = (() => {
     listen(window, 'blur', pause);
     listen(canvas, 'blur', () => { if (!document.body.classList.contains('game-theatre')) clearInput(); });
     listen(document, 'visibilitychange', () => {
-      if (document.hidden) { pause(); audio?.suspend(); cancelAnimationFrame(frame); }
-      else { last = 0; cancelAnimationFrame(frame); frame = requestAnimationFrame(tick); }
+      if (document.hidden) { pause(); audio?.suspend(); cancelAnimationFrame(frame); clearTimeout(idleTimer); }
+      else { last = 0; schedule(); }
     });
-    reset(); frame = requestAnimationFrame(tick);
+    reset(); schedule();
     return { start, pause, resume, action, ability, reset,
       applyRelic: id => resolveOffer(id),
       skipRelic: () => resolveOffer(null, true),
       startForecast(id) { forecastPick = id; reset(); start(); },
       setSound(value) { sound = value; if (!value) audio?.suspend(); },
-      destroy() { destroyed = true; cancelAnimationFrame(frame); abort.abort(); audio?.close().catch(() => {}); },
+      destroy() { destroyed = true; cancelAnimationFrame(frame); clearTimeout(idleTimer); abort.abort(); audio?.close().catch(() => {}); },
     };
   }
   return { create, orb, names, colours, radii, dimensions, relics, synergies, powerUps };

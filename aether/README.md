@@ -21,6 +21,19 @@ Open **http://localhost:4173**. The app can also be deployed to any static web h
 - Search planets, constellations, events, and pages with `/` or `Ctrl/Cmd + K`.
 - Optional synthesized ambient audio, observer preferences, and reduced-motion support.
 
+## The planetary atlas
+
+Eight field guides — one per planet — each pairing illustrated plates and rounded reference figures (with a NASA fact-sheet link) with a puzzle game built from that world's own character. Forty levels in total, with undo, redo, solver-derived hints, par scoring, three-star records, and saved progress in local storage.
+
+- **Mercury · Shadow circuit** — a Lights Out grid: switching a crater's light affects its neighbours.
+- **Venus · Cloudworks** — rotate pipe tiles until pump and receiver share one continuous circuit.
+- **Earth · Watershed** — connect every numbered pair with a continuous path and fill the whole grid.
+- **Mars · Sample return** — push-only crate puzzles: plan the route, mind the corners.
+- **Jupiter · Orbital lock** — coupled moon dials inspired by the Io–Europa–Ganymede resonance.
+- **Saturn · Cassini passage** — sliding-block boards: clear a lane to the exit.
+- **Uranus · Axis shift** — tilt the tray; every capsule slides together until something stops it.
+- **Neptune · Storm runner** — inertia navigation on limited fuel, visiting buoys in order.
+
 ## The cosmic arcade
 
 Four hand-rolled canvas games with saved expedition records, a shared daily seed, pause, optional sound, theatre view, charge-up abilities, and a small roguelite layer. During a run you earn up to four picks from twenty-four mechanical relics; picks visibly change play, and paired relics unlock named synergies. Discoveries stay in a permanent field guide while powers begin fresh each run.

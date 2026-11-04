@@ -27,10 +27,18 @@
 
   // Desktop wheel mice emit vertical deltas; steer them sideways.
   box.addEventListener("wheel", function (event) {
-    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-      event.preventDefault();
-      box.scrollLeft += event.deltaY;
-    }
+    // Let project descriptions scroll vertically.
+    if (event.target.closest(".text-ctn")) return;
+
+    // Preserve native horizontal scrolling.
+    if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+    var atStart = box.scrollLeft <= 0;
+    var atEnd = box.scrollLeft + box.clientWidth >= box.scrollWidth - 1;
+    if ((atStart && event.deltaY < 0) || (atEnd && event.deltaY > 0)) return;
+
+    event.preventDefault();
+    box.scrollLeft += event.deltaY;
   }, { passive: false });
 
   // Arrow keys work when the strip itself has focus.

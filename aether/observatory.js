@@ -144,24 +144,24 @@
   }
 
   const rooms = [
-    ['telescope', '01', 'Something out there', 'A drifting sky. A nebula jellyfish. Your next great photograph.', 'saturn', 'Open the dome'],
-    ['darkroom', '02', 'Light, developed', 'Dip a plate into the bath. See what the darkness was hiding.', 'orion', 'Get your hands luminous'],
-    ['worlds', '03', 'Worlds with issues', 'Paint continents. Add craters. Give your creation too many moons.', 'world', 'Play planet-maker'],
-    ['orchestra', '04', 'The cosmic B-side', 'Four planets, eight beats, and absolutely no music degree required.', 'music', 'Make some space music'],
-    ['history', '05', 'The sky detectives', 'Blink between exposures. Spot the thing that refuses to stay still.', 'jupiter', 'Investigate a lost night'],
-    ['letters', '06', 'Postcards at lightspeed', 'Bounce a beam through mirrors. Send a thought somewhere far away.', 'letter', 'Follow the light'],
+    ['telescope', '01', 'At the eyepiece', 'Five subjects to find, focus, and photograph.', 'saturn', 'Open the dome'],
+    ['darkroom', '02', 'The darkroom', 'Develop a capture into a print. Time the bath, tune the finish.', 'orion', 'Develop a plate'],
+    ['worlds', '03', 'The drawing table', 'Shape a world: mass, moons, continents, and one optional comet.', 'world', 'Make a world'],
+    ['orchestra', '04', 'The sequencer', 'Four planet voices, eight beats, and a score to record.', 'music', 'Arrange a score'],
+    ['history', '05', 'Lost nights', 'Four real discoveries, reconstructed. Find what changed.', 'jupiter', 'Investigate'],
+    ['letters', '06', 'The light desk', 'Route a beam through mirrors and post a letter by light.', 'letter', 'Route a beam'],
   ];
   function renderDiscover() {
-    return `<div class="experience">${heading('SIX DOORS. NO INSTRUCTION MANUAL REQUIRED.', 'Go on.<br><em>Touch everything.</em>', 'A collection of curious experiments. Each one leaves a trace of you.', passport())}
-      <div class="room-grid">${rooms.map(([id, number, title, description, picture, action]) => `<a class="room-card room-${id}" href="#${id}"><div class="room-art">${art(picture, world.hue, world)}<span class="room-number">EXPERIMENT / ${number}</span><span class="room-arrow">↗</span></div><div class="room-copy"><h2>${title}</h2><p>${description}</p><span>${action} ${icon('arrow-right')}</span></div></a>`).join('')}</div>
-      <section class="mystery-banner"><div class="wax-seal">?</div><div><p class="eyebrow">SOMETHING DOESN’T ADD UP</p><h2>One astronomer. Conspicuously absent.</h2><p>A photograph, an old notebook, and a message with no return address. Follow the evidence.</p></div>${roomLink('mystery', 'Take the case')}</section>
-      <section class="passport-panel"><div><p class="eyebrow">EXPLORE YOUR WAY</p><h2>How lost do you want to get?</h2><p>Guide labels the telescope sky and offers focus hints. Explorer hides labels. Astronomer makes you navigate by coordinates.</p></div><div class="mode-switch" role="group" aria-label="Exploration assistance">${['guide', 'explorer', 'astronomer'].map(mode => expButton('exploration-mode', mode[0].toUpperCase() + mode.slice(1), false, `data-mode="${mode}" aria-pressed="${voyage.mode === mode}"`)).join('')}</div></section></div>`;
+    return `<div class="experience">${heading('SIX WORK ROOMS', 'Observe first.<br><em>Then make something.</em>', 'Telescope, darkroom, workshop, sequencer, archive, and light desk. Everything you make is kept on this device.', passport())}
+      <div class="room-grid">${rooms.map(([id, number, title, description, picture, action]) => `<a class="room-card room-${id}" href="#${id}"><div class="room-art">${art(picture, world.hue, world)}<span class="room-number">ROOM / ${number}</span><span class="room-arrow">↗</span></div><div class="room-copy"><h2>${title}</h2><p>${description}</p><span>${action} ${icon('arrow-right')}</span></div></a>`).join('')}</div>
+      <section class="mystery-banner"><div class="wax-seal">?</div><div><p class="eyebrow">A SMALL MYSTERY</p><h2>The missing astronomer.</h2><p>A photograph, an old notebook, and a message with no return address. Follow the evidence through the rooms.</p></div>${roomLink('mystery', 'Take the case')}</section>
+      <section class="passport-panel"><div><p class="eyebrow">HOW MUCH HELP?</p><h2>Choose your guide level.</h2><p>Guide labels the telescope sky and offers focus hints. Explorer hides labels. Astronomer makes you navigate by coordinates.</p></div><div class="mode-switch" role="group" aria-label="Exploration assistance">${['guide', 'explorer', 'astronomer'].map(mode => expButton('exploration-mode', mode[0].toUpperCase() + mode.slice(1), false, `data-mode="${mode}" aria-pressed="${voyage.mode === mode}"`)).join('')}</div></section></div>`;
   }
 
   function renderTelescope() {
-    return `<div class="experience">${heading('01 / THE OPEN DOME', 'The sky is<br><em>looking back.</em>', 'Find something strange. Frame it your way. Bring the light home.', roomLink('darkroom', 'Your darkroom ↗'))}
-      <div class="instrument-layout"><section class="telescope-stage instrument-stage ${telescope.open ? 'dome-open' : ''}" id="telescope-stage"><div class="instrument-top"><span>REFRACTOR / 008</span><span id="scope-coordinates">800 / 450</span></div><div class="scope-viewport"><canvas id="scope-canvas" width="760" height="500" tabindex="0" role="application" aria-label="Telescope sky. Drag or use arrow keys to pan. Plus and minus zoom. Adjust focus with the labelled slider."></canvas><div class="scope-reticle" aria-hidden="true"><span></span></div></div><div class="dome-door dome-left"></div><div class="dome-door dome-right"></div><div class="dome-intro" ${telescope.open ? 'hidden' : ''}><span class="dome-mark">✳</span><h2>Knock, knock.<br>It’s the universe.</h2><p>Five strange sights. One very good excuse to stay up.</p>${expButton('open-dome', 'Open the dome ↗', true)}</div><div class="scope-readout"><span id="scope-target">Sweep the sky</span><strong id="scope-sharpness">0% sharpness</strong></div><p id="scope-status" class="sr-only" role="status"></p></section>
-      <aside class="instrument-panel scope-controls"><p class="eyebrow">LOOKING FOR TROUBLE?</p><h2>Start here.</h2><p>Drag to explore. The focus ring turns green when a centred subject is sharp enough to capture.</p><label class="field-label" for="scope-select">Find a subject</label><select id="scope-select" class="exp-select">${targets.map(t => `<option value="${t.id}" ${t.id === telescope.target ? 'selected' : ''}>${t.name}${voyage.discoveries.includes('capture:' + t.id) ? ' · captured' : ''}</option>`).join('')}</select>${expButton('scope-guide', voyage.mode === 'astronomer' ? 'Show coordinates' : 'Take me there')}${labelRange('scope-focus', 'Focus', telescope.focus, 0, 100)}${labelRange('scope-zoom', 'Zoom', telescope.zoom, .6, 3, .1, '×')}<div class="focus-meter"><i id="focus-fill"></i></div>${expButton('scope-capture', 'Capture this moment ↗', true, 'id="scope-capture" disabled')}<p class="tiny-note" id="scope-hint">${voyage.mode === 'guide' ? 'Pick a subject, take the telescope there, then dial in the focus.' : 'Centre your subject. Reach 80% sharpness to take a photograph.'}</p><p class="instrument-footnote">An illustrated, imaginary sky. Your framing, focus and capture time become the photograph.</p></aside></div>
+    return `<div class="experience">${heading('01 / THE OPEN DOME', 'Find it.<br><em>Focus it.</em>', 'Frame each subject your way, then take a photograph to develop.', roomLink('darkroom', 'Your darkroom ↗'))}
+      <div class="instrument-layout"><section class="telescope-stage instrument-stage ${telescope.open ? 'dome-open' : ''}" id="telescope-stage"><div class="instrument-top"><span>REFRACTOR / 008</span><span id="scope-coordinates">800 / 450</span></div><div class="scope-viewport"><canvas id="scope-canvas" width="760" height="500" tabindex="0" role="application" aria-label="Telescope sky. Drag or use arrow keys to pan. Plus and minus zoom. Adjust focus with the labelled slider."></canvas><div class="scope-reticle" aria-hidden="true"><span></span></div></div><div class="dome-door dome-left"></div><div class="dome-door dome-right"></div><div class="dome-intro" ${telescope.open ? 'hidden' : ''}><span class="dome-mark">✳</span><h2>Five subjects<br>for tonight.</h2><p>Find each one, focus the ring, and take a photograph.</p>${expButton('open-dome', 'Open the dome ↗', true)}</div><div class="scope-readout"><span id="scope-target">Sweep the sky</span><strong id="scope-sharpness">0% sharpness</strong></div><p id="scope-status" class="sr-only" role="status"></p></section>
+      <aside class="instrument-panel scope-controls"><p class="eyebrow">THE OBSERVING LIST</p><h2>Start here.</h2><p>Drag to explore. The focus ring turns green when a centred subject is sharp enough to capture.</p><label class="field-label" for="scope-select">Find a subject</label><select id="scope-select" class="exp-select">${targets.map(t => `<option value="${t.id}" ${t.id === telescope.target ? 'selected' : ''}>${t.name}${voyage.discoveries.includes('capture:' + t.id) ? ' · captured' : ''}</option>`).join('')}</select>${expButton('scope-guide', voyage.mode === 'astronomer' ? 'Show coordinates' : 'Take me there')}${labelRange('scope-focus', 'Focus', telescope.focus, 0, 100)}${labelRange('scope-zoom', 'Zoom', telescope.zoom, .6, 3, .1, '×')}<div class="focus-meter"><i id="focus-fill"></i></div>${expButton('scope-capture', 'Capture this moment ↗', true, 'id="scope-capture" disabled')}<p class="tiny-note" id="scope-hint">${voyage.mode === 'guide' ? 'Pick a subject, take the telescope there, then dial in the focus.' : 'Centre your subject. Reach 80% sharpness to take a photograph.'}</p><p class="instrument-footnote">An illustrated, imaginary sky. Your framing, focus and capture time become the photograph.</p></aside></div>
       <div class="target-strip">${targets.map(t => `<button data-exp="scope-target" data-id="${t.id}" class="target-chip ${voyage.discoveries.includes('capture:' + t.id) ? 'discovered' : ''}"><span style="--orb:${t.colour}"></span>${t.name}<small>${voyage.discoveries.includes('capture:' + t.id) ? '✓ CAPTURED' : 'UNDISCOVERED'}</small></button>`).join('')}</div></div>`;
   }
 
@@ -283,9 +283,10 @@
           else { $('#signal-journey').textContent = `Arrived at ${destinations[letter.destination].name}. There’s a postcard below.`; if (Date.now()-letter.arrival < 2400 && !motionQuery.matches) { ctx.strokeStyle='#edf19b'; ctx.globalAlpha=1-(Date.now()-letter.arrival)/2400; ctx.beginPath(); ctx.arc(...end,35+(Date.now()-letter.arrival)/35,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1; } }
         } else if ($('#signal-journey').textContent) $('#signal-journey').textContent = '';
       }
-      raf = requestAnimationFrame(tick);
+      raf = document.hidden ? 0 : requestAnimationFrame(tick);
     }
     raf = requestAnimationFrame(tick); cleanups.push(() => cancelAnimationFrame(raf));
+    on(document, 'visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(tick); } });
   }
 
   function mysteryProgress() {
@@ -623,7 +624,7 @@
     on(main, 'input', e => { if (e.target.id === 'scope-focus') { telescope.focus = Number(e.target.value); queue(); } if (e.target.id === 'scope-zoom') { telescope.zoom = Number(e.target.value); queue(); } });
     on(main, 'click', e => {
       const button = e.target.closest('[data-exp]'); if (!button) return;
-      if (button.dataset.exp === 'open-dome') { telescope.open = true; $('#telescope-stage').classList.add('dome-open'); $('.dome-intro').hidden = true; canvas.focus({ preventScroll: true }); draw(); }
+      if (button.dataset.exp === 'open-dome') { telescope.open = true; $('#telescope-stage').classList.add('dome-open'); $('.dome-intro').hidden = true; canvas.focus({ preventScroll: true }); draw(); wake(); }
       if (['scope-guide', 'scope-target'].includes(button.dataset.exp)) {
         if (button.dataset.id) { telescope.target = button.dataset.id; $('#scope-select').value = telescope.target; }
         const target = targets.find(t => t.id === telescope.target);
@@ -632,7 +633,7 @@
           else travel = { x: target.x, y: target.y };
         }
         telescope.open = true;
-        $('#telescope-stage').classList.add('dome-open'); $('.dome-intro').hidden = true; draw();
+        $('#telescope-stage').classList.add('dome-open'); $('.dome-intro').hidden = true; draw(); wake();
         $('#scope-hint').textContent = voyage.mode === 'guide' ? `${target.name} is centred. Try focus around ${target.focus} to bring it into view.` : `Target coordinates: ${target.x} / ${target.y}. Adjust focus for a crisp portrait.`;
         $('#scope-focus').focus({ preventScroll: true });
       }
@@ -649,16 +650,18 @@
         $$('.target-chip').forEach(chip => { if (chip.dataset.id === closest.id) { chip.classList.add('discovered'); $('small', chip).textContent = '✓ CAPTURED'; } });
       }
     });
+    // The sky only needs frames while the dome is open and the tab is visible.
+    const wake = () => { if (!raf && telescope.open && !document.hidden) { last = 0; raf = requestAnimationFrame(tick); } };
     function tick(now) {
+      if (document.hidden || !telescope.open) { raf = 0; return; }
       const dt = last ? Math.min(.05, (now - last) / 1000) : 0; last = now;
-      if (!document.hidden && telescope.open) {
-        if (!motionQuery.matches) clock += dt;
-        if (travel) { const k = 1 - Math.exp(-dt * 6); telescope.x += (travel.x - telescope.x) * k; telescope.y += (travel.y - telescope.y) * k; if (Math.hypot(travel.x - telescope.x, travel.y - telescope.y) < .3) { telescope.x = travel.x; telescope.y = travel.y; travel = null; } }
-        draw();
-      }
+      if (!motionQuery.matches) clock += dt;
+      if (travel) { const k = 1 - Math.exp(-dt * 6); telescope.x += (travel.x - telescope.x) * k; telescope.y += (travel.y - telescope.y) * k; if (Math.hypot(travel.x - telescope.x, travel.y - telescope.y) < .3) { telescope.x = travel.x; telescope.y = travel.y; travel = null; } }
+      draw();
       raf = requestAnimationFrame(tick);
     }
     draw(); raf = requestAnimationFrame(tick); cleanups.push(() => cancelAnimationFrame(raf));
+    on(document, 'visibilitychange', wake);
   }
 
   const photoFilter = photo => `brightness(${.3 + photo.exposure / 75}) contrast(${.6 + photo.clarity / 80}) sepia(${photo.warmth / 200}) saturate(${.5 + photo.clarity / 80})`;
@@ -707,7 +710,7 @@
       const dt = last ? Math.min(.08, (now - last) / 1000) : 0; last = now;
       if (!document.hidden) plateProgress = Math.min(1, plateProgress + dt / (motionQuery.matches ? .3 : 2.6));
       updatePlate(); $('.developer-liquid').style.setProperty('--development', plateProgress);
-      if (plateProgress < 1) { raf = requestAnimationFrame(tick); return; }
+      if (plateProgress < 1) { raf = document.hidden ? 0 : requestAnimationFrame(tick); return; }
       photo.developed = true; plateDeveloping = false; const kept = save();
       $('.darkroom-stage').classList.remove('is-developing'); $('#glass-plate').classList.add('developed'); $('#glass-plate').style.transform = '';
       $('#develop-plate').disabled = false; $('#plate-select').disabled = false; $('#develop-plate').textContent = 'Save this finish';
@@ -715,6 +718,7 @@
       if (kept) { unlock('develop:first', 'Your first developed photograph'); unlock('develop:' + photo.target, 'Light, developed · ' + targets.find(t => t.id === photo.target).name); }
     }
     raf = requestAnimationFrame(tick); cleanups.push(() => cancelAnimationFrame(raf));
+    on(document, 'visibilitychange', () => { if (!document.hidden && plateDeveloping && !raf) { last = 0; raf = requestAnimationFrame(tick); } });
   }
 
   function updateWorldReadout() {
@@ -764,9 +768,10 @@
           if (showBrush) { ctx.strokeStyle = '#f5edcba8'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(brushPoint.x, brushPoint.y, 15, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
         }
       }
-      raf = requestAnimationFrame(tick);
+      raf = document.hidden ? 0 : requestAnimationFrame(tick);
     }
     raf = requestAnimationFrame(tick); cleanups.push(() => cancelAnimationFrame(raf));
+    on(document, 'visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(tick); } });
   }
 
   const frequencies = [523.25, 329.63, 261.63, 130.81];

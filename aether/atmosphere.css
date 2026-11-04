@@ -84,11 +84,23 @@ main { padding-top: 32px; }
     linear-gradient(0deg, #0b1814ed, transparent 36%, #14251c35);
 }
 .playground-hero .hero-painting {
-  object-position: 64% 48%;
-  filter: saturate(.65) brightness(.85);
-  opacity: .8;
+  object-position: 34% 4%;
+  filter: saturate(.68) brightness(.95);
+  opacity: .92;
 }
-.playground-hero:hover .hero-painting { filter: saturate(.65) brightness(.85); }
+.playground-hero:hover .hero-painting { filter: saturate(.72) brightness(.98); }
+
+/* The painted sky stays with you, faintly, the whole way down the page. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: url('assets/celestial-landscape.webp') 50% 6% / cover no-repeat;
+  opacity: .09;
+  filter: saturate(.55) brightness(.62);
+  pointer-events: none;
+}
 .playground-hero .hero-copy { padding: 0; }
 .playground-hero .eyebrow { font-size: 9px; letter-spacing: 2px; color: #e0c590; gap: 10px; }
 .hero-kicker-star { font-size: 19px; line-height: 1; color: #ebd49f; }
@@ -463,7 +475,7 @@ body[data-observatory-theme="rose"] :is(.panel, .stat, .destination-card) { back
   .playground-hero .hero-cta { margin-top: 23px; gap: 8px; flex-direction: row; align-items: center; flex-wrap: wrap; }
   .hero-cta .button { min-height: 46px; padding: 12px 17px; font-size: 11px; gap: 20px; }
   .hero-cta .text-link { display: inline-flex; font-size: 10px; padding: 6px 0; min-height: 36px; }
-  .playground-hero .hero-painting { object-position: 62% center; opacity: .68; }
+  .playground-hero .hero-painting { object-position: 58% 8%; opacity: .8; }
   .playground-hero::after { background: linear-gradient(180deg, #0d1e16ed, #102219b0 55%, #10201735 75%, #0b1814da); }
   .cosmic-scene { height: 255px; margin: 8px -10px -7px; }
   .scene-astrolabe { width: 290px; max-width: 95%; right: -3%; top: 48%; opacity: .7; }

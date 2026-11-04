@@ -186,22 +186,23 @@ function renderOverview() {
   const next = upcomingEvents();
   const hour = new Date().getHours();
   return `<div class="playground-home view-enter">
-    <section class="welcome"><div><h1>${hour >= 5 && hour < 12 ? 'Good morning, stargazer.' : hour >= 12 && hour < 18 ? 'Good afternoon, stargazer.' : hour >= 18 || hour < 1 ? 'Good evening, stargazer.' : 'Up late, stargazer?'}</h1><p>${hour >= 5 && hour < 12 ? 'The stars are still there — the Sun simply outshines them.' : hour >= 12 && hour < 18 ? 'The cosmos is on. It never signed off.' : hour >= 18 || hour < 1 ? 'The world is quiet. The cosmos, anything but.' : 'The best hours. The sky rewards the sleepless.'}</p></div><button class="date-button" data-action="date" aria-label="Change observatory date, currently ${formatDate(state.selectedDate)}">${icon('calendar')}${formatDate(state.selectedDate)}${icon('chevron-down', 'chevron')}</button></section>
+    <section class="welcome"><div><h1>${hour >= 5 && hour < 12 ? 'Good morning.' : hour >= 12 && hour < 18 ? 'Good afternoon.' : 'Good evening.'}</h1><p>The planetary atlas is open. Choose a world and take a closer look.</p></div><button class="date-button" data-action="date" aria-label="Change observatory date, currently ${formatDate(state.selectedDate)}">${icon('calendar')}${formatDate(state.selectedDate)}${icon('chevron-down', 'chevron')}</button></section>
     <section class="playground-hero hero" aria-labelledby="hero-title">
       <img class="hero-painting" src="assets/celestial-landscape.webp" alt="" fetchpriority="high" />
       <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span><span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
-      <div class="hero-copy playground-copy"><p class="eyebrow"><span class="hero-kicker-star" aria-hidden="true">✦</span> THE UNIVERSE, WITH PLAY IN IT</p><h2 id="hero-title">The sky is serious.<br><em>The playground<br>isn’t.</em></h2><p class="hero-description">Borrow a comet’s orbit. Photograph a nebula.<br>Make a world that could never exist — then keep it.</p><div class="hero-cta"><a href="#arcade" class="button button-primary">Play in the arcade ${icon('arrow-right')}</a><a href="#discover" class="text-link">Wander the wonder rooms ${icon('arrow-up-right')}</a></div></div>
+      <div class="hero-copy playground-copy"><p class="eyebrow"><span class="hero-kicker-star" aria-hidden="true">✦</span> THE PLANETARY ATLAS</p><h2 id="hero-title">Eight worlds.<br><em>A closer look<br>at each.</em></h2><p class="hero-description">Trace a watershed. Plan a rover’s route.<br>Work your way through forty planetary puzzles.</p><div class="hero-cta"><a href="#planetarium" class="button button-primary">Open the atlas ${icon('arrow-right')}</a><a href="#arcade" class="text-link">Visit the arcade ${icon('arrow-up-right')}</a></div></div>
       <div class="cosmic-scene" role="group" aria-label="Floating worlds and strange companions"><div class="scene-grid" aria-hidden="true"></div><img class="scene-astrolabe" src="assets/celestial-dial.svg" width="600" height="600" alt="" /><div class="scene-orbit orbit-a" aria-hidden="true"></div><span class="scene-coordinate">FIG. 01 <span>THE PLAYFUL SKY</span></span><a class="scene-saturn" href="#worlds" aria-label="Make a world">${art('saturn')}<span class="scene-tag"><span aria-hidden="true">✧</span> MAKE A WORLD ${icon('arrow-up-right')}</span></a><a class="scene-jelly" href="#telescope" aria-label="Something’s out there">${art('orion')}<span class="scene-tag">SOMETHING’S OUT THERE ↗</span></a><button class="scene-sun" data-exp="poke-sun" aria-label="Wake the sun — the sun says hello">☀<span>the sun says hello.</span></button><a class="scene-music" href="#orchestra" aria-label="The Orrery Orchestra"><span>♪</span><small>THE ORRERY<br>ORCHESTRA ↗</small></a><span class="scene-spark spark-one" aria-hidden="true">✦</span><span class="scene-spark spark-two" aria-hidden="true">✧</span><span class="scene-handnote" aria-hidden="true">a perfectly ordinary<br>place for extraordinary things.</span><div id="sun-reaction" role="status"></div></div>
-      <div class="hero-colophon"><span><i aria-hidden="true"></i> CURIOSITY HAS NO CLOSING HOURS</span><span>EST. IN WONDER <span aria-hidden="true">✧</span> VOL. MMXXVI</span></div>
+      <div class="hero-colophon"><span><i aria-hidden="true"></i> FIELD NOTES, PUZZLES & OBSERVATIONS</span><span>THE PLANETARY ATLAS <span aria-hidden="true">✧</span> VOL. MMXXVI</span></div>
     </section>
     <section class="stats-grid" aria-label="Your observatory at a glance">
       <button class="stat" data-action="moon"><span class="stat-icon"><span class="stat-moon" style="${moonShadow(moon)}" aria-hidden="true"></span></span><span><span class="stat-label">Tonight’s moon</span><span class="stat-value">${moon.name}</span><span class="stat-detail">${moon.illumination}% illuminated <span aria-hidden="true">·</span> ${moon.phase < .5 ? 'A little more light' : 'A little less light'} each night</span></span></button>
-      <a class="stat" href="#arcade"><span class="stat-icon">${icon('meteor')}</span><span><span class="stat-label">Relic expeditions</span><span class="stat-value">4 games · 24 relics</span><span class="stat-detail"><i class="tiny-dot"></i> A different little build every run</span></span></a>
+      <a class="stat" href="#planetarium"><span class="stat-icon">${icon('orbit')}</span><span><span class="stat-label">The planetary puzzles</span><span class="stat-value">8 games · 40 levels</span><span class="stat-detail"><i class="tiny-dot"></i> Pick a planet to start</span></span></a>
       ${next[0] ? `<button class="stat" data-event="${next[0].id}"><span class="stat-icon">${icon('meteor')}</span><span><span class="stat-label">${next[0].date === dateKey(state.selectedDate) ? 'Tonight’s spectacle' : 'Next in the almanac'}</span><span class="stat-value">${next[0].short}</span><span class="stat-detail">${formatDate(parseDate(next[0].date), { month: 'long', day: 'numeric' })} · ${next[0].type}</span></span></button>` : `<a class="stat" href="#calendar"><span class="stat-icon">${icon('calendar')}</span><span><span class="stat-label">The almanac</span><span class="stat-value">A year of wonder</span><span class="stat-detail">Browse the 2026 celestial calendar</span></span></a>`}
-      <a class="stat" href="#journal"><span class="stat-icon">${icon('journal')}</span><span><span class="stat-label">Your field journal</span><span class="stat-value">${state.journal.length} observations</span><span class="stat-detail">Small moments, carefully kept</span></span></a>
+      <a class="stat" href="#journal"><span class="stat-icon">${icon('journal')}</span><span><span class="stat-label">Your field journal</span><span class="stat-value">${state.journal.length} observations</span><span class="stat-detail">Read, edit, or add a field note</span></span></a>
     </section>
-    <section class="home-destinations" aria-labelledby="destinations-title"><header class="home-section-heading"><div><p class="section-label">THREE WAYS TO LOSE TRACK OF TIME</p><h2 id="destinations-title">Follow your <em>curiosity.</em></h2></div><a class="text-link" href="#discover">All six wonder rooms ${icon('arrow-up-right')}</a></header><div class="destination-grid"><a class="destination-card destination-play" href="#arcade"><div class="destination-top"><span>PLATE II · THE ARCADE</span><span class="round-arrow">↗</span></div><h3>A healthy disregard<br><em>for gravity.</em></h3><p>Four games. Twenty-four relics. A very real “one more run” problem.</p><div class="destination-drawing drop-drawing" aria-hidden="true"><i class="draw-orb orb-one">·ᴗ·</i><i class="draw-orb orb-two">•ᴗ•</i><i class="draw-orb orb-three">◡</i><span>↘</span></div><span class="destination-label">GET YOUR GAME ON ↗</span></a><a class="destination-card destination-make" href="#discover"><div class="destination-top"><span>PLATE III · WONDER ROOMS</span><span class="round-arrow">↗</span></div><h3>What happens<br><em>if you touch this?</em></h3><p>Catch a nebula. Paint a world. Send a thought through a mirror.</p><div class="destination-drawing">${art('orion')}</div><span class="destination-label">FIND OUT YOURSELF ↗</span></a><a class="destination-card destination-music" href="#orchestra"><div class="destination-top"><span>PLATE IV · THE ORCHESTRA</span><span class="round-arrow">↗</span></div><h3>The solar system<br><em>has a B-side.</em></h3><p>Four planets. Eight beats. Your next extremely niche hit.</p><div class="destination-drawing music-drawing" aria-hidden="true">${[0,1,2,3,4,5,6,7,8,9].map(i => `<i style="--i:${i}"></i>`).join('')}</div><span class="destination-label">MAKE SPACE MUSIC ↗</span></a></div></section>
-    <section class="home-almanac" aria-labelledby="almanac-title"><header class="home-section-heading"><div><p class="section-label">MEANWHILE, IN THE ACTUAL UNIVERSE</p><h2 id="almanac-title">A little <em>perspective.</em></h2></div><span class="almanac-edition">THE OBSERVER’S ALMANAC / 2026</span></header><div class="dashboard-grid">
+    ${window.AetherPlanets?.renderIndex() || ''}
+    <section class="home-destinations" aria-labelledby="destinations-title"><header class="home-section-heading"><div><p class="section-label">ELSEWHERE IN THE OBSERVATORY</p><h2 id="destinations-title">At the <em>workbench.</em></h2></div><a class="text-link" href="#discover">All six rooms ${icon('arrow-up-right')}</a></header><div class="destination-grid"><a class="destination-card destination-play" href="#arcade"><div class="destination-top"><span>THE ARCADE</span><span class="round-arrow">↗</span></div><h3>A game<br><em>between observations.</em></h3><p>Stack planets, catch falling stars, or steer a comet. Four games with different controls and challenges.</p><div class="destination-drawing drop-drawing" aria-hidden="true"><i class="draw-orb orb-one">·ᴗ·</i><i class="draw-orb orb-two">•ᴗ•</i><i class="draw-orb orb-three">◡</i><span>↘</span></div><span class="destination-label">CHOOSE A GAME ↗</span></a><a class="destination-card destination-make" href="#discover"><div class="destination-top"><span>THE WORK ROOMS</span><span class="round-arrow">↗</span></div><h3>Observe,<br><em>then make something.</em></h3><p>Compose a telescope photograph, develop a print, or build a world at the drawing table.</p><div class="destination-drawing">${art('orion')}</div><span class="destination-label">EXPLORE THE ROOMS ↗</span></a><a class="destination-card destination-music" href="#orchestra"><div class="destination-top"><span>THE ORCHESTRA</span><span class="round-arrow">↗</span></div><h3>A score<br><em>for four planets.</em></h3><p>Arrange an eight-beat sequence, adjust the tempo, and listen to the parts together.</p><div class="destination-drawing music-drawing" aria-hidden="true">${[0,1,2,3,4,5,6,7,8,9].map(i => `<i style="--i:${i}"></i>`).join('')}</div><span class="destination-label">OPEN THE SEQUENCER ↗</span></a></div></section>
+    <section class="home-almanac" aria-labelledby="almanac-title"><header class="home-section-heading"><div><p class="section-label">THE OBSERVER’S DESK</p><h2 id="almanac-title">Charts & <em>dates.</em></h2></div><span class="almanac-edition">THE OBSERVER’S ALMANAC / 2026</span></header><div class="dashboard-grid">
       ${renderChart(false)}
       <section class="panel horizon-panel"><div class="panel-heading"><div class="panel-title">${icon('calendar')}<h2>On the horizon</h2></div><a class="text-link" href="#calendar">The full almanac ${icon('arrow-up-right')}</a></div><p class="panel-subtitle">${isNewVisitor ? 'New here? Start with Saturn — few first sights compare.' : 'Good things come to those who look up.'}</p><div class="events-list">${next.length ? next.map(eventRow).join('') : '<p class="day-description">The year’s almanac is complete. There is always something to discover in the planetarium.</p>'}</div><p class="events-footnote">Some nights are worth staying up for.</p></section>
     </div></section>
@@ -246,8 +247,8 @@ function renderConstellations() {
 
 function renderChart(full = false) {
   return `<section class="panel chart-panel ${full ? 'full-chart' : ''}" aria-label="Interactive celestial chart">
-    <div class="panel-heading"><div class="panel-title">${icon('orbit')}<h2>${full ? 'An atlas of the extraordinary' : 'The celestial theatre'}</h2></div>${full ? icon('sparkles') : `<a class="icon-button" href="#planetarium" aria-label="Expand the celestial chart">${icon('expand')}</a>`}</div>
-    <p class="panel-subtitle">A grand ballet, billions of years in the making.</p>
+    <div class="panel-heading"><div class="panel-title">${icon('orbit')}<h2>${full ? 'The orbital chart' : 'The solar system'}</h2></div>${full ? icon('sparkles') : `<a class="icon-button" href="#planetarium" aria-label="Expand the celestial chart">${icon('expand')}</a>`}</div>
+    <p class="panel-subtitle">Select a world to open its field guide and puzzle room.</p>
     <div class="chart-topline"><div class="segmented" aria-label="Chart type"><button data-action="map-mode" data-mode="solar" aria-pressed="${state.mapMode === 'solar'}">Solar system</button><button data-action="map-mode" data-mode="constellations" aria-pressed="${state.mapMode === 'constellations'}">Constellations</button></div><span class="chart-scale">${state.mapMode === 'solar' ? 'A HELIOCENTRIC PERSPECTIVE' : 'THE NORTHERN CELESTIAL ATLAS'}</span></div>
     <div class="orrery-wrap">${state.mapMode === 'solar' ? renderSolarSystem(full) : renderConstellations()}</div>
     ${full && state.mapMode === 'solar' ? `<div class="time-controls${state.playing ? ' is-playing' : ''}"><button class="icon-button" data-action="playback" aria-label="${state.playing ? 'Pause' : 'Animate'} planetary motion" aria-pressed="${state.playing}">${icon(state.playing ? 'pause' : 'play')}</button><label for="orbital-time">PASSAGE OF TIME</label><input id="orbital-time" aria-label="Days elapsed in orbital simulation" type="range" min="0" max="730" step="1" value="${Math.floor(state.orbitalDay)}"/><output for="orbital-time" id="orbital-output">+ ${Math.floor(state.orbitalDay)} days</output><button class="text-link" data-action="reset-orbits" title="Return to tonight">Tonight</button></div><p class="form-hint" style="padding:0 28px 15px;margin-top:-4px">From tonight. The outer worlds move slowly — drag far to see Neptune stir.</p>` : ''}
@@ -256,7 +257,7 @@ function renderChart(full = false) {
 }
 
 function renderPlanetarium() {
-  return `<div class="view-enter"><section class="view-header"><div><p class="eyebrow">THE GRAND CELESTIAL THEATRE</p><h1>A universe in motion.</h1><p>Eight worlds. Countless stories. Take your time getting to know our little corner of the cosmos.</p></div><button class="button" data-action="location">${icon('pin')}${currentLocation().name}</button></section>${renderChart(true)}<p class="section-label">MEET THE WANDERING STARS</p><div class="planet-index">${planets.map(planet => `<button class="panel planet-card" data-planet="${planet.id}"><span class="planet-sphere ${planet.id}" aria-hidden="true"></span><span class="planet-card-copy"><span class="planet-card-title">${planet.name}</span><span class="planet-card-sub">${planet.title}</span></span>${icon('arrow-up-right')}</button>`).join('')}</div></div>`;
+  return `<div class="view-enter"><section class="view-header"><div><p class="eyebrow">THE PLANETARY ATLAS</p><h1>From Mercury to Neptune.</h1><p>Eight illustrated field guides. Eight different puzzle games, with five levels each. Your place is saved as you go.</p></div><a class="button" href="#planet/earth">Start with Earth ${icon('arrow-right')}</a></section>${window.AetherPlanets?.renderIndex() || ''}${renderChart(true)}</div>`;
 }
 
 function renderCalendar() {
@@ -310,6 +311,7 @@ const renderers = { overview: renderOverview, planetarium: renderPlanetarium, ca
 
 function render() {
   hideToast();
+  window.AetherPlanets?.unmount();
   window.AetherExperiences?.unmount();
   document.body.dataset.view = state.view;
   main.innerHTML = renderers[state.view]();
@@ -321,7 +323,7 @@ function render() {
   document.querySelector('.avatar').textContent = state.name.replace(/^The /i, '').charAt(0).toUpperCase();
   document.querySelector('#location-label').textContent = currentLocation().name;
   document.querySelectorAll('[data-view]').forEach(link => {
-    if (link.dataset.view === state.view) link.setAttribute('aria-current', 'page');
+    if (link.dataset.view === state.view || (state.view.startsWith('planet/') && link.dataset.view === 'planetarium')) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
     // Compact tablet navigation hides the link text, so keep an accessible name.
     if (link.dataset.view === 'journal') link.removeAttribute('aria-label'); // the sr-only twin supplies the exact name
@@ -330,6 +332,7 @@ function render() {
   });
   document.title = `${viewNames[state.view]} · Æther Observatory`;
   window.AetherExperiences?.mount(state.view);
+  window.AetherPlanets?.mount(state.view);
 }
 
 function navigate(view) {
@@ -398,7 +401,7 @@ function saveButton(id) {
 function openPlanet(id) {
   const planet = planets.find(item => item.id === id);
   if (!planet) return;
-  showModal(`<p class="eyebrow">${planet.type.toUpperCase()} · A CELESTIAL PORTRAIT</p><h2 id="modal-title">${planet.name}</h2><p class="modal-description" style="margin-top:6px;font-family:var(--serif);font-size:22px;font-style:italic">${planet.title}</p><div class="modal-planet-visual"><span class="planet-sphere ${planet.id}" aria-hidden="true"></span></div><p class="modal-description">${planet.description}</p><dl class="planet-facts"><div><dt>Mean distance from the Sun</dt><dd>${planet.distance}</dd></div><div><dt>Diameter</dt><dd>${planet.diameter}</dd></div><div><dt>A year on ${planet.name}</dt><dd>${planet.period < 700 ? planet.period + ' Earth days' : (planet.period / 365.25).toFixed(1) + ' Earth years'}</dd></div><div><dt>Sidereal rotation</dt><dd>${planet.day}</dd></div></dl><p class="notice">${planet.note}<small>FROM THE OBSERVER’S HANDBOOK</small></p><div class="modal-actions">${saveButton(id)}<button class="button" data-action="new-entry" data-subject="${planet.name}">${icon('edit')}Make a note</button></div>`);
+  navigate(`planet/${id}`);
 }
 
 function openConstellation(id) {
@@ -425,6 +428,12 @@ function toggleSaved(id, removeOnly = false) {
   const wasSaved = state.saved.includes(id);
   state.saved = wasSaved ? state.saved.filter(value => value !== id) : [...state.saved, id];
   const saved = persist();
+  if (state.view === `planet/${id}` && !removeOnly) {
+    const button = main.querySelector(`[data-action="toggle-saved"][data-id="${id}"]`);
+    if (button) { button.outerHTML = saveButton(id); main.querySelector(`[data-action="toggle-saved"][data-id="${id}"]`)?.focus({ preventScroll: true }); }
+    if (saved) toast(wasSaved ? 'Removed from your collection.' : 'Added to your collection.');
+    return;
+  }
   render();
   if (!removeOnly) {
     openItem(id);
@@ -434,7 +443,7 @@ function toggleSaved(id, removeOnly = false) {
   } else {
     main.querySelector('.collection-actions .icon-button, .collection-actions .button, .view-header .button')?.focus({ preventScroll: true });
   }
-  if (saved) toast(wasSaved ? 'Released back into the universe. Removed from your collection.' : 'A little wonder, kept. Added to your collection.');
+  if (saved) toast(wasSaved ? 'Removed from your collection.' : 'Added to your collection.');
 }
 
 function openJournalForm(id, subject = '') {
@@ -483,12 +492,12 @@ function openNotifications() {
 }
 
 function openAbout() {
-  showModal(`<div class="about-mark">æther</div><p class="eyebrow">A COSMIC PLAYGROUND</p><h2 id="modal-title">Curiosity looks good on you.</h2><p class="modal-description">A handmade universe of games, impossible worlds, photographic experiments and very small orchestras. Follow a thread. Make a mess. Keep something you like.</p><p class="modal-description">The sky and physics are playful illustrations. The star atlas uses real orbital periods; the almanac is a curated 2026 edition. Artwork is custom SVG and Canvas. Type: Cormorant Garamond and DM Sans, under the SIL Open Font License.</p><div class="about-footnote">Your creations and scores live in this browser. No account or tracking. Export prints, recordings and field notes to take them with you.</div>`);
+  showModal(`<div class="about-mark">æther</div><p class="eyebrow">THE PLANETARY ATLAS & OBSERVATORY</p><h2 id="modal-title">A field guide to eight worlds.</h2><p class="modal-description">The planetary atlas pairs illustrated field notes with forty hand-crafted puzzle boards — one game per planet, five levels each. Elsewhere: a canvas arcade, telescope photographs, and a darkroom.</p><p class="modal-description">Astronomical figures are rounded reference values; each field guide links to NASA’s planet pages. The orbital chart is illustrative, and the almanac covers 2026. Artwork is custom SVG and Canvas. Type: Cormorant Garamond and DM Sans, under the SIL Open Font License.</p><div class="about-footnote">Puzzle progress, notes and creations live in this browser. No account or tracking.</div>`);
 }
 
 const searchItems = [
   ...Object.entries(viewNames).map(([id, name]) => ({ id, name, kind: 'page', subtitle: 'Observatory', icon: id === 'calendar' ? 'calendar' : id === 'journal' ? 'journal' : 'sparkles' })),
-  ...planets.map(planet => ({ id: planet.id, name: planet.name, kind: 'planet', subtitle: planet.title, icon: 'orbit' })),
+  ...planets.map(planet => ({ id: planet.id, name: planet.name, kind: 'planet', subtitle: `${planet.title} · puzzle room`, icon: 'orbit' })),
   ...constellations.map(constellation => ({ id: constellation.id, name: constellation.name, kind: 'constellation', subtitle: 'Constellation', icon: 'sparkles' })),
   ...events.map(event => ({ id: event.id, name: event.name, kind: 'event', subtitle: '2026 almanac', icon: event.icon })),
   { id: 'pluto', name: 'Pluto', kind: 'easter-egg', subtitle: 'Not in the atlas', icon: 'sparkles' },
@@ -501,7 +510,7 @@ function searchResults(query = '') {
 }
 
 function openSearch() {
-  showModal(`<p class="eyebrow">FOLLOW YOUR CURIOSITY</p><h2 id="modal-title">What are you looking for?</h2><div class="search-field">${icon('search')}<input id="observatory-search" type="search" placeholder="Planets, constellations, little wonders…" aria-label="Search the observatory" autocomplete="off"/></div><div id="search-results" aria-live="polite">${searchResults()}</div><p class="search-help"><kbd>Esc</kbd> to return to the stars <span style="float:right"><kbd>↵</kbd> to open the first result</span></p>`, '#observatory-search');
+  showModal(`<p class="eyebrow">SEARCH</p><h2 id="modal-title">What are you looking for?</h2><div class="search-field">${icon('search')}<input id="observatory-search" type="search" placeholder="Planets, puzzles, events, journal…" aria-label="Search the observatory" autocomplete="off"/></div><div id="search-results" aria-live="polite">${searchResults()}</div><p class="search-help"><kbd>Esc</kbd> to return to the stars <span style="float:right"><kbd>↵</kbd> to open the first result</span></p>`, '#observatory-search');
 }
 
 function downloadFile(name, content, type) {
