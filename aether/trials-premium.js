@@ -23,7 +23,7 @@
       {name:'Sunmine',icon:'◎',cost:55,cool:0,damage:90,range:65,color:'#f5ba77',detail:'One-use blast trap',paths:{left:['Star charge','Bigger detonation'],right:['Salvage core','Alloy from every blast']}},
     ];
     let towers=[],enemies=[],bolts=[],sparks=[],credits=175,core=8,kills=0,over=false,ended=false,selectedTower=null;
-    let selected=0,t=0,spawn=2.5,wave=1,slowTime=0,pulseCd=0,flash=0,shake=0,showHelp=10;
+    let selected=0,hover=null,t=0,spawn=2.5,wave=1,slowTime=0,pulseCd=0,flash=0,shake=0,showHelp=10;
     let messages=[{t:3,text:'INSTALL A DEFENCE · 1–4 SELECT · CLICK A HEX'}];
     const g=frame(container,W,H,{label:`Aether Bastion: tactical tower defence. Press 1 to 4 to select a tower, click an empty cell to place it, click an installed tower then press Q or E to choose an upgrade path, right click to sell for a partial refund. Space fires an emergency pulse. Keep the eight-heart observatory core alive${endless?' through an endless siege.':' through three waves.'}`,sound:options.sound,step,draw});
     const {canvas,ctx,listen,tone,burst,starfield}=g,stars=starfield(104,90);
@@ -125,6 +125,11 @@
       for(let x=90;x<900;x+=35)burstAt(x,300,'#a5e9da',2);
     }
     function inputCell(pt){return {col:Math.round((pt.x-180)/92),row:Math.round((pt.y-151)/68)};}
+    function previewTower(){
+      if(selectedTower&&towers.includes(selectedTower))return selectedTower;
+      if(!hover||hover.occupied)return null;
+      return {x:colX(hover.col),y:rowY(hover.row),type:selected,preview:true};
+    }
     function purchase(pt){
       if(over)return;
       if(pt.y>476){const i=Math.floor((pt.x-70)/192);if(i>=0&&i<4){selected=i;return;}}
@@ -159,6 +164,11 @@
         if(i>=0){const tower=towers[i];credits+=Math.floor(TOWERS[tower.type].cost*(.65+tower.tier*.2));burstAt(tower.x,tower.y,'#f5d3a5',8);if(selectedTower===tower)selectedTower=null;towers.splice(i,1);tone(380,.1,'triangle',.025);}
       } else purchase(pt);
     });
+    listen(canvas,'pointermove',e=>{
+      const pt=point(e,canvas,W,H),{col,row}=inputCell(pt);
+      hover=col<0||col>=C||row<0||row>=N||Math.hypot(colX(col)-pt.x,rowY(row)-pt.y)>41?null:{col,row,occupied:towers.some(q=>q.col===col&&q.row===row)};
+    });
+    listen(canvas,'pointerleave',()=>hover=null);
     listen(canvas,'contextmenu',e=>e.preventDefault());
     listen(canvas,'keydown',e=>{
        if(/^[1-4]$/.test(e.key)){selected=Number(e.key)-1;e.preventDefault();}
@@ -185,6 +195,17 @@
           ctx.fillStyle='#83b7c91c';circ(ctx,x,y,2);ctx.fill();
         }
       }
+      const preview=previewTower();
+      if(preview){
+        const d=TOWERS[preview.type],radius=preview.type===3?110:d.range;
+        canvas.dataset.previewRange=String(radius);
+        ctx.save();ctx.globalAlpha=preview.preview?.18:.26;ctx.strokeStyle=d.color;ctx.fillStyle=d.color;ctx.lineWidth=1.4;ctx.setLineDash([5,5]);
+        if(preview.type===2){ctx.fillRect(preview.x,preview.y-25,Math.min(radius,W-preview.x),50);ctx.strokeRect(preview.x,preview.y-25,Math.min(radius,W-preview.x),50);}
+        else {circ(ctx,preview.x,preview.y,radius);ctx.fill();ctx.stroke();if(preview.type===1){circ(ctx,preview.x,preview.y-68,radius);ctx.stroke();circ(ctx,preview.x,preview.y+68,radius);ctx.stroke();}}
+        ctx.setLineDash([]);ctx.globalAlpha=1;
+        if(preview.preview){ctx.translate(preview.x,preview.y);ctx.strokeStyle=hover.occupied?'#ff9c9e':d.color;ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<6;i++){const a=i*TAU/6;const x=Math.cos(a)*20,y=Math.sin(a)*20;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.stroke();}
+        ctx.restore();
+      }else canvas.dataset.previewRange='';
       ctx.save();if(shake>0&&!reduced()){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.9;}
       // Observatory core, health visibly contained in the central lens.
       ctx.fillStyle='#17323b';ctx.fillRect(62,109,32,354);
@@ -226,8 +247,9 @@
       txt(ctx,'AETHER BASTION',27,28,21,GOLD);
        txt(ctx,endless?`SIEGE ${wave} · ENDLESS`:`WAVE ${wave} / 3`,28,53,12,'#bce9db');
       txt(ctx,`ALLOY ✦ ${credits}`,240,29,17,'#f6da9e');txt(ctx,`KILLS  ${kills}`,240,52,12,'#b9c4c2');
-      txt(ctx,`CORE ${core} / 8`,425,28,17,core<=2?RED:TEAL);
+       txt(ctx,`CORE ${core} / 8`,425,28,17,core<=2?RED:TEAL);
        txt(ctx,endless?`SURVIVED ${Math.floor(t)}s`:`TIME ${Math.max(0,Math.ceil(TOTAL-t))}s`,425,51,12,'#b9c4c2');
+       if(preview){const d=TOWERS[preview.type],range=preview.type===3?110:d.range;txt(ctx,`${d.name.toUpperCase()} · ${range} RANGE${preview.type===3?' TRIGGER':''}`,590,51,11,d.color,'center');}
       ctx.fillStyle=pulseCd>0?'#24313a':'#29584e';ctx.strokeStyle='#a8e6d355';ctx.fillRect(722,15,164,62);ctx.strokeRect(722,15,164,62);
       txt(ctx,pulseCd>0?`PULSE ${Math.ceil(pulseCd)}s`:'PULSE READY · SPACE',804,42,12,TEAL,'center');
       txt(ctx,'STUN + SHOCK',804,60,10,'#d4dfda','center');

@@ -1,5 +1,11 @@
 # Æther Progress
 
+## 2026-11-04 - Bastion range preview
+
+- Added ghost placement and exact targeting envelopes for the selected Bastion tower.
+- Prism previews its lane beam; Sunmine previews its trigger radius.
+- Browser smoke confirms the scaled-canvas Needle preview before placement.
+
 ## 2026-11-04 - Wonder Room lifecycle fix
 
 - Fixed lost-capture and blur recovery for telescope, darkroom, and world-paint gestures.

@@ -12,7 +12,7 @@ This ledger records actual checkout evidence. The master plan remains the produc
 | AG-010 | partial | Route teardown invalidates in-flight music export; cartridge and trial teardown covered indirectly. | Exercise repeated mount/unmount and audio cleanup across all hosts. |
 | AG-201 | partial | Grand Tour has a seeded map and visible nodes. | Validate reward/branch rationale with focused gameplay coverage. |
 | AG-204 | partial | Skirmish direct cartridge has endless escalation. | Verify enemy-family/miniboss counterplay and balance through play. |
-| AG-206 | partial | Bastion has upgrades and endless siege. | Add explicit range preview and wave counterplay tests. |
+| AG-206 | partial | Bastion has upgrades, endless siege, and exact placement-range previews. | Add wave-counterplay tests and authored terrain choices. |
 | AG-208 | partial | Labyrinth has visible cones, veil, and looping circuits. | Validate multi-route depth and touch controls. |
 
 ## Next Unblocked Slice

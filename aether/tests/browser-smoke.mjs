@@ -94,6 +94,8 @@ try {
   const bastionBox = await bastion.boundingBox();
   assert.ok(bastionBox, 'the Bastion canvas needs a measurable layout box');
   const cell = { x: bastionBox.width * .2, y: bastionBox.height * .27 };
+  await bastion.hover({ position: cell });
+  await page.waitForFunction(canvas => canvas.dataset.previewRange === '280', await bastion.elementHandle());
   await bastion.click({ position: cell });
   await page.waitForFunction(canvas => canvas.dataset.towerCount === '1', await bastion.elementHandle());
   await bastion.press('q');
@@ -187,7 +189,7 @@ try {
 
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, Wonder Room pointer recovery, retreat cost, and Bastion upgrades.');
+  console.log('Browser smoke passed: landing, cabinet routes, valid and corrupt save recovery, standalone tour, hunt mount, pointer flight, Comet Surf cancellation, Wonder Room pointer recovery, retreat cost, and Bastion range upgrades.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});
