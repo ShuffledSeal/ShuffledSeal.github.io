@@ -2,6 +2,7 @@
 
 (() => {
   const KEY = 'aether-wonder-rooms-v1';
+  const studio = window.AetherOrchestra;
   const $ = (selector, root = main) => root.querySelector(selector);
   const $$ = (selector, root = main) => [...root.querySelectorAll(selector)];
   const esc = escapeHTML;
@@ -14,6 +15,65 @@
     dash: { title: 'Stardust Dash', kicker: 'THE FORECAST IS EXTREMELY WEIRD', description: 'Steer a moonboat through a meteor shower. Gold is good. Pink is trouble. Jellyfish are surprisingly helpful.', instruction: 'Slide to steer. Catch stars and dodge pink meteors.', goal: 'Survive 75 seconds. Keep your streak for up to ×8 points. Catch a jellyfish for a star magnet and a life. Dash through danger when charged.', colour: 'mint', badge: 'Catch / dodge / dash', icon: 'sparkles', ability: 'Dash', controls: '← → or pointer to steer · Space / X dash' },
     breaker: { title: 'Orbit Breaker', kicker: 'THE WALLS ARE YOUR RESPONSIBILITY', description: 'A cosmic pinball problem. Keep the comet inside your orbit and shatter every crystal in the constellation.', instruction: 'Move around the arena to steer your orbital paddle.', goal: 'Bounce the comet into crystals. Angle your paddle hits to steer. Clear a constellation for 500 points and a life. Charge slow orbit for a wider paddle.', colour: 'blue', badge: 'NEW · Cosmic pinball', icon: 'moon', ability: 'Slow orbit', controls: 'Pointer / touch around the arena · ← → rotate · X power' },
   };
+  // Persistent three-chapter fieldwork: score is not the only way to make progress.
+  const arcadeContracts = {
+    merge: [
+      { id: 'merge-3', title: 'The first collision', copy: 'Cause 3 planetary merges in one run.', target: 3, measure: s => s.totalMerges || 0 },
+      { id: 'merge-9', title: 'A growing system', copy: 'Make 9 merges without overflowing.', target: 9, measure: s => s.totalMerges || 0 },
+      { id: 'merge-18', title: 'The patient astronomer', copy: 'Make 18 merges in a single jar.', target: 18, measure: s => s.totalMerges || 0 },
+    ],
+    hop: [
+      { id: 'hop-2', title: 'First gravity assist', copy: 'Collect 2 golden rings in one flight.', target: 2, measure: s => s.ringsCaught || 0 },
+      { id: 'hop-6', title: 'Thread the skyway', copy: 'Find 6 rings before re-entry.', target: 6, measure: s => s.ringsCaught || 0 },
+      { id: 'hop-12', title: 'A perfect long arc', copy: 'Collect 12 rings in one flight.', target: 12, measure: s => s.ringsCaught || 0 },
+    ],
+    dash: [
+      { id: 'dash-10', title: 'Collecting starlight', copy: 'Catch 10 stars during one forecast.', target: 10, measure: s => s.totalCatches || 0 },
+      { id: 'dash-25', title: 'The brightest basket', copy: 'Catch 25 stars in one run.', target: 25, measure: s => s.totalCatches || 0 },
+      { id: 'dash-50', title: 'The long night', copy: 'Catch 50 stars, perhaps in Expedition.', target: 50, measure: s => s.totalCatches || 0 },
+    ],
+    breaker: [
+      { id: 'breaker-5', title: 'A crack in the heavens', copy: 'Strike 5 crystals in one run.', target: 5, measure: s => s.crystalHits || 0 },
+      { id: 'breaker-20', title: 'Constellation mason', copy: 'Land 20 crystal hits in one run.', target: 20, measure: s => s.crystalHits || 0 },
+      { id: 'breaker-50', title: 'Sky full of glass', copy: 'Land 50 crystal hits in a single run.', target: 50, measure: s => s.crystalHits || 0 },
+    ],
+  };
+  const firstArcadeSeals = ['arcade:merge-3', 'arcade:hop-2', 'arcade:dash-10', 'arcade:breaker-5'];
+  function checkConstellation() {
+    const firsts = firstArcadeSeals.filter(id => voyage.discoveries.includes(id)).length;
+    if (firsts === 4) unlock('arcade:grand-chart', 'The four-corner constellation · complete');
+    if (firsts === 4 && voyage.discoveries.includes('music:constellation'))
+      unlock('music:observatory-chorus', 'The observatory chorus · games and music together');
+    if (Object.values(arcadeContracts).flat().every(c => voyage.discoveries.includes('arcade:' + c.id)))
+      unlock('arcade:full-chart', 'A field guide full of impossible victories');
+    return firsts;
+  }
+  function arcadeFieldwork() {
+    const total = Object.values(arcadeContracts).flat().filter(c => voyage.discoveries.includes('arcade:' + c.id)).length;
+    return `<div class="instrument-panel arcade-fieldwork"><p class="eyebrow">THE KEEPER’S FIELDWORK</p><h2>Three little challenges.</h2><p>Earn seals by mastering a different part of each game. Records stay, even when the next run starts.</p><div class="arcade-fieldwork-count">${total} / 12 seals in the whole arcade</div><div class="arcade-grand-chart"><strong>THE FOUR-CORNER CONSTELLATION</strong><span id="arcade-grand-progress">${firstArcadeSeals.filter(id => voyage.discoveries.includes(id)).length} / 4 worlds charted</span><p>Earn the first seal in every game, then compose a first constellation in the Orchestra to reveal a hidden chorus.</p></div>${arcadeContracts[activeGame].map((mission, index) => {
+      const earned = voyage.discoveries.includes('arcade:' + mission.id);
+      return `<div class="arcade-contract ${earned ? 'is-earned' : ''}" data-contract="${mission.id}"><div class="arcade-contract-top"><strong>${['I', 'II', 'III'][index]} · ${mission.title}</strong><span data-contract-score>${earned ? 'SEALED' : `0 / ${mission.target}`}</span></div><p>${mission.copy}</p><progress max="${mission.target}" value="${earned ? mission.target : 0}" aria-label="${mission.title}: progress"></progress></div>`;
+    }).join('')}</div>`;
+  }
+  function updateArcadeFieldwork(data) {
+    if (!data?.stats || !['running', 'ending', 'over'].includes(data.phase)) return;
+    for (const mission of arcadeContracts[activeGame]) {
+      const id = 'arcade:' + mission.id, value = Math.min(mission.target, Math.floor(mission.measure(data.stats)));
+      if (value >= mission.target && !voyage.discoveries.includes(id)) unlock(id, mission.title + ' · fieldwork sealed');
+      const card = $(`[data-contract="${mission.id}"]`);
+      if (!card) continue;
+      const earned = voyage.discoveries.includes(id);
+      card.classList.toggle('is-earned', earned);
+      card.querySelector('progress').value = earned ? mission.target : value;
+      const label = earned ? 'SEALED' : `${value} / ${mission.target}`;
+      if (card.querySelector('[data-contract-score]').textContent !== label) card.querySelector('[data-contract-score]').textContent = label;
+    }
+    const total = Object.values(arcadeContracts).flat().filter(c => voyage.discoveries.includes('arcade:' + c.id)).length;
+    const count = $('.arcade-fieldwork-count'); if (count) count.textContent = `${total} / 12 seals in the whole arcade`;
+    const firsts = firstArcadeSeals.filter(id => voyage.discoveries.includes(id)).length;
+    const grand = $('#arcade-grand-progress'); if (grand) grand.textContent = `${firsts} / 4 worlds charted`;
+    if (firsts === 4) checkConstellation();
+  }
   const destinations = { moon: { name: 'the Moon', seconds: 1.28, distance: '384,400 km', colour: '#ced5d4' }, sun: { name: 'the Sun', seconds: 499, distance: '149.6 million km', colour: '#ecc379' }, mars: { name: 'Mars', seconds: 750, distance: '225 million km · illustrative', colour: '#dc9c84' }, neptune: { name: 'Neptune', seconds: 14977, distance: '4.49 billion km · illustrative', colour: '#91b1d8' } };
   const histories = [
     { id: 'galileo', year: '1610', date: '7 January 1610', title: 'Four lights. A new universe.', subtitle: 'Padua, Italy · Galileo’s telescope', text: 'Galileo watched little points of light change position beside Jupiter over successive nights. They were moons orbiting another world — evidence that not everything circled Earth.', task: 'Study both plates. Which point beside Jupiter changes position? Select your suspect.', clue: 'The moving light is a moon of Jupiter. Under the observation, the keeper has underlined two letters: ME. Part of a word?', type: 'jupiter' },
@@ -36,7 +96,7 @@
       photos: array('photos').filter(p => targets.some(t => t.id === p.target) && typeof p.id === 'string').map(p => ({ id: text(p.id), target: p.target, developed: p.developed === true, exposure: clamp(p.exposure ?? 60, 0, 100), clarity: clamp(p.clarity ?? 65, 0, 100), warmth: clamp(p.warmth ?? 50, 0, 100), date: text(p.date), name: text(p.name), frame: p.frame && typeof p.frame === 'object' ? { x: clamp(p.frame.x, 0, 1600), y: clamp(p.frame.y, 0, 900), zoom: clamp(p.frame.zoom, .6, 3), focus: clamp(p.frame.focus, 0, 100), time: clamp(p.frame.time, 0, 1e7), version: 2 } : null })),
       worlds: array('worlds').filter(p => typeof p.id === 'string').map(p => ({ id: text(p.id), name: text(p.name), hue: clamp(p.hue, 0, 360), size: clamp(p.size || 1, .5, 2), mass: clamp(p.mass || 1, .2, 5), atmosphere: clamp(p.atmosphere, 0, 100), tilt: clamp(p.tilt, 0, 90), moons: Math.round(clamp(p.moons, 0, 4)), rings: p.rings === true, speed: clamp(p.speed || 24, 4, 72), marks: Array.isArray(p.marks) ? p.marks.slice(0, 250).filter(m => m && ['land', 'crater', 'storm'].includes(m.type)).map(m => ({ x: clamp(m.x, -1, 1), y: clamp(m.y, -1, 1), r: clamp(m.r, .03, .3), type: m.type })) : [] })),
       letters: array('letters').filter(l => destinations[l.destination] && Number.isFinite(l.sent) && Number.isFinite(l.arrival)).map(l => ({ id: text(l.id), destination: l.destination, text: text(l.text, 280), sent: l.sent, arrival: Math.max(l.sent + 1, l.arrival), claimed: l.claimed === true })),
-      music: array('music').filter(m => Array.isArray(m.notes) && m.notes.length === 4).map(m => ({ id: text(m.id), name: text(m.name), tempo: clamp(m.tempo, 60, 160), notes: m.notes.map(row => Array.from({ length: 8 }, (_, i) => Boolean(row?.[i]))) })),
+      music: array('music').filter(m => Array.isArray(m.notes) && [4, 8].includes(m.notes.length)).map(m => studio.normalise({ ...m, id: text(m.id), name: text(m.name, 60) })),
       order: Array.isArray(raw.order) ? raw.order.filter(v => typeof v === 'string').slice(0, 200) : [],
       theme: ['forest', 'midnight', 'rose'].includes(raw.theme) ? raw.theme : 'forest',
       mode: ['guide', 'explorer', 'astronomer'].includes(raw.mode) ? raw.mode : 'guide',
@@ -48,7 +108,7 @@
   let cleanups = [], controller, lastGamePhase, lastGameScore = 0, currentPhoto = voyage.photos[0]?.id;
   let telescope = { x: 800, y: 450, focus: 50, zoom: 1, target: 'saturn', open: false };
   let world = { name: 'Somewhere strange', hue: 166, size: 1, mass: 1, atmosphere: 60, tilt: 23, moons: 2, rings: true, speed: 24, marks: [] };
-  let music = { name: 'Music for a quiet universe', tempo: 92, notes: [[true, false, false, false, true, false, false, false], [false, false, true, false, false, false, true, false], [true, false, false, true, false, false, true, false], [false, true, false, false, false, true, false, false]] };
+  let music = studio.normalise();
   let musicPlayer = null, musicStep = -1, historyIndex = 0, historyPlate = 0, blinkTimer, cabinetFilter = 'all';
   let worldBrush = 'land', worldRenderer = null, plateDeveloping = false, plateProgress = 0;
   let historyCompared = new Set([0]), historySelection = -1;
@@ -133,14 +193,15 @@
       <div class="game-scoreboard"><div><small>SCORE</small><strong id="game-score">0</strong></div><div><small>PERSONAL BEST</small><strong id="game-best">${voyage.best[gameKey()] || 0}</strong></div><div class="game-next"><small>${activeGame === 'merge' ? 'COMING UP' : 'MISSION STATUS'}</small><strong id="game-next">READY TO GO</strong><div id="next-worlds" class="next-worlds" ${activeGame === 'merge' ? '' : 'hidden'}></div></div></div>
       <div class="relic-progress"><div><span id="relic-progress-label">First discovery ahead</span><span id="relic-count">0 / 4 relics</span></div><progress id="relic-progress" max="1" value="0" aria-label="Progress to the next relic"></progress></div>
       <div class="game-screen" style="--game-ratio:${width}/${height};--game-aspect:${(width / height).toFixed(4)}"><canvas id="arcade-canvas" width="${width}" height="${height}" tabindex="0" role="application" aria-label="${g.title}. ${g.instruction} ${g.controls}. P pauses." aria-describedby="game-instruction"></canvas><div class="game-overlay" id="game-overlay"><span class="overlay-emblem">${activeGame === 'breaker' ? '◈' : '✦'}</span><p class="eyebrow" id="overlay-kicker">${challenge ? 'TODAY’S DAILY EXPEDITION' : 'A NEW BUILD EVERY RUN'}</p><h2 id="overlay-title">${g.title}</h2><p id="overlay-copy">${g.instruction}</p>${activeGame === 'merge' ? `<div class="forecast-row" role="group" aria-label="Choose tonight’s forecast">${expButton('game-forecast', 'Low gravity · floatier worlds', false, 'data-id="lowgrav"')}${expButton('game-forecast', 'Crowded skies · busier jar', false, 'data-id="crowded"')}${expButton('game-forecast', 'Long look-ahead · four ahead', false, 'data-id="lookahead"')}</div>` : expButton('game-start', 'Let’s play ' + icon('play'), true, 'id="game-start"')}<p class="overlay-footnote">${g.controls}</p></div></div>
-      <div class="game-bottom"><p id="game-instruction">${g.controls}<span>P to pause · 1 / 2 / 3 to choose a relic when offered</span></p>${g.ability ? `<button class="ability-button" data-exp="game-ability" id="game-ability" disabled><span>${g.ability}</span><b id="ability-charge">0%</b><i id="ability-fill"></i></button>` : '<span class="hold-hint">HOLD → ORBIT<br>RELEASE → FLY</span>'}</div>
+      <div class="game-bottom"><p id="game-instruction">${g.controls}<span>P to pause · C for the Stellar Pact · 1 / 2 / 3 to choose a relic</span></p>${g.ability ? `<button class="ability-button" data-exp="game-ability" id="game-ability" disabled><span>${g.ability}</span><b id="ability-charge">0%</b><i id="ability-fill"></i></button>` : '<span class="hold-hint">HOLD → ORBIT<br>RELEASE → FLY</span>'}</div>
+      <div class="pact-rail"><button type="button" id="game-pact" data-exp="game-pact" disabled aria-label="Invoke Stellar Pact, double points for twelve seconds, and forfeit shield protection if hit. Keyboard C.">✦ STELLAR PACT · ×2 SCORE</button><span id="game-pact-status">Earn this wager by playing. Press C when ready. A hit breaks the pact.</span></div>
       <div class="run-build"><div class="run-build-heading"><span>YOUR BUILD</span><span id="build-state">A blank page. For now.</span></div><div id="run-relics" class="run-relics"></div><div id="run-synergies" class="run-synergies" role="status"></div></div>
       <section id="run-recap" class="run-recap" aria-label="Run summary" hidden></section>
       <dialog id="relic-dialog" class="relic-dialog" aria-labelledby="relic-title" aria-describedby="relic-description"><div class="relic-dialog-heading"><span class="relic-discovery-mark" aria-hidden="true">✧</span><p class="eyebrow">SOMETHING EXTRAORDINARY, FOUND</p><h2 id="relic-title">What will you become?</h2><p id="relic-description">Choose one. It stays with you this run. Your expedition is paused.</p></div><div id="relic-choices" class="relic-choices"></div><div class="relic-dialog-footer"><span>Choose with a tap or keys 1 / 2 / 3</span>${expButton('relic-skip', 'Keep my current build')}</div></dialog>
       <p id="game-status" class="sr-only" role="status"></p></section>
       <aside class="arcade-aside"><div class="instrument-panel game-intro"><p class="eyebrow">${g.kicker}</p><h2>${g.title}.</h2><p>${g.description}</p><div class="game-tip"><span>✳</span><p>${g.goal}</p></div><div class="mode-switch" role="group" aria-label="Game mode">${expButton('game-casual', 'Free play', false, `aria-pressed="${!challenge && !expedition}"`)}${activeGame === 'dash' ? expButton('game-expedition', 'Expedition', false, `aria-pressed="${expedition && !challenge}"`) : ''}${expButton('game-daily', 'Daily orbit', false, `aria-pressed="${challenge}"`)}</div><p class="tiny-note">${challenge ? `A fixed course for ${formatDate(parseDate(challengeDate))}. Local daily best; resets at midnight.` : expedition && activeGame === 'dash' ? 'Six weathers, five missions, and one enormous whale. About four minutes.' : 'Fresh possibilities every run. Your best stays on this device.'}</p>${activeGame === 'hop' && !challenge ? `<label class="check-control"><input id="relaxed-flight" type="checkbox" ${relaxed ? 'checked' : ''}> Easy orbit · wider gravity fields</label>` : ''}</div>
       <div class="instrument-panel expedition-guide"><p class="eyebrow">A SMALL ROGUELITE. A BIG WHAT-IF.</p><h2>Make a little<br><em>trouble.</em></h2><ol><li><span>01</span>Play to earn a discovery.</li><li><span>02</span>Pick one of three relics.</li><li><span>03</span>Combine powers. Find a synergy.</li></ol><p class="tiny-note">Up to four relics per run. Discoveries stay in your field guide; powers begin fresh each time.</p><details class="relic-field-guide"><summary>Browse the six relics <span id="catalogue-count">${relicPool().filter(r => voyage.relics.includes(r.id)).length} / ${relicPool().length}</span></summary><div id="relic-catalogue">${relicCatalogue()}</div></details></div>
-      ${activeGame === 'merge' ? `<div class="instrument-panel evolution"><p class="eyebrow">SMALL WORLD. BIG AMBITIONS.</p><div class="evolution-row">${window.AetherArcade.names.map((name, i) => `<span title="${name}"><i style="--orb:${window.AetherArcade.colours[i]};--size:${19 + i * 1.4}px"></i><small>${name}</small></span>`).join('')}</div></div>` : ''}<div class="arcade-share"><span>Good run? Keep the evidence.</span>${expButton('share-score', 'Score postcard ↗', false, 'id="share-score"')}</div></aside></div></div>`;
+      ${arcadeFieldwork()}${activeGame === 'merge' ? `<div class="instrument-panel evolution"><p class="eyebrow">SMALL WORLD. BIG AMBITIONS.</p><div class="evolution-row">${window.AetherArcade.names.map((name, i) => `<span title="${name}"><i style="--orb:${window.AetherArcade.colours[i]};--size:${19 + i * 1.4}px"></i><small>${name}</small></span>`).join('')}</div></div>` : ''}<div class="arcade-share"><span>Good run? Keep the evidence.</span>${expButton('share-score', 'Score postcard ↗', false, 'id="share-score"')}</div></aside></div></div>`;
   }
 
   const rooms = [
@@ -185,9 +246,43 @@
       ${voyage.worlds.length ? `<section class="saved-worlds"><p class="section-label">YOUR VERY OWN SOLAR SYSTEM</p><div class="saved-world-grid">${voyage.worlds.map(w => `<button class="mini-world-card" data-exp="load-world" data-id="${esc(w.id)}">${art('world', w.hue, w)}<strong>${esc(w.name)}</strong><small>${w.moons} ${w.moons === 1 ? 'moon' : 'moons'} · ${w.marks?.length || 0} brush marks</small></button>`).join('')}</div></section>` : ''}</div>`;
   }
 
+  const musicStories = [
+    { id: 'music:constellation', title: 'The first constellation', detail: 'Place 8 notes across 3 voices.', voices: 3, notes: 8, quarters: 1 },
+    { id: 'music:tide', title: 'A changing tide', detail: 'Use 5 voices, 16 notes, and 3 phrases.', voices: 5, notes: 16, quarters: 3 },
+    { id: 'music:all-worlds', title: 'The eight-world symphony', detail: 'Play all 8 voices, 24 notes, across 4 phrases.', voices: 8, notes: 24, quarters: 4 },
+  ];
+  function musicStats() {
+    const voices = music.notes.filter(row => row.some(Boolean)).length;
+    const notes = music.notes.flat().filter(Boolean).length;
+    const quarters = Array.from({ length: 4 }, (_, i) => music.notes.some(row => row.slice(i * 4, i * 4 + 4).some(Boolean))).filter(Boolean).length;
+    return { voices, notes, quarters };
+  }
+  function musicStoryCards() {
+    const progress = musicStats();
+    return musicStories.map(story => {
+      const earned = voyage.discoveries.includes(story.id);
+      const ready = progress.voices >= story.voices && progress.notes >= story.notes && progress.quarters >= story.quarters;
+      return `<div class="music-story ${earned ? 'earned' : ready ? 'ready' : ''}"><div><strong>${earned ? '✧ ' : ''}${story.title}</strong><p>${story.detail}</p></div>${earned ? '<span class="music-story-seal">SEALED</span>' : `<button type="button" data-exp="music-claim" data-id="${story.id}" ${ready ? '' : 'disabled'}>${ready ? 'Claim seal ✧' : 'Keep composing'}</button>`}</div>`;
+    }).join('');
+  }
+  function refreshMusicStories() {
+    const stat = $('#music-mission-progress'); if (stat) {
+      const { voices, notes, quarters } = musicStats();
+      stat.textContent = `${voices} / 8 voices · ${notes} notes · ${quarters} / 4 phrases`;
+    }
+    const cards = $('#music-story-cards'); if (cards) cards.innerHTML = musicStoryCards();
+  }
   function renderOrchestra() {
-    const trackNames = ['Mercury · glass bells', 'Venus · warm keys', 'Earth · soft marimba', 'Saturn · velvet bass'];
-    return `<div class="experience">${heading('ROOM 04 · THE ORRERY ORCHESTRA', 'The universe has<br><em>excellent rhythm.</em>', 'Tap a few notes into orbit. Your own little celestial music box.', roomLink('cabinet', 'Your saved scores'))}<div class="orchestra-stage instrument-stage"><div class="music-orbits">${[0, 1, 2, 3].map(i => `<div class="music-orbit orbit-${i}"><span style="--note-colour:${['#e2c28a', '#b3a0d8', '#87c8b3', '#c89184'][i]}"></span></div>`).join('')}<span class="music-sun">✦</span></div><div class="orchestra-title"><p class="eyebrow">A COMPOSITION FOR FOUR WORLDS</p><h2 id="composition-title">${esc(music.name)}</h2><p id="orchestra-status" role="status">Your orchestra is ready.</p></div></div><section class="instrument-panel sequencer"><div class="sequencer-heading"><div><label class="field-label" for="music-name">Name your celestial score</label><input id="music-name" class="exp-input" value="${esc(music.name)}" maxlength="60"></div><div class="music-transport">${expButton('music-play', 'Play my universe ' + icon('play'), true, 'id="music-play" aria-pressed="false"')}${expButton('music-save', 'Keep this melody')}${expButton('music-export', 'Download a recording ' + icon('download'))}</div></div><div class="sequence-grid"><div class="sequence-count"><span></span>${Array.from({ length: 8 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div>${music.notes.map((row, track) => `<div class="sequence-track"><span>${trackNames[track]}</span>${row.map((note, step) => `<button class="sequence-note ${note ? 'on' : ''}" data-exp="music-note" data-track="${track}" data-step="${step}" aria-label="${trackNames[track]}, beat ${step + 1}" aria-pressed="${note}"><i></i></button>`).join('')}</div>`).join('')}</div><div class="music-bottom">${labelRange('music-tempo', 'Tempo', music.tempo, 60, 160, 1, ' BPM')}<div class="button-row">${expButton('music-preset', 'Midnight waltz', false, 'data-preset="0"')}${expButton('music-preset', 'Little solar dance', false, 'data-preset="1"')}${expButton('music-clear', 'Clear notes')}</div></div><p class="tiny-note">Artistic sonification, composed with your browser’s synthesiser. Audio starts when you press Play.</p></section>${voyage.music.length ? `<div class="saved-music"><p class="section-label">YOUR COMPOSITIONS</p>${voyage.music.map(m => expButton('music-load', '♫ ' + esc(m.name), false, `data-id="${esc(m.id)}"`)).join('')}</div>` : ''}</div>`;
+    const tracks = studio.TRACKS;
+    return `<div class="experience">${heading('ROOM 04 · THE ORRERY ORCHESTRA', 'The universe has<br><em>excellent rhythm.</em>', 'Eight playable instruments, sixteen steps, living harmonies and three little composition quests.', roomLink('cabinet', 'Your saved scores'))}
+      <div class="orchestra-stage instrument-stage"><div class="music-orbits">${tracks.map((track, i) => `<div class="music-orbit orbit-${i}"><span style="--note-colour:${track.colour}"></span></div>`).join('')}<span class="music-sun">✦</span></div><div class="orchestra-title"><p class="eyebrow">EIGHT WORLDS · ONE LIVING SCORE</p><h2 id="composition-title">${esc(music.name)}</h2><p id="orchestra-status" role="status">Your orchestra is ready. Compose or play the keyboard pads.</p><div class="music-mood-line">${studio.MOODS[music.mood].name} · ${music.tempo} BPM</div></div></div>
+      <section class="instrument-panel sequencer"><div class="sequencer-heading"><div><label class="field-label" for="music-name">Name your celestial score</label><input id="music-name" class="exp-input" value="${esc(music.name)}" maxlength="60"></div><div class="music-transport">${expButton('music-play', 'Play my universe ' + icon('play'), true, 'id="music-play" aria-pressed="false"')}${expButton('music-save', 'Keep this melody')}${expButton('music-export', 'Download stereo WAV ' + icon('download'))}</div></div>
+      <div class="music-explainer"><strong>THE SIXTEEN-BEAT SKY</strong><span>Click cells to place notes · every four beats the harmony changes · mute a planet or balance it in the mixer.</span></div>
+      <div class="sequence-scroll" role="region" tabindex="0" aria-label="Sixteen-step, eight-instrument sequencer; scroll horizontally for later beats"><div class="sequence-grid"><div class="sequence-count"><span>INSTRUMENT / BEAT</span>${Array.from({ length: studio.STEPS }, (_, i) => `<span>${i + 1}</span>`).join('')}</div>${music.notes.map((row, i) => `<div class="sequence-track ${music.mutes[i] ? 'is-muted' : ''}" style="--track-colour:${tracks[i].colour}"><div class="sequence-voice"><div class="sequence-voice-name"><strong>${tracks[i].planet}</strong><small>${tracks[i].voice}</small></div><div class="sequence-voice-controls"><button type="button" class="music-mute" data-exp="music-mute" data-track="${i}" aria-label="${music.mutes[i] ? 'Unmute' : 'Mute'} ${tracks[i].planet}" aria-pressed="${music.mutes[i]}">${music.mutes[i] ? 'Muted' : 'On'}</button><input type="range" class="music-level" data-track="${i}" id="music-level-${i}" min="0" max="100" value="${Math.round(music.levels[i] * 100)}" aria-label="${tracks[i].planet} volume" /></div></div>${row.map((active, step) => `<button type="button" class="sequence-note ${active ? 'on' : ''}" data-exp="music-note" data-track="${i}" data-step="${step}" aria-label="${tracks[i].planet} ${tracks[i].voice}, beat ${step + 1}" aria-pressed="${active}"><i></i></button>`).join('')}</div>`).join('')}</div></div>
+      <div class="music-studio-controls"><div class="music-harmony-control"><label class="field-label" for="music-mood">Harmonic weather</label><select id="music-mood" class="exp-select">${Object.entries(studio.MOODS).map(([id, mood]) => `<option value="${id}" ${music.mood === id ? 'selected' : ''}>${mood.name}</option>`).join('')}</select></div>${labelRange('music-tempo', 'Tempo', music.tempo, 60, 160, 1, ' BPM')}${labelRange('music-swing', 'Swing', music.swing, 0, 50, 1, '%')}${labelRange('music-space', 'Space & echoes', music.space, 0, 80, 1, '%')}</div>
+      <div class="music-bottom"><div><p class="eyebrow">START FROM A LITTLE SKETCH</p><div class="button-row">${studio.PRESETS.map((preset, i) => expButton('music-preset', preset.name, false, `data-preset="${i}"`)).join('')}${expButton('music-clear', 'Clear notes')}</div></div><p class="tiny-note">Web Audio instruments, stereo panning and a soft echo chamber. WAV exports render the same arrangement and effects. All scores stay in your browser.</p></div></section>
+      <section class="instrument-panel music-quest"><div class="music-quest-heading"><div><p class="eyebrow">AN ATLAS OF SOUND</p><h2>Compose for the stars.</h2></div><span id="music-mission-progress">${musicStats().voices} / 8 voices · ${musicStats().notes} notes · ${musicStats().quarters} / 4 phrases</span></div><div id="music-story-cards">${musicStoryCards()}</div><p class="music-story-link">The music and arcade fieldwork share one discovery passport. Chart the first challenge in all four games and claim your first composition seal to unlock the Observatory Chorus.</p></section>
+      ${voyage.music.length ? `<div class="saved-music"><p class="section-label">YOUR COMPOSITIONS</p>${voyage.music.map(m => expButton('music-load', '♫ ' + esc(m.name), false, `data-id="${esc(m.id)}"`)).join('')}</div>` : ''}</div>`;
   }
 
   function historyCandidates() {
@@ -318,7 +413,7 @@
 
   function renderCabinet() {
     const items = cabinetItems(), shown = items.filter(item => cabinetFilter === 'all' || item.type === cabinetFilter);
-    const stamps = [['game:merge', 'World maker', 'orbit'], ['game:hop', 'Gravity surfer', 'meteor'], ['game:dash', 'Star catcher', 'sparkles'], ['game:breaker', 'Orbit breaker', 'moon'], ['relic:first', 'Relic finder', 'sparkles'], ['relic:synergy', 'Synergy seeker', 'orbit'], ['capture:saturn', 'First light', 'search'], ['develop:first', 'Light keeper', 'moon'], ['world:first', 'Planet dreamer', 'sun'], ['music:first', 'Sky composer', 'sound'], ['history:galileo', 'Time traveller', 'calendar'], ['letter:first', 'Cosmic post', 'arrow-right'], ['sun:friend', 'Sun charmer', 'sparkles'], ['mystery:solved', 'The new keeper', 'bookmark']];
+    const stamps = [['game:merge', 'World maker', 'orbit'], ['game:hop', 'Gravity surfer', 'meteor'], ['game:dash', 'Star catcher', 'sparkles'], ['game:breaker', 'Orbit breaker', 'moon'], ['relic:first', 'Relic finder', 'sparkles'], ['relic:synergy', 'Synergy seeker', 'orbit'], ['capture:saturn', 'First light', 'search'], ['develop:first', 'Light keeper', 'moon'], ['world:first', 'Planet dreamer', 'sun'], ['music:first', 'Sky composer', 'sound'], ['music:constellation', 'First constellation', 'sparkles'], ['music:all-worlds', 'Eight-world symphony', 'sound'], ['arcade:grand-chart', 'Four-corner chart', 'orbit'], ['arcade:full-chart', 'Field guide complete', 'bookmark'], ['music:observatory-chorus', 'Observatory chorus', 'sparkles'], ['history:galileo', 'Time traveller', 'calendar'], ['letter:first', 'Cosmic post', 'arrow-right'], ['sun:friend', 'Sun charmer', 'sparkles'], ['mystery:solved', 'The new keeper', 'bookmark']];
     return `<div class="experience">${heading('YOUR DISCOVERY CABINET', 'A universe<br><em>with your fingerprints.</em>', 'The worlds you made. The light you caught. The little victories worth keeping.', passport())}<section class="cabinet-passport"><div class="passport-medallion">Æ</div><div><p class="eyebrow">${esc(state.name).toUpperCase()} · OBSERVATORY PASSPORT</p><h2>${rank()}</h2><p>${voyage.discoveries.length} ${voyage.discoveries.length === 1 ? 'discovery' : 'discoveries'} · ${items.length} ${items.length === 1 ? 'keepsake' : 'keepsakes'} · saved on this device</p><div class="passport-progress"><i style="width:${Math.min(100, points() / 4)}%"></i></div></div><div class="theme-picker"><label for="observatory-theme">Dress your observatory</label><select id="observatory-theme" class="exp-select"><option value="forest" ${voyage.theme === 'forest' ? 'selected' : ''}>Old forest · original</option><option value="midnight" ${voyage.theme === 'midnight' ? 'selected' : ''}>Midnight blue</option><option value="rose" ${voyage.theme === 'rose' ? 'selected' : ''}>Rose & copper</option></select></div></section><div class="stamp-grid">${stamps.map(([id, name, symbol]) => `<div class="discovery-stamp ${voyage.discoveries.includes(id) ? 'earned' : ''}">${icon(symbol)}<span>${name}</span><small>${voyage.discoveries.includes(id) ? 'DISCOVERED' : 'AWAITING A STORY'}</small></div>`).join('')}</div><div class="cabinet-toolbar"><div class="mode-switch" role="group" aria-label="Cabinet drawer">${['all', 'plates', 'worlds', 'scores', 'music', 'letters'].map(filter => expButton('cabinet-filter', filter[0].toUpperCase() + filter.slice(1), false, `data-filter="${filter}" aria-pressed="${cabinetFilter === filter}"`)).join('')}</div><p>Drag to arrange · or use the arrow buttons</p></div><div class="keepsake-grid">${shown.length ? shown.map(item => `<article class="keepsake" draggable="true" data-keepsake="${esc(item.id)}"><div class="keepsake-image">${item.type === 'scores' ? gameArt(item.data.key.split(':')[0]) : art(item.art, item.data.hue, item.data)}<span>${item.type.toUpperCase()}</span></div><div class="keepsake-copy"><h3>${esc(item.name)}</h3><p>${esc(item.subtitle)}</p><div class="keepsake-actions">${expButton('open-keepsake', 'Revisit ' + icon('arrow-up-right'), false, `data-id="${esc(item.id)}"`)}<div>${expButton('move-keepsake', '←', false, `data-id="${esc(item.id)}" data-direction="-1" aria-label="Move ${esc(item.name)} earlier"`)}${expButton('move-keepsake', '→', false, `data-id="${esc(item.id)}" data-direction="1" aria-label="Move ${esc(item.name)} later"`)}</div></div></div></article>`).join('') : `<div class="cabinet-empty"><span>✧</span><h2>A drawer full of possibility.</h2><p>Play a round, develop a photograph, compose a melody, or make a world. Your discoveries will find a home here.</p>${roomLink('discover', 'Find your first wonder')}</div>`}</div></div>`;
   }
 
@@ -360,7 +455,7 @@
       root: main, signal: controller.signal, motion: motionQuery, esc, toast, unlock, save, voyage,
       getWorld: () => world, checkpointWorld: () => worldRenderer?.checkpoint(), updateWorld: updateWorldReadout,
       getPhoto: () => voyage.photos.find(photo => photo.id === currentPhoto), updatePlate,
-      getTelescope: () => telescope, getMusic: () => music,
+      getTelescope: () => telescope, getMusic: () => music, updateMusicStories: refreshMusicStories,
     });
     if (typeof roomCleanup === 'function') cleanups.push(roomCleanup);
     on(document, 'visibilitychange', () => { if (document.hidden) { stopMusic(); stopBlink(); } });
@@ -568,6 +663,14 @@
           const incomingId = data.incoming?.id || '';
           if (incomingId !== incomingKey) { incomingKey = incomingId; if (data.incoming) $('#game-status').textContent = `${data.incoming.name} incoming — catch it before it drifts by.`; }
         }
+        // Pact controls never depend on colour alone and remain operable by C.
+        if ($('#game-pact')) {
+          const pact = data.pact || {};
+          $('#game-pact').disabled = !pact.ready;
+          $('#game-pact').textContent = pact.active ? `✦ STELLAR PACT · ${pact.seconds}s LEFT` : pact.used ? '✦ STELLAR PACT · SPENT' : pact.ready ? '✦ INVOKE STELLAR PACT · ×2' : '✦ STELLAR PACT · ×2 SCORE';
+          $('#game-pact-status').textContent = pact.active ? 'Double points. Dodge carefully: shields cannot save a failed pact.' : pact.failed ? 'Broken by a hit. Try again on the next run.' : pact.used ? 'Wager complete. A new pact awaits next run.' : pact.ready ? 'Ready: press C or activate this button. Double points for 12 seconds.' : 'Earn this wager by playing. Press C when ready. A hit breaks the pact.';
+        }
+        updateArcadeFieldwork(data);
         updateBuild(data);
       },
       onFinish({ score, largest, relics = [] }) {
@@ -774,7 +877,6 @@
     on(document, 'visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(tick); } });
   }
 
-  const frequencies = [523.25, 329.63, 261.63, 130.81];
   function stopMusic() {
     if (musicPlayer) { clearInterval(musicPlayer.timer); musicPlayer.audio.close().catch(() => {}); musicPlayer = null; }
     musicStep = -1; $$('.sequence-note').forEach(el => el.classList.remove('playing'));
@@ -785,56 +887,48 @@
   async function playMusic() {
     if (musicPlayer) { stopMusic(); return; }
     try {
-      const audio = new (window.AudioContext || window.webkitAudioContext)();
-      const player = { audio, timer: null, next: 0, step: 0, visuals: [] };
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) throw new Error('Web Audio unavailable');
+      const audio = new Audio();
+      const player = { audio, bus: studio.createBus(audio, music), timer: null, next: 0, step: 0, visuals: [] };
       musicPlayer = player;
       await audio.resume();
       if (musicPlayer !== player) { audio.close().catch(() => {}); return; }
-      player.next = audio.currentTime + .05;
+      player.next = audio.currentTime + .06;
       const schedule = () => {
         if (document.hidden || musicPlayer !== player) return;
-        while (player.next < audio.currentTime + .1) {
-          const step = player.step % 8;
-          music.notes.forEach((row, track) => {
-            if (!row[step]) return;
-            const oscillator = audio.createOscillator(), gain = audio.createGain();
-            oscillator.type = track === 3 ? 'triangle' : 'sine'; oscillator.frequency.value = frequencies[track];
-            gain.gain.setValueAtTime(0, player.next); gain.gain.linearRampToValueAtTime(.09, player.next + .012); gain.gain.exponentialRampToValueAtTime(.0001, player.next + .6);
-            oscillator.connect(gain).connect(audio.destination); oscillator.start(player.next); oscillator.stop(player.next + .65);
-          });
-          player.visuals.push({ step, when: player.next, tracks: music.notes.map(row => row[step]) });
-          player.next += 30 / music.tempo; player.step++;
+        studio.setSpace(player.bus, music.space, audio.currentTime);
+        // The current editable sequence is consulted for every scheduled note.
+        while (player.next < audio.currentTime + .14) {
+          const step = player.step % studio.STEPS;
+          const when = player.next + studio.swingOffset(music, step);
+          music.notes.forEach((row, track) => { if (row[step]) studio.voice(audio, player.bus, track, when, music, step); });
+          player.visuals.push({ step, when, tracks: music.notes.map((row, track) => row[step] && !music.mutes[track]) });
+          player.next += studio.stepSeconds(music); player.step++;
         }
         while (player.visuals.length && player.visuals[0].when <= audio.currentTime) {
           const visual = player.visuals.shift(); musicStep = visual.step;
           $$('.sequence-note').forEach(el => el.classList.toggle('playing', Number(el.dataset.step) === musicStep));
-          visual.tracks.forEach((active, track) => { const planet = $(`.orbit-${track} > span`); if (active && planet && !motionQuery.matches) planet.animate([{ transform: 'scale(1.8)', boxShadow: '0 0 40px 10px var(--note-colour)' }, { transform: 'scale(1)' }], { duration: 360 }); });
-          $('.music-sun')?.classList.toggle('beat-on', musicStep % 2 === 0);
+          visual.tracks.forEach((active, track) => { const planet = $(`.orbit-${track} > span`); if (active && planet && !motionQuery.matches) planet.animate([{ transform: 'scale(1.5)', boxShadow: '0 0 32px 8px var(--note-colour)' }, { transform: 'scale(1)' }], { duration: 310 }); });
+          $('.music-sun')?.classList.toggle('beat-on', musicStep % 4 === 0);
         }
       };
       schedule(); player.timer = setInterval(schedule, 25);
-      $('#music-play').textContent = 'Pause the orchestra'; $('#music-play').setAttribute('aria-pressed', 'true');
-      $('.orchestra-stage').classList.add('is-playing'); $('#orchestra-status').textContent = 'Four worlds. One little melody.';
-    } catch { stopMusic(); toast('The orchestra needs audio support in your browser. You can still compose and download your score.'); }
+      $('#music-play').textContent = 'Stop the orchestra'; $('#music-play').setAttribute('aria-pressed', 'true');
+      $('.orchestra-stage').classList.add('is-playing'); $('#orchestra-status').textContent = 'Eight worlds are turning. Change the notes as they play.';
+    } catch { stopMusic(); toast('Sound is unavailable here. You can still compose and save your arrangement.'); }
   }
 
-  function exportMusic() {
-    const rate = 22050, stepLength = 30 / music.tempo, duration = stepLength * 16 + .8;
-    const samples = new Float32Array(Math.ceil(rate * duration));
-    for (let beat = 0; beat < 16; beat++) music.notes.forEach((row, track) => {
-      if (!row[beat % 8]) return;
-      const start = Math.floor(beat * stepLength * rate);
-      for (let i = 0; i < rate * .65; i++) {
-        const t = i / rate, envelope = Math.min(1, t / .012) * Math.exp(-t * 9);
-        const wave = Math.sin(2 * Math.PI * frequencies[track] * t);
-        samples[start + i] += (track === 3 ? Math.asin(wave) * 2 / Math.PI : wave) * envelope * .16;
-      }
-    });
-    const buffer = new ArrayBuffer(44 + samples.length * 2), view = new DataView(buffer);
-    const str = (offset, s) => [...s].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
-    str(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); str(8, 'WAVE'); str(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); str(36, 'data'); view.setUint32(40, samples.length * 2, true);
-    samples.forEach((sample, i) => view.setInt16(44 + i * 2, clamp(sample, -1, 1) * 32767, true));
-    downloadFile('aether-celestial-score.wav', buffer, 'audio/wav'); toast('Your little universe, ready to listen to anywhere.');
+  async function exportMusic() {
+    const button = $('[data-exp="music-export"]');
+    if (button?.disabled) return;
+    if (button) { button.disabled = true; button.textContent = 'Rendering your score…'; }
+    try {
+      const buffer = await studio.recording(music);
+      downloadFile('aether-celestial-score.wav', buffer, 'audio/wav');
+      toast('Your stereo orchestra recording is ready. Four full loops, including the echoes.');
+    } catch { toast('This browser could not render an offline recording. Your score is still safe.'); }
+    finally { if (button?.isConnected) { button.disabled = false; button.innerHTML = 'Download stereo WAV ' + icon('download'); } }
   }
 
   function stopBlink() {
@@ -940,6 +1034,7 @@
         break;
       }
       case 'choose-game': if (games[id]) { activeGame = id; lastGameScore = 0; redraw(); } break;
+      case 'game-pact': gameHandle?.invokePact(); $('#arcade-canvas')?.focus({ preventScroll: true }); break;
       case 'game-ability': gameHandle?.ability(); $('#arcade-canvas')?.focus({ preventScroll: true }); break;
       case 'game-start': if (lastGamePhase === 'paused') gameHandle?.resume(); else { if (lastGamePhase === 'over') gameHandle?.reset(); gameHandle?.start(); } break;
       case 'game-pause': lastGamePhase === 'paused' ? gameHandle?.resume() : gameHandle?.pause(); break;
@@ -987,8 +1082,10 @@
         break;
       }
       case 'load-world': { const saved = voyage.worlds.find(w => w.id === id); if (saved) { world = structuredClone(saved); redraw(); window.scrollTo({ top: 0, behavior: 'smooth' }); } break; }
-      case 'music-note': { const track = Number(button.dataset.track), step = Number(button.dataset.step); music.notes[track][step] = !music.notes[track][step]; button.classList.toggle('on', music.notes[track][step]); button.setAttribute('aria-pressed', music.notes[track][step]); break; }
+      case 'music-note': { const track = Number(button.dataset.track), step = Number(button.dataset.step); music.notes[track][step] = !music.notes[track][step]; button.classList.toggle('on', music.notes[track][step]); button.setAttribute('aria-pressed', String(music.notes[track][step])); refreshMusicStories(); break; }
       case 'music-play': playMusic(); break;
+      case 'music-mute': { const track = Number(button.dataset.track); music.mutes[track] = !music.mutes[track]; button.textContent = music.mutes[track] ? 'Muted' : 'On'; button.setAttribute('aria-pressed', String(music.mutes[track])); button.setAttribute('aria-label', `${music.mutes[track] ? 'Unmute' : 'Mute'} ${studio.TRACKS[track].planet}`); button.closest('.sequence-track')?.classList.toggle('is-muted', music.mutes[track]); break; }
+      case 'music-claim': { const story = musicStories.find(story => story.id === id), stats = musicStats(); if (story && stats.voices >= story.voices && stats.notes >= story.notes && stats.quarters >= story.quarters) { unlock(story.id, story.title); checkConstellation(); refreshMusicStories(); } break; }
       case 'music-save': {
         music.name = $('#music-name').value.trim() || 'An unnamed little melody';
         const existing = voyage.music.find(m => m.id === music.id);
@@ -1000,11 +1097,8 @@
         toast('Melody saved. Keep the universe playing.'); break;
       }
       case 'music-load': { const saved = voyage.music.find(m => m.id === id); if (saved) { music = structuredClone(saved); redraw(); } break; }
-      case 'music-clear': music.notes = Array.from({ length: 4 }, () => Array(8).fill(false)); redraw(); break;
-      case 'music-preset': {
-        const patterns = button.dataset.preset === '1' ? ['10101010', '01010101', '10010010', '10001000'] : ['10010010', '00100001', '01001000', '10001000'];
-        music = { name: button.dataset.preset === '1' ? 'Little solar dance' : 'Midnight waltz', tempo: button.dataset.preset === '1' ? 126 : 84, notes: patterns.map(row => [...row].map(c => c === '1')) }; redraw(); break;
-      }
+      case 'music-clear': music.notes = Array.from({ length: studio.TRACKS.length }, () => Array(studio.STEPS).fill(false)); redraw(); break;
+      case 'music-preset': music = studio.preset(Number(button.dataset.preset)); redraw(); break;
       case 'music-export': exportMusic(); break;
       case 'history-era': historyIndex = Number(button.dataset.index); historyPlate = 0; historyCompared = new Set([0]); historySelection = -1; redraw(); break;
       case 'history-next': flipPlate(); break;
@@ -1071,13 +1165,17 @@
       else if (['hue', 'size', 'mass', 'atmosphere', 'tilt', 'speed', 'moons'].includes(id.slice(6))) world[id.slice(6)] = Number(value);
       updateWorldReadout();
     }
-    if (id === 'music-tempo') music.tempo = Number(value);
+    if (id === 'music-tempo') { music.tempo = Number(value); const mood = $('.music-mood-line'); if (mood) mood.textContent = `${studio.MOODS[music.mood].name} · ${music.tempo} BPM`; }
+    if (id === 'music-swing') music.swing = Number(value);
+    if (id === 'music-space') music.space = Number(value);
+    if (event.target.classList.contains('music-level')) music.levels[Number(event.target.dataset.track)] = Number(value) / 100;
     if (id === 'music-name') { music.name = value; $('#composition-title').textContent = value || 'An unnamed little melody'; }
   }
 
   function handleChange(event) {
     const { id, value } = event.target;
     if (id === 'scope-select') telescope.target = value;
+    if (id === 'music-mood' && studio.MOODS[value]) { music.mood = value; const mood = $('.music-mood-line'); if (mood) mood.textContent = `${studio.MOODS[value].name} · ${music.tempo} BPM`; }
     if (id === 'plate-select') { currentPhoto = value; redraw(); }
     if (id === 'relaxed-flight') { relaxed = event.target.checked; redraw(); }
     if (id === 'letter-destination' || id === 'letter-speed') {

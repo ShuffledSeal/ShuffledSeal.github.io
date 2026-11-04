@@ -36,16 +36,14 @@ Eight field guides — one per planet — each pairing illustrated plates and ro
 
 ## The Grand Tour
 
-A seeded roguelite voyage from the inner worlds to Neptune — one run threading everything in the observatory together. Twelve legs across three sectors: planetary puzzle surveys hosted live from the atlas, full arcade expeditions with relic drafts, and eight standalone trials between the stars. Hull is finite; refuges repair it; caches draft run-long artifacts; records and an in-progress tour persist in local storage.
+A run-based roguelite expedition from the Sun's doorstep to the Umbral Maw at Neptune. Arena **hunts** are the core game — sharp twin-stick movement, a burst dash with i-frames, telegraphed enemies (chasers, weavers, shards, maws), waves, and a two-phase boss. Around them: rule-rewriting **instruments** (drafts and the chandlery), trials that pay salvage, oddities with consequences, and sanctuaries. Death resets the run; what persists is knowledge, records, and new hulls in the hangar.
 
-- **Solar Shield** — parry flares from four directions inside the gold window.
-- **Syzygy** — drag the moon over the sun and hold totality three times.
-- **Debris Field** — steer, thrust and break three waves of asteroids.
-- **Ice Tail** — grow a comet's tail without crossing it.
-- **Deep Field** — chart a minesweeper sky of hidden supernovae.
-- **Free Return** — aim a gravity-assist slingshot between two gravity wells.
-- **The Descent** — a careful, fuelled landing on a marked pad.
-- **Shepherd** — return every moonlet drifting out of the ring band.
+- **Hunts** — three waves per sector, elites at finales, stardust motes off every kill.
+- **Instruments** — Lodestone Coil, Echo Plate, Prism Lens, Rime Coating, Static Net and more; their verbs also rewrite the trials (wells bend gravity in Free Return, echoes repeat actions, parallax doubles every fifth success…).
+- **Trials** — Solar Shield, Syzygy, Ice Tail, Deep Field, Free Return, The Descent, Shepherd.
+- **Hull forms** — Swift Kite is yours; the Iron Bell and Moth Wing unlock through play.
+
+Each arcade game also offers **three persistent fieldwork seals** (twelve total), tracking meaningful goals within individual runs. After progressing far enough in a run, you may invoke a **Stellar Pact** with **C** or the in-game button: a twelve-second double-score wager that ends early if you take a hit; shields cannot protect you from that hit. Your seals and personal records carry forward across attempts. Complete the first seal in each arcade game, then claim the Orchestra’s first musical constellation to uncover the **Observatory Chorus** achievement in the discovery cabinet.
 
 ## The cosmic arcade
 

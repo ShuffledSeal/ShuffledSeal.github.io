@@ -96,15 +96,19 @@ window.AetherTrials = (() => {
         const side = Math.floor(Math.random() * 4);
         flares.push({ side, t: 0, speed: (150 + g.clock * 2.4) * scale, x: sides[side][0], y: sides[side][1] });
       }
-      for (const f of flares) f.t += dt;
+      for (const f of flares) { if (f.frozen) { f.frozen -= dt; continue; } f.t += dt; }
+      const verbs = options.verbs || new Set();
+      for (const f of flares) if (!f.frozen && verbs.has('well') && Math.hypot(f.x - 450, f.y - 280) < 150) f.slow = true;
       for (let i = flares.length - 1; i >= 0; i--) {
         const f = flares[i], d = Math.hypot(f.x - 450, f.y - 280), arrive = (d - 92) / f.speed;
         if (arrive <= 0) {
           flares.splice(i, 1);
-          if (shield === f.side && g.clock - shieldAt < .55) {
+          const window = verbs.has('gyro') ? .8 : .55;
+          if (shield === f.side && g.clock - shieldAt < window) {
             const q = g.clock - shieldAt;
             parries++; if (q > .28) perfect++;
-            score += q > .28 ? 150 : 80;
+            score += (q > .28 ? 150 : 80) * (verbs.has('parallax') && parries % 5 === 0 ? 2 : 1);
+            if (q > .28 && verbs.has('freeze')) flares.forEach(o => o.frozen = 1);
             burst(f.x, f.y, '#f2d38a', 18, 190); tone(q > .28 ? 880 : 660, .1, 'triangle', .06);
           } else {
             hits++; hull--; burst(450, 280, '#f58e9b', 22, 220); tone(140, .25, 'sawtooth', .05);
@@ -171,8 +175,9 @@ window.AetherTrials = (() => {
     function step(dt) {
       if (over) return;
       state.drift += dt;
-      state.sun.x = 450 + Math.sin(state.drift * .5 + state.round * 2) * (30 + state.round * 26);
-      state.sun.y = 280 + Math.cos(state.drift * .34) * (18 + state.round * 16);
+      const verbs = options.verbs || new Set(), driftMul = verbs.has('well') ? .6 : 1;
+      state.sun.x = 450 + Math.sin(state.drift * .5 + state.round * 2) * (30 + state.round * 26) * driftMul;
+      state.sun.y = 280 + Math.cos(state.drift * .34) * (18 + state.round * 16) * driftMul;
       const cover = 1 - clamp(Math.hypot(state.moon.x - state.sun.x, state.moon.y - state.sun.y) / 130, 0, 1);
       if (cover > .82) {
         state.hold += dt;
@@ -183,7 +188,7 @@ window.AetherTrials = (() => {
           state.round++; state.hold = 0; state.moon = { x: 130 + Math.random() * 120, y: 120 + Math.random() * 320, r: 40 };
           if (state.round >= 3) end(scores.every(s => s > 80));
         }
-      } else state.hold = Math.max(0, state.hold - dt * 2);
+      } else state.hold = Math.max(0, state.hold - dt * ((options.verbs || new Set()).has('echo') ? 1 : 2));
     }
     function draw(ctx, dt, clock) {
       ctx.fillStyle = '#0e1420'; ctx.fillRect(0, 0, W, H); stars();
@@ -340,7 +345,7 @@ window.AetherTrials = (() => {
   function comet(container, options) {
     const W = 900, H = 560;
     const scale = options.speedScale || 1;
-    let head = { x: 450, y: 280 }, trail = [], ices = [], score = 0, over = 0, dir = { x: 1, y: 0 }, target = 40;
+    let head = { x: 450, y: 280 }, trail = [], ices = [], score = 0, over = 0, dir = { x: 1, y: 0 }, target = 40, forgiven = false;
     let growClock = 0;
     const g = frame(container, W, H, { label: 'Ice Tail. Steer the comet, gather ice, never cross your own tail.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -356,11 +361,18 @@ window.AetherTrials = (() => {
       const max = 26 + Math.floor(score / 60);
       while (trail.length > max) trail.pop();
       growClock += dt;
-      if (head.x < 20 || head.x > W - 20 || head.y < 20 || head.y > H - 20) return end(false);
-      for (let i = 14; i < trail.length; i++) if (Math.hypot(trail[i].x - head.x, trail[i].y - head.y) < 12) return end(false);
+      const verbs = options.verbs || new Set();
+      if (head.x < 20 || head.x > W - 20 || head.y < 20 || head.y > H - 20) {
+        if (verbs.has('cinder') && !forgiven) { forgiven = true; head = { x: 450, y: 280 }; trail = []; tone(200, .2, 'sine', .05); return; }
+        return end(false);
+      }
+      for (let i = 14; i < trail.length; i++) if (Math.hypot(trail[i].x - head.x, trail[i].y - head.y) < 12) {
+        if (verbs.has('cinder') && !forgiven) { forgiven = true; trail = trail.slice(i); tone(200, .2, 'sine', .05); break; }
+        return end(false);
+      }
       for (let i = ices.length - 1; i >= 0; i--) {
         if (Math.hypot(ices[i].x - head.x, ices[i].y - head.y) < 20) {
-          ices.splice(i, 1); place(); score += 60 + trail.length; tone(700 + trail.length * 6, .08, 'sine', .05);
+          ices.splice(i, 1); place(); score += (60 + trail.length) * (verbs.has('trail') ? 2 : 1); tone(700 + trail.length * 6, .08, 'sine', .05);
           burst(head.x, head.y, '#bfe3ea', 10, 140);
           if (score >= target * 60) return end(true);
         }
@@ -423,6 +435,7 @@ window.AetherTrials = (() => {
       }
       return out;
     }
+    const verbs = options.verbs || new Set();
     const status = document.createElement('p'); status.className = 'deepfield-status'; status.setAttribute('role', 'status');
     const board = document.createElement('div'); board.className = 'deepfield-grid'; board.setAttribute('role', 'group'); board.setAttribute('aria-label', 'Deep field survey. Reveal every safe sector; flag the supernovae.');
     container.append(status, board);
@@ -440,6 +453,19 @@ window.AetherTrials = (() => {
       if (grid[p] === -1) { cell.textContent = '✸'; cell.classList.add('nova'); alive = false; status.textContent = 'A supernova. The survey ends here.'; [...board.children].forEach((c, i) => { if (grid[i] === -1) { c.classList.add('revealed', 'nova'); c.textContent = '✸'; } }); end(false); return; }
       if (grid[p] > 0) { cell.textContent = grid[p]; cell.dataset.count = grid[p]; }
       else for (const q of around(p)) reveal(q);
+      if (verbs.has('echo') && revealed.size % 1 === 0 && Math.random() < .2) {
+        const extra = around(p).find(q => !revealed.has(q) && !flagged.has(q) && grid[q] >= 0);
+        if (extra !== undefined) reveal(extra);
+      }
+      if (verbs.has('parallax') && revealed.size % 5 === 0) {
+        const hidden = [...Array(n * n).keys()].filter(q => grid[q] === -1 && !flagged.has(q));
+        if (hidden.length) {
+          const q = hidden[Math.floor(Math.random() * hidden.length)];
+          const c = board.children[q];
+          c.classList.add('flagged'); c.textContent = '⚑'; flagged.add(q);
+          status.textContent = 'The Parallax Mirror marks a hiding supernova.';
+        }
+      }
       status.textContent = `${revealed.size} / ${safe} safe sectors charted`;
       if (revealed.size >= safe) { status.textContent = 'The deep field is charted.'; end(true); }
     }
@@ -473,6 +499,10 @@ window.AetherTrials = (() => {
     function step(dt) {
       if (over || !flying) return;
       for (let k = 0; k < 3; k++) {
+        if ((options.verbs || new Set()).has('well')) {
+          const dx = target.x - probe.x, dy = target.y - probe.y, d = Math.hypot(dx, dy) || 1;
+          probe.vx += dx / d * 26 * dt; probe.vy += dy / d * 26 * dt;
+        }
         for (const p of planets) {
           const dx = p.x - probe.x, dy = p.y - probe.y, d2 = dx * dx + dy * dy, d = Math.sqrt(d2);
           if (d < p.r + 6) { burst(probe.x, probe.y, '#f58e9b', 24, 220); tone(130, .3, 'sawtooth', .06); flying = false; miss('The probe burned up in an atmosphere.'); return; }
@@ -542,7 +572,7 @@ window.AetherTrials = (() => {
   function lander(container, options) {
     const W = 900, H = 560;
     const pad = { x: 620, w: 110 };
-    let craft = { x: 170, y: 90, vx: 30, vy: 0, a: 0 }, fuel = 100, over = 0, dust = [];
+    let craft = { x: 170, y: 90, vx: 30, vy: 0, a: 0 }, fuel = 100, over = 0, dust = [], forgiven = false;
     const g = frame(container, W, H, { label: 'The Descent. Rotate with arrow keys, thrust with Up or Space. Land gently on the pad.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(83, 44);
@@ -557,7 +587,7 @@ window.AetherTrials = (() => {
       if (keys.has('ArrowRight')) craft.a += 2.6 * dt;
       const thrusting = (keys.has('ArrowUp') || keys.has(' ')) && fuel > 0;
       if (thrusting) {
-        fuel = Math.max(0, fuel - 16 * dt);
+        fuel = Math.max(0, fuel - 16 * dt * ((options.verbs || new Set()).has('gyro') ? .75 : 1));
         craft.vx += Math.sin(craft.a) * 130 * dt; craft.vy -= Math.cos(craft.a) * 130 * dt;
         if (Math.random() < .5) dust.push({ x: craft.x - Math.sin(craft.a) * 12, y: craft.y + Math.cos(craft.a) * 12, life: .5 });
       }
@@ -566,10 +596,15 @@ window.AetherTrials = (() => {
       craft.x += craft.vx * dt; craft.y += craft.vy * dt;
       dust.forEach(d => d.life -= dt); dust = dust.filter(d => d.life > 0);
       const ground = 508;
+      const verbs = options.verbs || new Set();
       if (craft.y > ground - 12) {
         const onPad = craft.x > pad.x && craft.x < pad.x + pad.w;
         const gentle = Math.abs(craft.vy) < 26 && Math.abs(craft.vx) < 18 && Math.abs(craft.a) < .3;
         if (onPad && gentle) { burst(craft.x, ground - 14, '#f2d38a', 26, 160); tone(660, .3, 'sine', .06); end(true); }
+        else if (verbs.has('cinder') && !forgiven) {
+          forgiven = true; craft.y = ground - 14; craft.vy = -Math.abs(craft.vy) * .45; craft.vx *= .5;
+          burst(craft.x, ground - 8, '#f2a66c', 24, 200); tone(220, .25, 'triangle', .05);
+        }
         else { burst(craft.x, ground - 8, '#f58e9b', 30, 220); tone(110, .4, 'sawtooth', .06); end(false); }
       }
       if (craft.x < -40 || craft.x > W + 40) { craft.x = clamp(craft.x, -40, W + 40); craft.vx = 0; }
@@ -635,9 +670,14 @@ window.AetherTrials = (() => {
         // Paddles
         for (const side of [0, 1]) {
           const px = side ? W - 60 : 60;
-          if (Math.abs(m.x - px) < 16 && Math.abs(m.y - paddle.y) < 52 && Math.sign(m.vx) === (side ? 1 : -1)) {
+          const reach = (options.verbs || new Set()).has('gyro') ? 68 : 52;
+          if (Math.abs(m.x - px) < 16 && Math.abs(m.y - paddle.y) < reach && Math.sign(m.vx) === (side ? 1 : -1)) {
             m.vx = -m.vx * 1.04; m.vy += (m.y - paddle.y) * 2.4;
             saved++; score += 40; tone(520, .07, 'sine', .045); burst(px, m.y, '#e6c58b', 8, 120);
+            if ((options.verbs || new Set()).has('chain')) {
+              const other = moonlets.find(o => o !== m && Math.abs(o.x - px) < 220);
+              if (other) { other.vx = -other.vx * 1.1; burst(other.x, other.y, '#9ed7ec', 6, 90); tone(840, .05, 'square', .02); }
+            }
           }
         }
         if (m.x < -50 || m.x > W + 50) {
@@ -696,7 +736,7 @@ window.AetherTrials = (() => {
   return {
     list,
     create(id, container, options = {}) {
-      return creators[id](container, { sound: options.sound !== false, speedScale: options.speedScale || 1, onEnd: options.onEnd || (() => {}) });
+      return creators[id](container, { sound: options.sound !== false, speedScale: options.speedScale || 1, verbs: options.verbs || new Set(), onEnd: options.onEnd || (() => {}) });
     },
   };
 })();

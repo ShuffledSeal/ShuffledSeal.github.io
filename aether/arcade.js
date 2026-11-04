@@ -129,6 +129,8 @@ window.AetherArcade = (() => {
     let surgeUntil = 0, lastTen = false, dashAct = 1, lastTickSec = -1, lastActTick = -1;
     let oneCrystal = false, lastBeacon = 0, ghosts = [], sprayT = 0, chargeStep = 0;
     let music = null;
+    // One optional high-stakes burst per run, available only after mastering the opening loop.
+    let pact = 0, pactUsed = false, pactFailed = false;
     let suspended = false, owned = [], offer = null, draftDecks = [], draftIndex = 0, lastDraftTime = 0, draftFallbacks = 0;
     let aimVelocity = 0, aimStamp = 0, guidedBall = null, fields = [], echoes = [];
     let pickupSchedule = [], activePower = null, slow = 0;
@@ -146,6 +148,8 @@ window.AetherArcade = (() => {
     const ringReach = () => has('ring-compass') ? (has('solar-spool') && flightBoost > 0 ? 340 : 150) : 0;
     const magnetReach = () => magnet > 0 ? (has('lodestone') ? 300 : 260) : has('lodestone') ? 180 : 0;
     const progressValue = () => options.game === 'merge' ? totalMerges : options.game === 'hop' ? Math.floor(maxMetres) : options.game === 'dash' ? totalCatches : crystalHits;
+    const pactThreshold = { merge: 3, hop: 350, dash: 7, breaker: 7 };
+    const pactReady = () => phase === 'running' && !suspended && !pactUsed && progressValue() >= pactThreshold[options.game];
     const stats = () => ({ simulationTime: time, totalMerges, totalCatches, crystalHits, ringsCaught, maxMetres: Math.floor(maxMetres), comets: comets.length, shields, shieldCharge, orbitCharge, ward, draftFallbacks, draftTimes: draftTimes.slice() });
 
     function notify() {
@@ -156,7 +160,8 @@ window.AetherArcade = (() => {
       const incomingPickup = options.game === 'dash' ? falling.find(g => g.kind === 'pickup' && !g.taken) : null;
       const incomingDef = incomingPickup && powerUps.dash.find(p => p.id === incomingPickup.pickupId);
       options.onUpdate?.({ phase, suspended, score, best, next: names[queue?.[0] || 0], queue: queue.slice(), largest: names[largest], lives, combo, remaining: Math.ceil(remaining), danger: clamp(danger / dangerLimit(), 0, 1), drops, charge: Math.floor(charge), detail, result,
-        relics: owned.slice(), offer: offer ? offer.slice() : null, synergies: activeSynergies(), stats: stats(),
+        relics: owned.slice(), offer: offer ? offer.slice() : null, synergies: activeSynergies(), stats: stats(), level,
+        pact: { active: pact > 0, seconds: Math.ceil(pact), ready: pactReady(), used: pactUsed, failed: pactFailed },
         relicProgress: draftIndex < 4 ? { value: progressValue(), target: milestones[options.game][draftIndex], label: progressLabels[options.game] } : { value: owned.length, target: 4, label: 'relics collected' },
         pickup: activePower ? { id: activePower.id, name: activePower.name, glyph: activePower.glyph, remaining: activePower.remaining, total: activePower.duration } : null,
         incoming: incomingDef ? { id: incomingDef.id, name: incomingDef.name, x: Math.round(incomingPickup.x) } : null,
@@ -334,8 +339,9 @@ window.AetherArcade = (() => {
       ripples.push({ x, y, radius: 8, life: .6, colour });
     }
     function scoreAt(value, x, y, label) {
-      score += value; best = Math.max(best, score);
-      popups.push({ x, y, text: label || `+${value}`, life: 1.1, colour: '#f1f4ac' });
+      const earned = Math.round(value * (pact > 0 ? 2 : 1));
+      score += earned; best = Math.max(best, score);
+      popups.push({ x, y, text: pact > 0 && value ? `✦ ×2 · +${earned}` : (label || `+${earned}`), life: 1.1, colour: '#f1f4ac' });
       if (popups.length > 14) popups.shift();
     }
     function clearInput() {
@@ -355,7 +361,9 @@ window.AetherArcade = (() => {
     }
     function hurt(x, y) {
       if (invulnerable > 0 || phase !== 'running' || suspended) return;
-      if (shields > 0) {
+      const breachedPact = pact > 0;
+      if (breachedPact) { pact = 0; pactFailed = true; banner('PACT BROKEN — SHIELDS CANNOT HELP', '#f58e9b', 16); }
+      if (shields > 0 && !breachedPact) {
         shields--; invulnerable = 1; relicField(x, y, 64, '#9ed7c6'); burst(x, y, '#9ed7c6', 20);
         // Moonshield's lesson: a blocked meteor charges the dash.
         if (options.game === 'dash') { charge = Math.min(100, charge + 20); lastHitTime = time; }
@@ -444,6 +452,7 @@ window.AetherArcade = (() => {
       draftWarn = 0; stirred = -1; draftTimes = []; pileT = 0; peakBand = 0; lastThump = 0;
       surgeUntil = 0; lastTen = false; dashAct = 1; lastTickSec = -1; lastActTick = -1;
       oneCrystal = false; lastBeacon = 0; ghosts = []; sprayT = 0; chargeStep = 0; music = null;
+      pact = 0; pactUsed = false; pactFailed = false;
       phase = 'ready'; score = 0; time = 0; accumulator = 0; last = 0; result = ''; notifyTimer = 0;
       particles = []; ripples = []; popups = []; shake = 0; flash = 0; clearInput();
       charge = options.game === 'dash' ? 100 : 0; combo = 0; comboTimer = 0; lives = 3; invulnerable = 0; level = 1; totalMerges = 0;
@@ -488,6 +497,15 @@ window.AetherArcade = (() => {
       phase = 'running'; last = 0; accumulator = 0; clearInput();
       if (sound) { audio?.resume().catch(() => {}); motif([[329.63, 0, .1], [440, .08, .16]], .032); }
       schedule(); notify(); canvas.focus({ preventScroll: true });
+    }
+    function invokePact() {
+      if (!pactReady()) return false;
+      pactUsed = true; pactFailed = false; pact = 12;
+      banner('STELLAR PACT · DOUBLE POINTS', '#edf19b', 19);
+      relicField(W / 2, H / 2, Math.min(W, H) * .36, '#edf19b', 1.2);
+      light('237,241,155', .12, .8); kick = .8;
+      motif([[392, 0, .2], [523.25, .11, .25], [783.99, .25, .36]], .06);
+      notify(); return true;
     }
     function ability() {
       if (phase !== 'running' || suspended || charge < 100 || options.game === 'hop') return;
@@ -619,6 +637,7 @@ window.AetherArcade = (() => {
         peakBand = 0;
         banner('THE JAR SETTLES', '#9ed7c6', 16); tone(392, .4, 'sine', .04);
       }
+      if (pact > 0 && danger > 0) danger += dt * 1.2; // The wager accelerates overflow risk.
       if (danger > dangerLimit() || balls.length > 110) finish('One very full universe.', 1.4);
     }
     function surfStep(dt) {
@@ -722,7 +741,7 @@ window.AetherArcade = (() => {
       const distance = Math.floor(Math.max(0, ship.x) / 100);
       // Route risk pays: storm doubles the distance purse, gold pays half again.
       const routeBonus = routeMod && ship.x < routeMod.until ? routeMod.kind === 'storm' ? 2 : routeMod.kind === 'gold' ? 1.5 : 1 : 1;
-      if (distance > distanceScore) { score += Math.round((distance - distanceScore) * routeBonus); distanceScore = distance; best = Math.max(best, score); }
+      if (distance > distanceScore) { score += Math.round((distance - distanceScore) * routeBonus * (pact > 0 ? 2 : 1)); distanceScore = distance; best = Math.max(best, score); }
       const sector = 1 + Math.floor(ship.x / 2400);
       if (sector > level) {
         level = sector; lives = Math.min(3, lives + 1);
@@ -1106,6 +1125,11 @@ window.AetherArcade = (() => {
     function step(dt) {
       if (suspended || phase !== 'running') return;
       time += dt; invulnerable = Math.max(0, invulnerable - dt);
+      if (pact > 0) { pact = Math.max(0, pact - dt); if (pact === 0 && !pactFailed) {
+        scoreAt(150, W / 2, H * .22, 'PACT FULFILLED +150');
+        banner('THE CONSTELLATION HOLDS', '#9ed7c6', 18);
+        motif([[523.25, 0, .14], [659.26, .1, .14], [880, .2, .3]], .06);
+      } }
       const wasReady = charge >= 100;
       if (options.game === 'merge') mergeStep(dt);
       else if (options.game === 'hop') surfStep(dt);
@@ -1616,6 +1640,13 @@ window.AetherArcade = (() => {
         const t = 1 - finishDelay / finishTotal;
         ctx.fillStyle = `rgba(13,18,26,${.3 * t})`; ctx.fillRect(0, 0, W, H);
       }
+      if (pact > 0) {
+        const remaining = Math.ceil(pact);
+        ctx.fillStyle = '#edf19b15'; ctx.fillRect(0, 0, W, H);
+        ctx.textAlign = 'center'; ctx.fillStyle = '#f2e4ad'; ctx.font = 'bold 15px "DM Sans", sans-serif';
+        ctx.fillText(`✦ STELLAR PACT ×2 · ${remaining}s`, W / 2, 38);
+        ctx.fillStyle = '#edf19b'; ctx.fillRect(W * .25, 47, W * .5 * pact / 12, 3);
+      }
       if (options.game !== 'merge') {
         for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < lives ? 1 : .15; star(ctx, 28 + i * 23, options.game === 'breaker' ? 64 : H - 30, 8, '#f5a08c', 5); } ctx.globalAlpha = 1;
       }
@@ -1684,11 +1715,12 @@ window.AetherArcade = (() => {
     listen(canvas, 'pointercancel', cancelPointer); listen(canvas, 'lostpointercapture', cancelPointer);
     listen(canvas, 'keydown', event => {
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-      if (![' ', 'Enter', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'a', 'd', 'p', 'Escape', 'x'].includes(key)) return;
+      if (![' ', 'Enter', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'a', 'd', 'p', 'Escape', 'x', 'c'].includes(key)) return;
       event.preventDefault();
       if (['p', 'Escape'].includes(key)) { if (event.repeat || key === 'Escape' && document.body.classList.contains('game-theatre')) return; phase === 'paused' ? resume() : pause(); return; }
       keys.add(key);
       if (!event.repeat && key === 'x') ability();
+      if (!event.repeat && key === 'c') invokePact();
       if (!event.repeat && [' ', 'Enter', 'ArrowUp'].includes(key) && (options.game !== 'hop' || phase !== 'running')) action();
     });
     listen(window, 'keyup', e => { keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key); });
@@ -1699,7 +1731,7 @@ window.AetherArcade = (() => {
       else { last = 0; schedule(); }
     });
     reset(); schedule();
-    return { start, pause, resume, action, ability, reset,
+    return { start, pause, resume, action, ability, reset, invokePact,
       applyRelic: id => resolveOffer(id),
       skipRelic: () => resolveOffer(null, true),
       startForecast(id) { forecastPick = id; reset(); start(); },

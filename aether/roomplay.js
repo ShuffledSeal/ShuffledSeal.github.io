@@ -221,13 +221,15 @@ window.AetherRoomPlay = (() => {
 
   function orchestra(api, life) {
     if (!api.getMusic?.()) return;
-    const names = ['Mercury', 'Venus', 'Earth', 'Saturn'];
-    const panel = panelAfter(api, life, $(api.root, '.orchestra-stage'), 'improviser', `${title('THE POCKET IMPROVISER', 'Play a little answer.', 'Four warm notes. Tap freely, or echo the four-note call. Your sequence can keep orbiting.')}<div class="rp-improv-top"><div class="rp-phrase" aria-label="The four-note call"></div>${button('pad-sound', 'Pad sound on', 'aria-pressed="true"')}</div><div class="rp-pads" role="group" aria-label="Play the four planets">${names.map((name, i) => `<button type="button" class="rp-pad rp-pad-${i}" data-pad="${i}"><span class="rp-pad-orb" aria-hidden="true"></span><strong>${name}</strong><small>${['Glass bell', 'Warm key', 'Soft marimba', 'Velvet bass'][i]} <kbd>${i + 1}</kbd></small></button>`).join('')}</div><div class="rp-actions">${button('call', 'Hear the call ♫')}${button('new-call', 'New call ↗')}${button('weave', 'Weave my last four into the score', 'disabled')}</div><p class="rp-feedback" role="status" data-rp-status>Tap any planet to begin. Keys 1–4 also work while this panel is focused.</p><div class="rp-remix"><div><h3>A change of orbit.</h3><p>Gently vary the score below. Every change has a way back.</p></div><div class="rp-actions">${button('variation', 'A small variation ✧')}${button('rotate-score', 'Rotate one beat →')}${button('undo-music', 'Undo score change', 'disabled')}</div></div><p class="rp-note">Pads make sound only when played. Save a score with “Keep this melody”.</p>`);
+    const studio = window.AetherOrchestra;
+    const names = studio.TRACKS.map(track => track.planet);
+    const panel = panelAfter(api, life, $(api.root, '.orchestra-stage'), 'improviser', `${title('THE POCKET IMPROVISER', 'Play a little answer.', 'Eight instruments. Echo the four-note calls, then weave what you played into your sixteen-beat score.')}<div class="rp-improv-top"><div class="rp-phrase" aria-label="The four-note call"></div>${button('pad-sound', 'Pad sound on', 'aria-pressed="true"')}</div><div class="rp-pads" role="group" aria-label="Play the eight planets">${names.map((name, i) => `<button type="button" class="rp-pad rp-pad-${i}" data-pad="${i}"><span class="rp-pad-orb" aria-hidden="true"></span><strong>${name}</strong><small>${studio.TRACKS[i].voice} <kbd>${i + 1}</kbd></small></button>`).join('')}</div><div class="rp-actions">${button('call', 'Hear the call ♫')}${button('new-call', 'New call ↗')}${button('weave', 'Weave my last four into the score', 'disabled')}</div><p class="rp-feedback" role="status" data-rp-status>Tap any planet to begin. Keys 1–8 also work while this panel is focused.</p><div class="rp-remix"><div><h3>A change of orbit.</h3><p>Gently vary the score below. Every change has a way back.</p></div><div class="rp-actions">${button('variation', 'A small variation ✧')}${button('rotate-score', 'Rotate one beat →')}${button('undo-music', 'Undo score change', 'disabled')}</div></div><p class="rp-note">Keys 1–8 play the pads. Play three different calls perfectly to earn a second improviser seal. Compose, remix and save downstairs.</p>`);
     if (!panel) return;
-    let audio = null, sound = true, demonstrating = false, demoTimers = [], response = 0, recent = [], won = false;
+    let audio = null, bus = null, sound = true, demonstrating = false, demoTimers = [], response = 0, recent = [], won = false;
+    const completedCalls = new Set();
     let callIndex = 0;
-    const calls = [[0, 2, 1, 3], [3, 1, 2, 0], [2, 0, 3, 1], [1, 2, 1, 0], [0, 3, 2, 3]];
-    const undo = [], voices = new Set();
+    const calls = [[0, 2, 4, 7], [5, 3, 1, 6], [7, 0, 6, 2], [1, 4, 3, 5], [6, 2, 7, 0], [4, 5, 1, 3]];
+    const undo = [];
     const snapshot = () => api.getMusic().notes.map(row => [...row]);
     function updateUndo() { $(panel, '[data-rp="undo-music"]').disabled = !undo.length; }
     function checkpoint() { undo.push(snapshot()); if (undo.length > 20) undo.shift(); updateUndo(); }
@@ -238,25 +240,24 @@ window.AetherRoomPlay = (() => {
         const active = notes[Number(el.dataset.track)][Number(el.dataset.step)];
         el.classList.toggle('on', active); el.setAttribute('aria-pressed', String(active));
       });
+      api.updateMusicStories?.();
     }
     function stopVoices() {
-      voices.forEach(voice => { try { voice.osc.stop(); } catch {} voice.osc.disconnect(); voice.gain.disconnect(); });
-      voices.clear();
+      // Closing a context also stops any calls scheduled ahead of time.
+      if (audio) { audio.close().catch(() => {}); audio = null; bus = null; }
     }
-    function closeAudio() {
-      stopVoices();
-      if (audio) { audio.close().catch(() => {}); audio = null; }
-    }
+    function closeAudio() { stopVoices(); }
     function openAudio() {
       if (!sound) return null;
       try {
         if (!audio) {
           const Audio = window.AudioContext || window.webkitAudioContext;
           if (!Audio) throw new Error('Audio unavailable');
-          audio = new Audio();
+          audio = new Audio(); bus = studio.createBus(audio, api.getMusic());
         }
+        studio.setSpace(bus, api.getMusic().space, audio.currentTime);
         if (audio.state === 'suspended') audio.resume().catch(() => {
-          if (life.active()) $(panel, '[data-rp-status]').textContent = 'Audio is resting. The light-up pads still work; try sound again when ready.';
+          if (life.active()) $(panel, '[data-rp-status]').textContent = 'Audio is resting. The glowing pads still work.';
         });
         return audio;
       } catch {
@@ -268,16 +269,10 @@ window.AetherRoomPlay = (() => {
     }
     function note(track, when) {
       if (!audio || !sound) return;
-      if (voices.size >= 20) return;
-      const at = when ?? audio.currentTime + .01, duration = [.8, .65, .45, .75][track];
-      const osc = audio.createOscillator(), gain = audio.createGain();
-      osc.type = track === 3 ? 'triangle' : 'sine'; osc.frequency.value = [523.25, 329.63, 261.63, 130.81][track];
-      gain.gain.setValueAtTime(0, at); gain.gain.linearRampToValueAtTime(.085, at + .009);
-      gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
-      osc.connect(gain).connect(audio.destination);
-      const voice = { osc, gain }; voices.add(voice);
-      life.on(osc, 'ended', () => { voices.delete(voice); osc.disconnect(); gain.disconnect(); }, { once: true });
-      osc.start(at); osc.stop(at + duration + .03);
+      // Audition works even for a muted channel in the running sequencer.
+      const model = api.getMusic();
+      studio.voice(audio, bus, track, when ?? audio.currentTime + .01,
+        { ...model, mutes: Array(studio.TRACKS.length).fill(false) }, 0);
     }
     function light(track) {
       pulse(life, $(panel, `[data-pad="${track}"]`), 'rp-struck', 330);
@@ -321,6 +316,8 @@ window.AetherRoomPlay = (() => {
         if (response === 4) {
           won = true; panel.classList.add('rp-complete');
           api.unlock('music:echo', 'A little call, beautifully answered');
+          completedCalls.add(callIndex);
+          if (completedCalls.size >= 3) api.unlock('music:three-calls', 'Three constellations, answered by ear');
           $(panel, '[data-rp-status]').textContent = '✧ A perfect answer. Weave these four notes into the score, or try another call.';
         } else $(panel, '[data-rp-status]').textContent = `${response} / 4 notes echoed. Follow the next planet.`;
       } else {
@@ -353,12 +350,12 @@ window.AetherRoomPlay = (() => {
       }
       if (action === 'weave' && recent.length === 4) {
         checkpoint(); const notes = snapshot();
-        recent.forEach((track, i) => { notes[track][i * 2] = true; });
+        recent.forEach((track, i) => { notes[track][i * 4] = true; });
         setNotes(notes);
-        $(panel, '[data-rp-status]').textContent = 'Your last four notes are woven into beats 1, 3, 5 and 7. Undo can lift them out.';
+        $(panel, '[data-rp-status]').textContent = 'Your last four notes are woven into beats 1, 5, 9 and 13. Undo can lift them out.';
       }
       if (action === 'rotate-score') {
-        checkpoint(); setNotes(snapshot().map(row => [row[7], ...row.slice(0, 7)]));
+        checkpoint(); setNotes(snapshot().map(row => [row.at(-1), ...row.slice(0, -1)]));
         $(panel, '[data-rp-status]').textContent = 'Every note moved one beat around the orbit. Same melody, new point of view.';
       }
       if (action === 'variation') {
@@ -367,8 +364,8 @@ window.AetherRoomPlay = (() => {
         notes.forEach(row => {
           const occupied = row.map((on, i) => on ? i : -1).filter(i => i >= 0);
           const empty = row.map((on, i) => !on ? i : -1).filter(i => i >= 0);
-          if (!occupied.length) { row[Math.floor(Math.random() * 8)] = true; return; }
-          if (!empty.length) { row[1 + Math.floor(Math.random() * 6)] = false; return; }
+          if (!occupied.length) { row[Math.floor(Math.random() * studio.STEPS)] = true; return; }
+          if (!empty.length) { row[1 + Math.floor(Math.random() * (studio.STEPS - 2))] = false; return; }
           const from = occupied[Math.floor(Math.random() * occupied.length)];
           const to = empty.reduce((best, n) => Math.abs(n - from) < Math.abs(best - from) ? n : best, empty[0]);
           row[from] = false; row[to] = true;
@@ -382,7 +379,7 @@ window.AetherRoomPlay = (() => {
       }
     });
     life.on(panel, 'keydown', e => {
-      if (/^[1-4]$/.test(e.key) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); play(Number(e.key) - 1); }
+      if (/^[1-8]$/.test(e.key) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); play(Number(e.key) - 1); }
     });
     life.on(document, 'visibilitychange', () => { if (document.hidden) { stopDemo(); closeAudio(); } });
     life.dispose(() => { stopDemo(); closeAudio(); });

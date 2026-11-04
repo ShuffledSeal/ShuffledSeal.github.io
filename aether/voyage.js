@@ -1,28 +1,17 @@
 'use strict';
 
-// The Grand Tour: one seeded voyage from the Sun's doorstep to Neptune,
-// threading every game in the observatory into a single expedition.
+// The Grand Tour: a run-based expedition. Hunts are the core game; trials,
+// drafts, chandlery and oddities reshape the build; the Umbral Maw waits at
+// Neptune. Death resets the run; what persists is knowledge and new hulls.
 window.AetherVoyage = (() => {
-  const KEY = 'aether-grand-tour-v1';
+  const KEY = 'aether-grand-tour-v2';
   const $ = (s, r = main) => r.querySelector(s);
   const esc = escapeHTML;
-  const TAU = Math.PI * 2;
-  let controller, arcadeHandle = null, trialHandle = null, puzzleHandle = null;
+  let controller, gameHandle = null, trialHandle = null;
 
-  const artifacts = {
-    'brass-sextant': { name: 'Brass Sextant', icon: '✧', text: 'Puzzle surveys pay +25 stardust.' },
-    'ion-sails': { name: 'Ion Sails', icon: '⛵', text: 'Arcade expeditions pay double stardust.' },
-    'moonshield-patent': { name: 'Moonshield Patent', icon: '◈', text: 'The first hull lost in each sector is refunded at its finale.' },
-    'lodestone-chart': { name: 'Lodestone Chart', icon: '◎', text: 'Trials run 15% slower.' },
-    'star-atlas': { name: 'Star Atlas', icon: '✦', text: 'The chart reveals exactly what waits at each stop.' },
-    'aurora-battery': { name: 'Aurora Battery', icon: '⚡', text: 'Trials pay +15 stardust.' },
-    'compass-of-halley': { name: 'Compass of Halley', icon: '☄', text: 'Relic caches offer a fourth artifact to choose from.' },
-    'pressure-flask': { name: 'Pressure Flask', icon: '⚗', text: 'Refuges restore two hull.' },
-    'meteor-charm': { name: 'Meteor Charm', icon: '☄', text: 'All stardust gains +25%.' },
-    'observers-handbook': { name: 'Observer’s Handbook', icon: '📖', text: 'Puzzle par windows are half again as generous.' },
-  };
-  const sectors = ['THE INNER WORLDS', 'THE GIANTS', 'THE LONG DARK'];
-  const puzzlePlanets = () => planets.map(p => p.id);
+  const I = window.AetherSkirmish.INSTRUMENTS;
+  const HULLS = window.AetherSkirmish.HULLS;
+  const SECTORS = window.AetherSkirmish.SECTORS;
 
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
   function shuffle(arr, rand) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -30,273 +19,302 @@ window.AetherVoyage = (() => {
   function readStore() {
     let raw = {};
     try { raw = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
+    const r = raw.records && typeof raw.records === 'object' ? raw.records : {};
     return {
       records: {
-        tours: Number.isInteger(raw.records?.tours) ? raw.records.tours : 0,
-        bestDust: Number.isInteger(raw.records?.bestDust) ? raw.records.bestDust : 0,
-        bestStep: Number.isInteger(raw.records?.bestStep) ? raw.records.bestStep : 0,
+        tours: Number.isInteger(r.tours) ? r.tours : 0,
+        wins: Number.isInteger(r.wins) ? r.wins : 0,
+        kills: Number.isInteger(r.kills) ? r.kills : 0,
+        bestDust: Number.isInteger(r.bestDust) ? r.bestDust : 0,
+        bossWins: Number.isInteger(r.bossWins) ? r.bossWins : 0,
       },
-      active: raw.active && typeof raw.active === 'object' && Number.isInteger(raw.active.seed) && Number.isInteger(raw.active.step) ? raw.active : null,
+      active: raw.active && typeof raw.active === 'object' && Number.isInteger(raw.active.seed) ? raw.active : null,
     };
   }
   const store = readStore();
   let run = null;
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} }
-  function saveRun() { store.active = run ? { seed: run.seed, step: run.step, hull: run.hull, dust: run.dust, artifacts: run.artifacts, done: run.done, path: run.path, shieldUsed: run.shieldUsed } : null; save(); }
+  function saveRun() {
+    store.active = run ? {
+      seed: run.seed, step: run.step, hull: run.hull, maxHull: run.maxHull, dust: run.dust,
+      instruments: run.instruments, hullId: run.hullId, done: run.done, path: run.path, kills: run.kills,
+    } : null;
+    save();
+  }
+  const unlockedHull = id => !HULLS[id].unlock || (id === 'bell' && store.records.wins > 0) || (id === 'moth' && store.records.bossWins > 0);
 
-  function buildMap(seed, compass) {
+  // The route. Fixed skeleton, seeded content — the chart is part of strategy.
+  function buildMap(seed) {
     const rand = rng(seed);
-    const planetDeck = shuffle(puzzlePlanets(), rand);
-    const trialDeck = shuffle(AetherTrials.list.map(t => t.id), rand);
-    const arcadeDeck = shuffle(['merge', 'hop', 'dash', 'breaker'], rand);
-    const steps = [];
-    let pi = 0, ti = 0, ai = 0;
-    for (let s = 0; s < 12; s++) {
-      if (s === 11) { steps.push([{ kind: 'puzzle', planet: 'neptune', level: 1 + Math.floor(rand() * 3), finale: true }]); continue; }
-      if (s === 3 || s === 7) { steps.push([{ kind: 'arcade', game: arcadeDeck[ai++ % 4], finale: true }]); continue; }
-      const count = compass ? 3 : (s === 0 ? 2 : 2 + (rand() < .4 ? 1 : 0));
-      const choices = [];
-      for (let c = 0; c < count; c++) {
-        const roll = rand();
-        if (roll < .32) choices.push({ kind: 'puzzle', planet: planetDeck[pi++ % 8], level: Math.floor(rand() * 5) });
-        else if (roll < .66) choices.push({ kind: 'trial', trial: trialDeck[ti++ % 8] });
-        else if (roll < .76) choices.push({ kind: 'refuge' });
-        else if (roll < .88) choices.push({ kind: 'cache' });
-        else choices.push({ kind: 'arcade', game: arcadeDeck[ai++ % 4] });
-      }
-      steps.push(choices);
-    }
-    return steps;
+    const trialDeck = shuffle(window.AetherTrials.list.filter(t => t.id !== 'asteroids').map(t => t.id), rand);
+    let ti = 0;
+    const trial = () => ({ kind: 'trial', trial: trialDeck[ti++ % trialDeck.length] });
+    return [
+      [{ kind: 'hunt', sector: 0 }],
+      [trial(), { kind: 'oddity', oddity: Math.floor(rand() * 4) }],
+      [{ kind: 'chandlery' }, { kind: 'mutation' }],
+      [{ kind: 'hunt', sector: 0, elite: true }],
+      [trial(), { kind: 'sanctuary' }],
+      [{ kind: 'mutation' }],
+      [{ kind: 'hunt', sector: 1 }],
+      [trial(), { kind: 'oddity', oddity: Math.floor(rand() * 4) }],
+      [{ kind: 'hunt', sector: 1, elite: true }, { kind: 'chandlery' }],
+      [{ kind: 'sanctuary' }, trial()],
+      [{ kind: 'hunt', sector: 2, elite: true }],
+      [{ kind: 'boss' }],
+    ];
   }
 
-  const has = id => run?.artifacts.includes(id);
-  const dustBonus = base => {
-    let value = base;
-    if (has('meteor-charm')) value *= 1.25;
-    return Math.round(value);
-  };
+  const oddities = [
+    { title: 'A drifting wreck', text: 'An old survey skiff, hull open to the stars. Something glints inside.', choices: [
+      ['Strip it for parts', '+50 stardust, but the work costs 1 hull.', r => { r.dust += 50; r.hull = Math.max(0, r.hull - 1); return 'Stripped the wreck. +50 dust, −1 hull.'; }],
+      ['Chart it for the keepers', 'The next cache or chandlery holds +1 free instrument.', r => { r.nextDraftBonus = true; return 'Charted the wreck for the keepers.'; },
+    ]]},
+    { title: 'A choir of static', text: 'The radio sings in a frequency your instruments almost recognise.', choices: [
+      ['Tune in', 'A 40% chance of an instrument; otherwise static burns 1 hull.', r => rng(r.seed + r.step)() < .4 ? (r.freeInstrument = true, 'The static resolves into music. A free instrument waits at the next draft.') : (r.hull = Math.max(0, r.hull - 1), 'Only static. It stings. −1 hull.')],
+      ['Leave the frequency alone', 'Nothing ventured. +10 dust for the careful log entry.', r => (r.dust += 10, 'Logged the frequency. +10 dust.')],
+    ]},
+    { title: 'The keeper’s marker', text: 'A brass buoy, still warm. The old keeper’s mark is etched beneath the dust.', choices: [
+      ['Polish the brass', 'Restore 1 hull.', r => (r.hull = Math.min(r.maxHull, r.hull + 1), 'The brass shines. +1 hull.')],
+      ['Take the dusting', '+35 stardust.', r => (r.dust += 35, 'Pocketed the stardust. +35.')],
+    ]},
+    { title: 'An impossible tide', text: 'For a moment, the chart shows a route that does not exist.', choices: [
+      ['Follow it', 'Skip ahead one leg, but arrive with 1 less hull.', r => { r.skipAhead = true; r.hull = Math.max(1, r.hull - 1); return 'The impossible tide carries you. −1 hull.'; }],
+      ['Trust the slow sky', 'No shortcut. +20 dust and a clear head.', r => (r.dust += 20, 'Kept to the chart. +20 dust.')],
+    ]},
+  ];
 
   function nodeLabel(node) {
-    const atlas = has('star-atlas');
-    if (node.kind === 'puzzle') return { icon: '✦', name: 'Planetary survey', detail: atlas ? `${planets.find(p => p.id === node.planet).name} · ${P0.catalogue[node.planet].levels[node.level]}` : planets.find(p => p.id === node.planet).name };
-    if (node.kind === 'trial') { const t = AetherTrials.list.find(t => t.id === node.trial); return { icon: '☄', name: 'Trial', detail: atlas ? t.name : t.place }; }
-    if (node.kind === 'arcade') return { icon: '♪', name: node.finale ? 'Sector finale' : 'Expedition', detail: atlas || node.finale ? { merge: 'Planet Drop', hop: 'Comet Surf', dash: 'Stardust Dash', breaker: 'Orbit Breaker' }[node.game] : 'The arcade' };
-    if (node.kind === 'refuge') return { icon: '☕', name: 'Refuge', detail: 'Rest. Repair. Warm tea.' };
-    return { icon: '✧', name: 'Relic cache', detail: 'Draft one artifact' };
+    switch (node.kind) {
+      case 'hunt': return { icon: '⚔', name: node.elite ? 'Hunt · elite' : 'Hunt', detail: `${SECTORS[node.sector].name}${node.elite ? ' · heavier contact' : ''}` };
+      case 'trial': { const t = window.AetherTrials.list.find(t => t.id === node.trial); return { icon: '☄', name: 'Trial', detail: t.name }; }
+      case 'oddity': return { icon: '?', name: 'Oddity', detail: oddities[node.oddity].title };
+      case 'chandlery': return { icon: '⚖', name: 'Chandlery', detail: 'Stardust for steel and glass' };
+      case 'mutation': return { icon: '✧', name: 'Instrument draft', detail: 'Choose one of three' };
+      case 'sanctuary': return { icon: '☕', name: 'Sanctuary', detail: 'Repair and breathe' };
+      case 'boss': return { icon: '◆', name: 'THE UMBRAL MAW', detail: 'The Neptune relay' };
+    }
   }
+  const has = id => run?.instruments.includes(id);
+  const dustMul = () => has('golden-sextant') ? 1.33 : 1;
 
   // ── Rendering ────────────────────────────────────────────────────────────
   function renderVoyage() {
-    if (!run && store.active) run = { ...store.active, node: null, nodeKey: null, shieldLost: {}, map: buildMap(store.active.seed, false) };
+    if (!run && store.active) run = hydrate(store.active);
     if (run?.over) return renderRecap(false);
     if (run?.won) return renderRecap(true);
     if (run?.node) return renderNode();
     if (run) return renderChart();
     return renderLanding();
   }
+  function hydrate(saved) {
+    return { ...saved, node: null, nodeKey: null, map: buildMap(saved.seed), over: false, won: false };
+  }
 
   function renderLanding() {
-    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">THE GRAND TOUR</p><h1>One voyage. Every world.</h1><p>A single expedition from the Sun's doorstep to Neptune. Chart a path across the solar system: survey planets in their puzzle rooms, run the arcade expeditions, and pass the trials between the stars. Your hull is finite. The sky is not.</p></div></section>
-    <div class="tour-landing"><div class="tour-rules">
-      <article><span class="chapter-number">Ⅰ</span><div><h3>Chart</h3><p>Each leg of the tour offers a choice of stops. Surveys, trials, expeditions, refuges and relic caches — the seed of the sky decides the mix.</p></div></article>
-      <article><span class="chapter-number">Ⅱ</span><div><h3>Endure</h3><p>You set out with three hull. Failing a trial costs one. Refuges and the odd artifact patch the ship back together.</p></div></article>
-      <article><span class="chapter-number">Ⅲ</span><div><h3>Arrive</h3><p>Reach the Neptune relay with dust in the hold and stories in the logbook. Tours completed and your best haul are kept on this device.</p></div></article>
-    </div>
-    <aside class="tour-manifest"><p class="eyebrow">THE LEDGER</p><dl><div><dt>Tours completed</dt><dd>${store.records.tours}</dd></div><div><dt>Best haul</dt><dd>${store.records.bestDust} stardust</dd></div><div><dt>Furthest leg</dt><dd>${store.records.bestStep ? `Leg ${store.records.bestStep} of 12` : '—'}</dd></div></dl>
-    ${store.active ? '<p class="tour-resume-note">A voyage is already underway.</p><button class="button button-primary" data-tour="resume">Resume the tour →</button><button class="button" data-tour="abandon">Abandon it</button>' : '<button class="button button-primary tour-begin" data-tour="begin">Begin the Grand Tour →</button>'}</aside></div></div>`;
+    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">THE GRAND TOUR</p><h1>One skiff. Every world.</h1><p>A run from the Sun's doorstep to the Umbral Maw at Neptune. Hunts are the heart of it — but what you draft rewrites what everything else means. The skiff you lose is gone; what you learn is not.</p></div></section>
+    <div class="tour-landing"><div>
+      <p class="section-label">THE HANGAR · CHOOSE YOUR SKIFF</p>
+      <div class="hangar">${Object.entries(HULLS).map(([id, h]) => {
+        const open = unlockedHull(id);
+        return `<button class="hangar-card ${open ? '' : 'locked'}" data-hull="${id}" ${open ? '' : 'disabled'} aria-pressed="${pendingHull === id}"><span class="hangar-ship hull-${id}" aria-hidden="true"><i></i></span><h3>${h.name}</h3><p>${h.desc}</p><dl><div><dt>PLATING</dt><dd>${h.hp}</dd></div><div><dt>SPEED</dt><dd>${Math.round(h.speed * 100)}%</dd></div><div><dt>BOLT</dt><dd>${h.boltDmg} / ${h.boltCd}s</dd></div></dl><span class="hangar-status">${open ? (pendingHull === id ? 'SELECTED ✦' : 'IN SERVICE') : `SEALED · ${h.unlock}`}</span></button>`;
+      }).join('')}</div>
+      <div class="tour-rules">
+        <article><span class="chapter-number">Ⅰ</span><div><h3>Hunt</h3><p>Arena combat is the core. Move sharp, burst through the gap, read the wind-up. Threats are telegraphed; the blame is yours.</p></div></article>
+        <article><span class="chapter-number">Ⅱ</span><div><h3>Draft</h3><p>Instruments change rules, not numbers. A Lodestone Coil drags hunts inward — and bends the trials too.</p></div></article>
+        <article><span class="chapter-number">Ⅲ</span><div><h3>Arrive</h3><p>Trials pay hull and dust. The chandlery sells instruments. The Maw waits at Neptune. Death resets the run.</p></div></article>
+      </div></div>
+    <aside class="tour-manifest"><p class="eyebrow">THE LEDGER</p><dl><div><dt>Tours flown</dt><dd>${store.records.tours}</dd></div><div><dt>Maw victories</dt><dd>${store.records.bossWins}</dd></div><div><dt>Best haul</dt><dd>${store.records.bestDust} stardust</dd></div><div><dt>Threats cleared</dt><dd>${store.records.kills}</dd></div></dl>
+    ${store.active ? '<p class="tour-resume-note">A tour is already underway.</p><button class="button button-primary" data-tour="resume">Resume ↗</button><button class="button" data-tour="abandon">Abandon it</button>' : '<button class="button button-primary tour-begin" data-tour="begin">Choose a skiff &amp; set out →</button>'}</aside></div></div>`;
   }
 
   function renderChart() {
-    const map = run.map;
-    return `<div class="view-enter tour-page"><section class="view-header tour-header"><div><p class="eyebrow">THE GRAND TOUR · ${sectors[Math.min(2, Math.floor(run.step / 4))]}</p><h1>Leg ${run.step + 1} of 12.</h1></div><div class="tour-vitals"><span class="tour-hull" aria-label="Hull ${run.hull} of 5">${'♥'.repeat(run.hull)}${'♡'.repeat(Math.max(0, 5 - run.hull))}</span><span class="tour-dust">✦ ${run.dust}</span></div></section>
-    <div class="tour-artifacts">${run.artifacts.length ? run.artifacts.map(id => `<span class="tour-artifact" title="${esc(artifacts[id].text)}">${artifacts[id].icon} ${artifacts[id].name}</span>`).join('') : '<span class="tour-artifact empty">No artifacts yet — relic caches hold them.</span>'}</div>
-    <div class="tour-chart" role="list" aria-label="The route chart">${map.map((choices, s) => `<div class="tour-step ${s === run.step ? 'current' : s < run.step ? 'passed' : ''}" role="listitem"><span class="tour-step-label">${s === 11 ? 'RELAY' : [3, 7].includes(s) ? 'FINALE' : `LEG ${s + 1}`}</span>${choices.map((node, i) => {
+    const sectorIdx = Math.min(2, Math.floor(run.step / 4));
+    return `<div class="view-enter tour-page"><section class="view-header tour-header"><div><p class="eyebrow">THE GRAND TOUR · ${SECTORS[sectorIdx].name.toUpperCase()}</p><h1>Leg ${run.step + 1} of 12.</h1></div><div class="tour-vitals"><span class="tour-hull" aria-label="Hull ${run.hull} of ${run.maxHull}">${'♥'.repeat(run.hull)}${'♡'.repeat(Math.max(0, run.maxHull - run.hull))}</span><span class="tour-dust">✦ ${run.dust}</span></div></section>
+    <div class="tour-artifacts">${run.instruments.length ? run.instruments.map(id => `<span class="tour-artifact" title="${esc(I[id].text)} ${esc(I[id].trialNote)}">${I[id].icon} ${I[id].name}</span>`).join('') : '<span class="tour-artifact empty">No instruments yet — drafts and chandleries hold them.</span>'}</div>
+    <div class="tour-chart" role="list" aria-label="The route chart">${run.map.map((choices, s) => `<div class="tour-step ${s === run.step ? 'current' : s < run.step ? 'passed' : ''}" role="listitem"><span class="tour-step-label">${s === 11 ? 'RELAY' : s === 10 ? 'LEG 11' : `LEG ${s + 1}`}</span>${choices.map((node, i) => {
       const key = `${s}:${i}`, state = run.done[key], label = nodeLabel(node);
       const reachable = s === run.step && !run.node;
-      return `<button class="tour-node ${state ? state : ''} ${reachable ? 'reachable' : ''}" data-tour-node="${key}" ${reachable ? '' : 'disabled'} aria-label="${esc(label.name)}: ${esc(label.detail)}${state === 'won' ? ', completed' : state === 'failed' ? ', failed' : ''}"><span class="tour-node-icon">${label.icon}</span><span class="tour-node-copy"><strong>${state === 'won' ? '✓ ' : state === 'failed' ? '✕ ' : ''}${label.name}</strong><small>${esc(label.detail)}</small></span></button>`;
+      return `<button class="tour-node ${state || ''} ${reachable ? 'reachable' : ''}" data-tour-node="${key}" ${reachable ? '' : 'disabled'} aria-label="${esc(label.name)}: ${esc(label.detail)}"><span class="tour-node-icon">${label.icon}</span><span class="tour-node-copy"><strong>${state === 'won' ? '✓ ' : state === 'failed' ? '✕ ' : ''}${label.name}</strong><small>${esc(label.detail)}</small></span></button>`;
     }).join('')}</div>`).join('')}</div>
     ${run.path.length ? `<details class="tour-log"><summary>The logbook (${run.path.length})</summary>${run.path.slice(-6).reverse().map(line => `<p>${esc(line)}</p>`).join('')}</details>` : ''}</div>`;
   }
 
   function renderNode() {
-    const node = run.node;
-    const label = nodeLabel(node);
-    const arcadeNames = { merge: 'Planet Drop', hop: 'Comet Surf', dash: 'Stardust Dash', breaker: 'Orbit Breaker' };
-    const headsFor = {
-      puzzle: () => ['PLANETARY SURVEY', `The ${planets.find(p => p.id === node.planet).name} contract`],
-      trial: () => ['A TRIAL BETWEEN WORLDS', AetherTrials.list.find(t => t.id === node.trial).name],
-      arcade: () => [node.finale ? 'SECTOR FINALE' : 'AN EXPEDITION', arcadeNames[node.game]],
-      refuge: () => ['A QUIET REFUGE', 'The halfway lantern'],
-      cache: () => ['A RELIC CACHE', 'Something the last keeper left behind'],
-    };
-    const heads = headsFor[node.kind]();
-    return `<div class="view-enter tour-page"><section class="view-header tour-header"><div><p class="eyebrow">${heads[0]}</p><h1>${heads[1]}.</h1><p class="tour-node-brief">${nodeBrief(node)}</p></div><div class="tour-vitals"><span class="tour-hull">${'♥'.repeat(run.hull)}</span><span class="tour-dust">✦ ${run.dust}</span></div></section>
+    const node = run.node, label = nodeLabel(node);
+    return `<div class="view-enter tour-page"><section class="view-header tour-header"><div><p class="eyebrow">${label.name.toUpperCase()}</p><h1>${label.detail}.</h1><p class="tour-node-brief">${nodeBrief(node)}</p></div><div class="tour-vitals"><span class="tour-hull">${'♥'.repeat(run.hull)}</span><span class="tour-dust">✦ ${run.dust}</span></div></section>
     <div id="tour-stage" class="tour-stage"></div>
-    <div class="tour-node-actions"><button class="button" data-tour="leave">← Chart another course</button></div></div>`;
+    <div class="tour-node-actions">${node.kind !== 'boss' ? '<button class="button" data-tour="leave">← Chart another course</button>' : ''}</div></div>`;
   }
-
   function nodeBrief(node) {
-    if (node.kind === 'puzzle') return `${P0.catalogue[node.planet].lead} Win the survey to bank stardust; the board below is live.`;
-    if (node.kind === 'trial') return AetherTrials.list.find(t => t.id === node.trial).brief + ' Failure costs one hull.';
-    if (node.kind === 'arcade') return 'A full expedition. Stardust pays by the point; relics draft as usual.';
-    if (node.kind === 'refuge') return `Restore ${has('pressure-flask') ? 'two' : 'one'} hull and take a moment. No risk, small reward.`;
-    return 'Choose one of three artifacts. It travels with you for the rest of the tour.';
+    switch (node.kind) {
+      case 'hunt': return 'Clear every wave. Stardust motes drift off what falls. Failure costs a hull.';
+      case 'trial': return window.AetherTrials.list.find(t => t.id === node.trial).brief + ' Win it for salvage; lose it for a hull.';
+      case 'oddity': return 'A choice with consequences. Read the sky before you answer.';
+      case 'chandlery': return 'Spend stardust on instruments and repairs. Leave when you are done.';
+      case 'mutation': return 'One instrument, free of charge. Choose the rule you want to rewrite.';
+      case 'sanctuary': return '+1 hull and a little dust. No risk here.';
+      case 'boss': return 'Two tempests live in it. Clear the first; survive the second. There is no leaving the relay.';
+    }
   }
 
   function renderRecap(won) {
-    return `<div class="view-enter tour-page"><section class="tour-recap"><p class="eyebrow">${won ? 'THE RELAY REACHED' : 'THE TOUR ENDS EARLY'}</p><h1>${won ? 'Neptune, in person.' : 'The sky keeps the rest.'}</h1>
-    <p class="tour-recap-line">${won ? 'Twelve legs. One little ship. The whole neighborhood.' : 'The hull gave out — but the logbook didn’t. Every leg taught the chart something.'}</p>
-    <dl class="tour-stats"><div><dt>Stardust banked</dt><dd>✦ ${run.dust}</dd></div><div><dt>Legs completed</dt><dd>${Object.values(run.done).filter(v => v === 'won').length} / 12</dd></div><div><dt>Hull remaining</dt><dd>${'♥'.repeat(run.hull) || '—'}</dd></div><div><dt>Artifacts carried</dt><dd>${run.artifacts.length ? run.artifacts.map(id => artifacts[id].name).join(' · ') : 'None'}</dd></div></dl>
-    <div class="tour-recap-actions"><button class="button button-primary" data-tour="begin">Set out again →</button><a class="button" href="#planetarium">Back to the atlas</a></div>
+    const hullNote = won ? (store.records.bossWins > 0 && HULLS.moth ? 'The Moth Wing is yours to fly.' : '') : '';
+    return `<div class="view-enter tour-page"><section class="tour-recap"><p class="eyebrow">${won ? 'THE MAW IS QUIET' : 'THE TOUR ENDS EARLY'}</p><h1>${won ? 'Neptune, in person.' : 'The sky keeps the rest.'}</h1>
+    <p class="tour-recap-line">${won ? 'Twelve legs, one skiff, and the Maw behind you. ' + hullNote : 'The plating gave out — but the logbook didn’t. The next skiff launches knowing more.'}</p>
+    <dl class="tour-stats"><div><dt>Stardust banked</dt><dd>✦ ${run.dust}</dd></div><div><dt>Threats cleared</dt><dd>${run.kills}</dd></div><div><dt>Legs resolved</dt><dd>${Object.values(run.done).filter(v => v === 'won').length} / 12</dd></div><div><dt>Instruments carried</dt><dd>${run.instruments.length ? run.instruments.map(id => I[id].name).join(' · ') : 'None'}</dd></div></dl>
+    <div class="tour-recap-actions"><button class="button button-primary" data-tour="begin">Set out again →</button><button class="button" data-tour="journal">Save the logbook to the field journal</button><a class="button" href="#planetarium">Back to the atlas</a></div>
     ${run.path.length ? `<details class="tour-log" open><summary>The logbook</summary>${run.path.map(line => `<p>${esc(line)}</p>`).join('')}</details>` : ''}</section></div>`;
   }
 
   // ── Run flow ─────────────────────────────────────────────────────────────
+  let pendingHull = 'kite';
   function begin() {
     teardown();
-    const seed = Math.floor(Math.random() * 0xffffffff);
-    const compassDraft = false;
-    run = { seed, step: 0, hull: 3, dust: 0, artifacts: [], done: {}, path: [], node: null, shieldUsed: {}, map: null };
-    run.map = buildMap(seed, compassDraft);
-    store.active = null; // fresh tour replaces any abandoned one
-    saveRun();
+    // Hull choice happens on the landing page; default kite.
+    const hullId = unlockedHull(pendingHull) ? pendingHull : 'kite';
+    run = { seed: Math.floor(Math.random() * 0xffffffff), step: 0, hull: HULLS[hullId].hp > 60 ? 4 : 3, maxHull: HULLS[hullId].hp > 60 ? 4 : 3, dust: 0, instruments: [], hullId, kills: 0, done: {}, path: [], node: null, nodeKey: null, map: null, over: false, won: false };
+    run.map = buildMap(run.seed);
+    store.records.tours++;
+    store.active = null;
+    saveRun(); save();
     render();
-    toast('The tour begins. Choose your first stop.');
+    toast(`The ${HULLS[hullId].name} lifts off. First contact ahead.`);
   }
-  function resume() {
-    const saved = store.active; if (!saved) return;
-    run = { ...saved, node: null, nodeKey: null, shieldLost: {}, map: buildMap(saved.seed, false) };
-    render();
-  }
+  function teardown() { gameHandle?.destroy(); gameHandle = null; trialHandle?.destroy(); trialHandle = null; }
 
-  function finishNode(state, dustGain, note) {
-    const key = run.nodeKey;
-    run.done[key] = state;
-    if (dustGain) run.dust += dustBonus(dustGain);
+  function finishNode(state, note) {
+    if (!run?.node) return;
+    run.done[run.nodeKey] = state;
     if (note) run.path.push(note);
-    store.records.bestStep = Math.max(store.records.bestStep, run.step + 1);
-    // Sector finale: refund the first hull lost under the Moonshield Patent.
-    if (nodeIsFinale(run.step) && has('moonshield-patent')) {
-      const sector = Math.floor(run.step / 4);
-      if (run.shieldLost?.[sector] && !run.shieldUsed[sector]) { run.hull = Math.min(5, run.hull + 1); run.shieldUsed[sector] = true; run.path.push('The Moonshield Patent pays out: +1 hull.'); }
-    }
     run.node = null; run.nodeKey = null;
+    if (run.skipAhead) { run.skipAhead = false; run.step++; run.path.push('The impossible tide carries you a leg further.'); }
     run.step++;
-    if (run.hull <= 0) { run.over = true; store.records.tours += 0; store.active = null; }
-    else if (run.step >= 12) { run.won = true; store.records.tours++; store.records.bestDust = Math.max(store.records.bestDust, run.dust); store.active = null; }
-    else saveRun();
-    save();
+    if (run.hull <= 0) {
+      run.over = true; store.active = null;
+      store.records.kills += run.kills; save();
+    } else if (run.step >= 12) {
+      // The tour is only won through the Maw's defeat.
+      if (run.done['11:0'] === 'won') {
+        run.won = true; store.records.wins++;
+        store.records.bestDust = Math.max(store.records.bestDust, run.dust);
+      } else run.over = true;
+      store.records.kills += run.kills;
+      store.active = null;
+      save();
+    } else saveRun();
     render();
   }
-  function nodeIsFinale(step) { return [3, 7, 11].includes(step); }
-
   function loseHull(reason) {
     run.hull = Math.max(0, run.hull - 1);
-    const sector = Math.floor(run.step / 4);
-    (run.shieldUsed ||= {}); (run.shieldLost ||= {}); run.shieldLost[sector] = true;
     run.path.push(reason);
-  }
-
-  function teardown() {
-    arcadeHandle?.destroy(); arcadeHandle = null;
-    trialHandle?.destroy(); trialHandle = null;
-    puzzleHandle?.destroy(); puzzleHandle = null;
+    toast(reason);
   }
 
   // ── Node hosts ───────────────────────────────────────────────────────────
   function mountNode() {
     const node = run.node, stage = $('#tour-stage');
     if (!node || !stage) return;
-    if (node.kind === 'puzzle') mountPuzzleNode(node, stage);
-    else if (node.kind === 'trial') mountTrialNode(node, stage);
-    else if (node.kind === 'arcade') mountArcadeNode(node, stage);
-    else if (node.kind === 'refuge') mountRefuge(node, stage);
-    else mountCache(node, stage);
+    if (node.kind === 'hunt' || node.kind === 'boss') mountHunt(node, stage);
+    else if (node.kind === 'trial') mountTrial(node, stage);
+    else if (node.kind === 'oddity') mountOddity(node, stage);
+    else if (node.kind === 'chandlery') mountChandlery(stage);
+    else if (node.kind === 'mutation') mountDraft(stage);
+    else mountSanctuary(stage);
   }
 
-  function mountPuzzleNode(node, stage) {
-    stage.innerHTML = `<div class="tour-puzzle-host"></div>`;
-    const host = $('.tour-puzzle-host', stage);
-    let paid = false;
-    puzzleHandle = window.AetherPlanets.host(host, node.planet, node.level, {
-      parScale: has('observers-handbook') ? 1.5 : 1,
-      onSolve() {
-        if (paid) return; paid = true;
-        const gain = dustBonus(40 + (has('brass-sextant') ? 25 : 0));
+  function mountHunt(node, stage) {
+    stage.innerHTML = `<div class="tour-hunt-frame"></div>`;
+    const isBoss = node.kind === 'boss';
+    gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), {
+      sector: node.sector ?? 2, elite: node.elite, boss: isBoss, hull: run.hullId, instruments: run.instruments,
+      seed: run.seed + run.step * 977,
+      onEnd({ won, dust, kills }) {
+        run.kills += kills;
+        const gain = Math.round(dust * dustMul());
         run.dust += gain;
-        const counter = $('.tour-dust'); if (counter) counter.textContent = `✦ ${run.dust}`;
-        toast(`Survey complete · +${gain} stardust`);
-      },
-      onDone() {
-        finishNode('won', 0, `${planets.find(p => p.id === node.planet).name} surveyed.`);
+        if (won) {
+          if (isBoss) { store.records.bossWins++; save(); finishNode('won', `The Umbral Maw, quiet at last. +${gain} dust.`); }
+          else finishNode('won', `Hunt cleared · ${kills} threats · +${gain} dust.`);
+        } else {
+          loseHull(isBoss ? 'The Maw holds the relay. −1 hull.' : 'The field won this time. −1 hull.');
+          if (isBoss) finishNode('failed', 'Beaten back from the relay.');
+          else finishNode('failed', 'Beaten from the field.');
+        }
       },
     });
-    // Leave-without-reward path
-    stage.insertAdjacentHTML('beforeend', `<p class="tour-note">Surveys never cost hull. Solve it to bank stardust — or chart another course and the contract passes to the wind.</p>`);
   }
 
-  function mountTrialNode(node, stage) {
-    const trial = AetherTrials.list.find(t => t.id === node.trial);
+  function mountTrial(node, stage) {
+    const trial = window.AetherTrials.list.find(t => t.id === node.trial);
     stage.innerHTML = `<div class="trial-cabinet"><div class="trial-frame"></div></div>`;
-    const frame = $('.trial-frame', stage);
-    trialHandle = AetherTrials.create(node.trial, frame, {
+    trialHandle = window.AetherTrials.create(node.trial, $('.trial-frame', stage), {
       speedScale: has('lodestone-chart') ? .85 : 1,
+      verbs: new Set(run.instruments.flatMap(id => I[id].verbs || [])),
       onEnd({ won, score }) {
-        const gain = dustBonus(Math.round(score / 8) + (won ? 30 : 0) + (has('aurora-battery') && won ? 15 : 0));
-        if (won) toast(`${trial.name} cleared · +${gain} stardust`);
-        else { loseHull(`${trial.name}: the trial wins this time. −1 hull.`); toast('The trial wins this time. −1 hull.'); }
-        finishNode(won ? 'won' : 'failed', gain, `${trial.name}: ${won ? `${score} points` : 'failed'}.`);
+        const gain = Math.round((score / 8 + (won ? 30 : 0)) * dustMul());
+        run.dust += gain;
+        if (won) {
+          // Salvage: hull plating or pure dust.
+          stage.innerHTML = `<div class="tour-refuge"><h2>${trial.name} — cleared.</h2><p>+${gain} stardust banked. The wreckage is yours to choose from.</p><div class="tour-recap-actions"><button class="button button-primary" data-tour="salvage-hull">Salvage plating · +1 hull</button><button class="button" data-tour="salvage-dust">Take the dust · +60</button></div></div>`;
+        } else {
+          loseHull(`${trial.name}: the trial wins. −1 hull.`);
+          finishNode('failed', `${trial.name}: failed.`);
+        }
       },
     });
-    frame.querySelector('canvas')?.focus({ preventScroll: true });
+    $('.trial-frame canvas', stage)?.focus({ preventScroll: true });
   }
 
-  function mountArcadeNode(node, stage) {
-    const names = { merge: 'Planet Drop', hop: 'Comet Surf', dash: 'Stardust Dash', breaker: 'Orbit Breaker' };
-    stage.innerHTML = `<div class="tour-arcade"><div class="tour-arcade-hud"><span id="tour-score">SCORE 0</span><span id="tour-lives">♥♥♥</span></div><div class="tour-arcade-frame"><canvas id="tour-canvas"></canvas><div class="tour-arcade-overlay" id="tour-overlay"><p class="eyebrow">${node.finale ? 'SECTOR FINALE' : 'EXPEDITION'}</p><h2>${names[node.game]}</h2><button class="button button-primary" data-tour="arcade-start">Begin →</button></div><div class="tour-draft" id="tour-draft" hidden></div></div></div>`;
-    const canvas = $('#tour-canvas');
-    const [w, h] = window.AetherArcade.dimensions(node.game);
-    canvas.width = w; canvas.height = h;
-    canvas.tabIndex = 0;
-    let ended = false;
-    arcadeHandle = window.AetherArcade.create(canvas, {
-      game: node.game, seed: run.seed + run.step * 97, best: 0,
-      onUpdate(data) {
-        const score = $('#tour-score'); if (score) score.textContent = `SCORE ${data.score}`;
-        const lives = $('#tour-lives'); if (lives) lives.textContent = '♥'.repeat(Math.max(0, data.lives));
-      },
-      onOffer(offer) {
-        const draft = $('#tour-draft');
-        draft.hidden = false;
-        draft.innerHTML = `<p class="eyebrow">A RELIC OFFERS ITSELF</p><div class="tour-draft-row">${offer.map(r => `<button class="tour-draft-card" data-relic="${r.id}"><strong>${esc(r.name)}</strong><small>${esc(r.description)}</small></button>`).join('')}</div><button class="text-link" data-tour="relic-skip">Keep the current build</button>`;
-        draft.querySelectorAll('[data-relic]').forEach(btn => btn.addEventListener('click', () => { if (arcadeHandle.applyRelic(btn.dataset.relic)) { draft.hidden = true; draft.innerHTML = ''; } }));
-        $('[data-tour="relic-skip"]', draft)?.addEventListener('click', () => { if (arcadeHandle.skipRelic()) { draft.hidden = true; draft.innerHTML = ''; } });
-      },
-      onFinish({ score }) {
-        if (ended) return; ended = true;
-        const gain = dustBonus(Math.max(20, Math.round(score / 6)) * (has('ion-sails') ? 2 : 1));
-        toast(`${names[node.game]}: ${score} points · +${gain} stardust`);
-        finishNode('won', gain, `${names[node.game]}: ${score} points.`);
-      },
-    });
-  }
-
-  function mountRefuge(node, stage) {
-    const heal = has('pressure-flask') ? 2 : 1;
-    stage.innerHTML = `<div class="tour-refuge"><div class="refuge-lantern" aria-hidden="true">☕</div><h2>The kettle is already on.</h2><p>No puzzles here. No hazards. Just a warm bench, a long view, and the slow repair of a little ship.</p><button class="button button-primary" data-tour="rest">Rest · +${heal} hull, +10 stardust</button></div>`;
-  }
-
-  function mountCache(node, stage) {
-    const rand = rng(run.seed + run.step * 131);
-    const pool = shuffle(Object.keys(artifacts).filter(id => !run.artifacts.includes(id)), rand).slice(0, has('compass-of-halley') ? 4 : 3);
-    stage.innerHTML = `<div class="tour-cache"><p class="eyebrow">CHOOSE ONE</p><div class="tour-cache-row">${pool.map(id => `<button class="tour-cache-card" data-artifact="${id}"><span>${artifacts[id].icon}</span><strong>${artifacts[id].name}</strong><small>${artifacts[id].text}</small></button>`).join('')}</div></div>`;
-    stage.querySelectorAll('[data-artifact]').forEach(card => card.addEventListener('click', () => {
-      const id = card.dataset.artifact;
-      run.artifacts.push(id);
-      toast(`${artifacts[id].name} joins the tour.`);
-      finishNode('won', 20, `Drafted ${artifacts[id].name}.`);
+  function mountOddity(node, stage) {
+    const o = oddities[node.oddity];
+    stage.innerHTML = `<div class="tour-oddity"><p class="eyebrow">AN ODDITY</p><h2>${o.title}</h2><p>${o.text}</p><div class="tour-recap-actions">${o.choices.map((c, i) => `<button class="button ${i === 0 ? 'button-primary' : ''}" data-oddity="${i}">${c[0]}<small>${c[1]}</small></button>`).join('')}</div></div>`;
+    stage.querySelectorAll('[data-oddity]').forEach(btn => btn.addEventListener('click', () => {
+      const [, , fn] = o.choices[Number(btn.dataset.oddity)];
+      const note = fn(run);
+      if (run.hull <= 0) { finishNode('failed', note); return; }
+      finishNode('won', note);
     }));
+  }
+
+  function mountChandlery(stage) {
+    const rand = rng(run.seed + run.step * 131);
+    const pool = shuffle(Object.keys(I).filter(id => !run.instruments.includes(id)), rand).slice(0, 3 + (run.nextDraftBonus ? 1 : 0));
+    run.nextDraftBonus = false;
+    const prices = [70, 80, 90, 90];
+    stage.innerHTML = `<div class="tour-cache"><p class="eyebrow">THE CHANDLERY</p><p class="tour-node-brief" style="margin:0 auto 18px;max-width:480px">Stardust for steel and glass. The keeper wraps everything in brown paper.</p><div class="tour-cache-row">${pool.map((id, i) => `<button class="tour-cache-card" data-buy="${id}" data-price="${prices[i]}" ${run.dust < prices[i] ? 'disabled' : ''}><span>${I[id].icon}</span><strong>${I[id].name}</strong><small>${I[id].text} <em>${I[id].trialNote}</em></small><b>✦ ${prices[i]}</b></button>`).join('')}<button class="tour-cache-card repair" data-buy="repair" data-price="40" ${run.dust < 40 || run.hull >= run.maxHull ? 'disabled' : ''}><span>⚒</span><strong>Hull repair</strong><small>Patch one heart of plating back on.</small><b>✦ 40</b></button></div></div>`;
+    stage.querySelectorAll('[data-buy]').forEach(card => card.addEventListener('click', () => {
+      const price = Number(card.dataset.price);
+      if (run.dust < price) return;
+      run.dust -= price;
+      if (card.dataset.buy === 'repair') { run.hull = Math.min(run.maxHull, run.hull + 1); toast('The plating holds again. +1 hull.'); run.path.push('Bought repairs at the chandlery.'); }
+      else { run.instruments.push(card.dataset.buy); applyInstrument(card.dataset.buy); toast(`${I[card.dataset.buy].name} joins the build.`); run.path.push(`Bought ${I[card.dataset.buy].name}.`); }
+      mountChandlery(stage);
+      $('.tour-dust') && ($('.tour-dust').textContent = `✦ ${run.dust}`);
+    }));
+  }
+
+  function mountDraft(stage) {
+    const rand = rng(run.seed + run.step * 313);
+    const pool = shuffle(Object.keys(I).filter(id => !run.instruments.includes(id)), rand).slice(0, 3 + (run.nextDraftBonus ? 1 : 0) + (run.freeInstrument ? 0 : 0));
+    run.nextDraftBonus = false;
+    stage.innerHTML = `<div class="tour-cache"><p class="eyebrow">${run.freeInstrument ? 'THE STATIC RESOLVES' : 'AN INSTRUMENT DRAFT'}</p><p class="tour-node-brief" style="margin:0 auto 18px;max-width:480px">Free of charge. Choose the rule you want the sky to obey.</p><div class="tour-cache-row">${pool.map(id => `<button class="tour-cache-card" data-draft="${id}"><span>${I[id].icon}</span><strong>${I[id].name}</strong><small>${I[id].text} <em>${I[id].trialNote}</em></small></button>`).join('')}</div></div>`;
+    if (run.freeInstrument) run.freeInstrument = false;
+    stage.querySelectorAll('[data-draft]').forEach(card => card.addEventListener('click', () => {
+      run.instruments.push(card.dataset.draft);
+      applyInstrument(card.dataset.draft);
+      toast(`${I[card.dataset.draft].name} joins the build.`);
+      finishNode('won', `Drafted ${I[card.dataset.draft].name}.`);
+    }));
+  }
+
+  function applyInstrument(id) {
+    if (id === 'ironwood-ribs') { run.maxHull++; run.hull = Math.min(run.maxHull, run.hull + 1); }
+  }
+
+  function mountSanctuary(stage) {
+    stage.innerHTML = `<div class="tour-refuge"><div class="refuge-lantern" aria-hidden="true">☕</div><h2>The kettle is already on.</h2><p>+1 hull, +15 stardust. The relay can wait one quiet minute.</p><button class="button button-primary" data-tour="rest">Rest here</button></div>`;
   }
 
   // ── Mount / events ───────────────────────────────────────────────────────
@@ -305,42 +323,44 @@ window.AetherVoyage = (() => {
     controller = new AbortController();
     const signal = controller.signal;
     if (run?.node) mountNode();
-    // Centre the route chart on the current leg.
     const chart = $('.tour-chart'), currentStep = $('.tour-step.current');
     if (chart && currentStep) chart.scrollLeft = currentStep.offsetLeft - chart.clientWidth / 2 + currentStep.clientWidth / 2;
     main.addEventListener('click', event => {
+      const hullCard = event.target.closest('[data-hull]');
+      if (hullCard && !run) {
+        pendingHull = hullCard.dataset.hull;
+        document.querySelectorAll('.hangar-card').forEach(c => { c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false'); });
+        hullCard.classList.add('selected'); hullCard.setAttribute('aria-pressed', 'true');
+        toast(`${HULLS[pendingHull].name}, fuelled and waiting.`);
+        return;
+      }
       const nodeBtn = event.target.closest('[data-tour-node]');
       if (nodeBtn && !run.node) {
         const [s, i] = nodeBtn.dataset.tourNode.split(':').map(Number);
         if (s !== run.step || run.done[`${s}:${i}`]) return;
         run.node = run.map[s][i]; run.nodeKey = `${s}:${i}`;
-        render(); mountNode();
-        return;
+        render(); return;
       }
       const action = event.target.closest('[data-tour]')?.dataset.tour;
       if (!action) return;
       if (action === 'begin') begin();
-      else if (action === 'resume') resume();
+      else if (action === 'resume') { if (store.active) { run = hydrate(store.active); render(); } }
       else if (action === 'abandon') { store.active = null; run = null; save(); render(); }
-      else if (action === 'leave') { if (run?.node) { finishNode('left', 0, `${nodeLabel(run.node).name}: passed by.`); } }
-      else if (action === 'rest') {
-        run.hull = Math.min(5, run.hull + (has('pressure-flask') ? 2 : 1));
-        finishNode('won', 10, 'Rested at the halfway lantern.');
+      else if (action === 'leave' && run?.node) finishNode('left', `${nodeLabel(run.node).name}: passed by.`);
+      else if (action === 'rest') { run.hull = Math.min(run.maxHull, run.hull + 1); run.dust += Math.round(15 * dustMul()); finishNode('won', 'Rested at the sanctuary. +1 hull, +15 dust.'); }
+      else if (action === 'salvage-hull') { run.hull = Math.min(run.maxHull, run.hull + 1); finishNode('won', 'Salvaged plating from the trial. +1 hull.'); }
+      else if (action === 'salvage-dust') { run.dust += Math.round(60 * dustMul()); finishNode('won', 'Took the dust and ran. +60.'); }
+      else if (action === 'journal') {
+        const body = `THE GRAND TOUR — ${run.won ? 'COMPLETED' : 'LOST AT SEA'}\nSkiff: ${HULLS[run.hullId].name}\nStardust: ${run.dust} · Threats cleared: ${run.kills}\n\n${run.path.join('\n')}`;
+        state.journal.unshift({ id: crypto.randomUUID(), title: run.won ? 'Neptune, in person' : 'The sky kept the rest', body, subject: 'The Grand Tour', date: dateKey(new Date()) });
+        persist(); toast('The logbook is pressed into the field journal.');
       }
-      else if (action === 'arcade-start') {
-        $('#tour-overlay').hidden = true;
-        arcadeHandle?.start(); $('#tour-canvas')?.focus({ preventScroll: true });
-      }
-    }, { signal });
-    main.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && run?.node && run.node.kind !== 'arcade' && !modal.open) { event.preventDefault(); finishNode('left', 0, `${nodeLabel(run.node).name}: passed by.`); }
     }, { signal });
   }
   function unmount() { teardown(); controller?.abort(); controller = null; }
 
-  const P0 = window.AetherPuzzles;
   viewNames.voyage = 'The Grand Tour';
   renderers.voyage = renderVoyage;
-  searchItems.push({ id: 'voyage', name: 'The Grand Tour', kind: 'page', subtitle: 'One voyage · every world', icon: 'meteor' });
+  searchItems.push({ id: 'voyage', name: 'The Grand Tour', kind: 'page', subtitle: 'A run to Neptune', icon: 'meteor' });
   return { mount, unmount };
 })();

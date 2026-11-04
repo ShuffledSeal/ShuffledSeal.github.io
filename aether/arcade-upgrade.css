@@ -1,0 +1,25 @@
+/* A once-per-run risk/reward mechanic and lasting challenges for every arcade game. */
+.pact-rail { margin: 0 0 13px; display: flex; gap: 14px; align-items: center; padding: 13px 16px; border: 1px solid #c4ac7950; background: radial-gradient(ellipse at left, #c4ac791c, #13232b); }
+.pact-rail button { flex: 0 0 auto; padding: 10px 15px; min-height: 39px; background: #bba375; color: #142124; font: 600 10px var(--sans); letter-spacing: .075em; border: 1px solid #dec99d; cursor: pointer; }
+.pact-rail button:disabled { background: #c4ac790e; color: #b3b6a8; border-color: #c4ac792d; cursor: not-allowed; }
+.pact-rail button:focus-visible { outline: 2px solid #f4dea6; outline-offset: 3px; }
+.pact-rail span { font-size: 11px; color: #b6c9bd; line-height: 1.6; }
+.arcade-fieldwork h2 { font: 30px var(--serif); color: #f0dfc0; margin: 9px 0 12px; }
+.arcade-fieldwork > p:not(.eyebrow) { font-size: 12px; line-height: 1.7; color: #bfcbc3; }
+.arcade-fieldwork-count { color: #e2c28a; font-size: 10px; margin: 19px 0 12px; letter-spacing: .07em; }
+.arcade-contract { padding: 13px 0; border-top: 1px solid #c4ac792b; }
+.arcade-contract-top { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
+.arcade-contract strong { font: 20px var(--serif); color: #e5dfd0; }
+.arcade-contract-top span { flex: 0 0 auto; color: #c2bc9a; font: 10px var(--sans); }
+.arcade-contract p { margin: 7px 0 9px; font-size: 11px; color: #a9c0b4; line-height: 1.45; }
+.arcade-contract progress { height: 5px; width: 100%; display: block; border: 0; background: #c4ac7929; accent-color: #d9c387; }
+.arcade-contract.is-earned strong, .arcade-contract.is-earned span { color: #a5d8b3; }
+.arcade-contract.is-earned progress { accent-color: #a5d8b3; }
+@media (max-width: 700px) {
+ .pact-rail { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; }
+ .pact-rail button { width: 100%; }
+}
+.arcade-grand-chart { background: linear-gradient(130deg, #c4ac7919, #9ed7c609); border: 1px solid #c4ac7950; padding: 13px; margin: 12px 0 6px; }
+.arcade-grand-chart strong { font-size: 10px; letter-spacing: .09em; color: #e9d1a4; display: block; }
+.arcade-grand-chart span { color: #abd9c4; display: block; font: 21px var(--serif); margin-top: 6px; }
+.arcade-grand-chart p { font-size: 11px; line-height: 1.5; color: #b9c5b9; margin-top: 7px; }
