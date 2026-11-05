@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "test:browser": "node tests/browser-smoke.mjs",
+    "test:cartridges": "node tests/cartridge-depth.mjs",
     "test:trials": "node tests/verify-trial-registry.mjs"
   },
   "devDependencies": {

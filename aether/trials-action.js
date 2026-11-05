@@ -28,7 +28,7 @@
     const keys = new Set();
     let pointer = null;
     const g = frame(container, W, H, {
-      label: 'Constellation Chain. Steer the comet with the pointer or W A S D and arrow keys. Every link of your chain fires on the drifting shards; a shard that touches the chain destroys that link. Survive seventy-five seconds.',
+      label: 'Constellation Chain. Steer the comet with the pointer or W A S D and arrow keys. Every link of your chain fires on the drifting shards; a shard that touches the chain destroys that link. Survive seventy-five seconds. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -259,7 +259,7 @@
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText('Steer with the pointer or WASD · every link fires on its own · gather star-motes', W / 2, H - 16);
+      ctx.fillText('Steer with the pointer or WASD · every link fires on its own · gather star-motes · P pauses', W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd']);
@@ -294,7 +294,7 @@
     let gates = [], passed = 0, over = 0, invuln = 0, forgiven = false, shake = 0, gateTimer = 0, pointerHeld = false;
     const keys = new Set();
     const g = frame(container, W, H, {
-      label: 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds.',
+      label: 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -428,7 +428,7 @@
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText('Hold to dive — release to climb · thread the golden rings', W / 2, H - 16);
+      ctx.fillText('Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set([' ', 'w', 'arrowup']);

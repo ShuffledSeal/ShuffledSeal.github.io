@@ -11,6 +11,9 @@
   --edge: #d7bd8840;
 }
 body { background: var(--ink-deep); color: var(--vellum); }
+/* The observatory theme palettes (set by the cabinet theme picker via
+   document.body.dataset.observatoryTheme). This file is the single source of
+   truth for these variable sets — it loads last and wins by design. */
 body[data-observatory-theme="midnight"] { --bg: #101814; --sidebar: #0a100e; --panel: #172019; --muted: #a6afa0; --line: #d1b27729; --gold: #bcb5da; --gold-bright: #e1d6fa; --exp-muted: #b0baac; --exp-border: #c7bee23d; --spectral: #a9a0d2; }
 body[data-observatory-theme="rose"] { --bg: #171311; --sidebar: #100c0c; --panel: #211916; --muted: #b6a69e; --line: #d1b27730; --gold: #d6ae91; --gold-bright: #f0d0bb; --exp-muted: #c1afa6; --exp-border: #d9b79d42; --spectral: #c89286; }
 body[data-observatory-theme="midnight"] .workspace { background: radial-gradient(ellipse at 84% 0, #aaa0d21a, transparent 36%), radial-gradient(ellipse at 0 55%, #7785bf0d, transparent 46%); }

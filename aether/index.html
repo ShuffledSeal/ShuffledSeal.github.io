@@ -9,44 +9,44 @@
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="assets/cormorant-regular.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="assets/dm-sans-regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="experiences.css" />
+    <link rel="stylesheet" href="styles.css?v=1" />
+    <link rel="stylesheet" href="experiences.css?v=1" />
     <link rel="stylesheet" href="relics.css?v=3" />
     <link rel="stylesheet" href="roomplay.css?v=3" />
     <link rel="stylesheet" href="atmosphere.css?v=3" />
     <link rel="stylesheet" href="planets.css?v=4" />
-    <link rel="stylesheet" href="voyage.css?v=8" />
+    <link rel="stylesheet" href="voyage.css?v=12" />
     <link rel="stylesheet" href="premium.css?v=2" />
-    <link rel="stylesheet" href="starforge.css?v=1" />
-    <link rel="stylesheet" href="orchestra-upgrade.css?v=1" />
+    <link rel="stylesheet" href="starforge.css?v=2" />
+    <link rel="stylesheet" href="orchestra-upgrade.css?v=2" />
     <link rel="stylesheet" href="arcade-upgrade.css?v=1" />
-    <link rel="stylesheet" href="atelier.css?v=1" />
+    <link rel="stylesheet" href="atelier.css?v=2" />
     <script>if(new URLSearchParams(location.search).has('standalone'))document.documentElement.classList.add('standalone-game');</script>
-    <script src="cosmos.js?v=5" defer></script>
-    <script src="app.js?v=11" defer></script>
+    <script src="cosmos.js?v=6" defer></script>
+    <script src="app.js?v=13" defer></script>
     <script src="planet-data.js?v=2" defer></script>
     <script src="planet-levels.js?v=2" defer></script>
     <script src="planet-puzzles.js?v=4" defer></script>
-    <script src="planets.js?v=3" defer></script>
+    <script src="planets.js?v=4" defer></script>
     <script src="battle-art.js?v=3" defer></script>
-    <script src="skirmish.js?v=16" defer></script>
-    <script src="trials.js?v=6" defer></script>
-    <script src="trials-loom.js?v=1" defer></script>
-    <script src="trials-terminal.js?v=1" defer></script>
-    <script src="trials-action.js?v=3" defer></script>
-    <script src="trials-premium.js?v=3" defer></script>
-    <script src="starforge.js?v=1" defer></script>
-    <script src="voyage.js?v=20" defer></script>
+    <script src="skirmish.js?v=19" defer></script>
+    <script src="trials.js?v=7" defer></script>
+    <script src="trials-loom.js?v=2" defer></script>
+    <script src="trials-terminal.js?v=2" defer></script>
+    <script src="trials-action.js?v=4" defer></script>
+    <script src="trials-premium.js?v=8" defer></script>
+    <script src="starforge.js?v=4" defer></script>
+    <script src="voyage.js?v=24" defer></script>
     <script src="arcade.js?v=9" defer></script>
     <script src="orchestra-synth.js?v=1" defer></script>
     <script src="roomplay.js?v=4" defer></script>
-    <script src="observatory.js?v=10" defer></script>
+    <script src="observatory.js?v=11" defer></script>
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to the observatory</a>
     <div class="mobile-scrim" data-action="close-menu"></div>
     <aside class="sidebar" aria-label="Observatory navigation">
-      <a href="#voyage" class="brand">
+      <a href="#overview" class="brand">
         <svg class="brand-emblem" viewBox="0 0 70 70" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".8"><circle cx="35" cy="35" r="14"/><circle cx="35" cy="35" r="18"/><ellipse cx="35" cy="35" rx="9" ry="18"/><path d="M17 35h36M35 17v36M24 22l22 26M20 43l30-16"/><path d="M35 3v10m0 44v10M3 35h10m44 0h10M12 12l8 8m30 30 8 8M12 58l8-8m30-30 8-8M22 5l4 10m18 40 4 10M5 22l10 4m40 18 10 4M5 48l10-4m40-18 10-4M22 65l4-10M44 15l4-10"/></g><path d="m35 0 2 7-2 3-2-3ZM35 70l-2-7 2-3 2 3ZM0 35l7-2 3 2-3 2ZM70 35l-7 2-3-2 3-2Z" fill="currentColor"/></svg>
         <span class="brand-name">ÆTHER</span>
         <span class="brand-caption">A PRIVATE OBSERVATORY</span>
@@ -78,7 +78,7 @@
     <div class="workspace">
       <header class="topbar">
         <div class="breadcrumb"><button class="icon-button mobile-menu" data-action="menu" aria-label="Open navigation" aria-expanded="false"><svg><use href="assets/icons.svg#menu"/></svg></button><svg class="breadcrumb-star"><use href="assets/icons.svg#sparkles"/></svg><span>The observatory</span><span class="breadcrumb-slash">/</span><span id="breadcrumb-current">Overview</span></div>
-        <div class="topbar-actions"><button class="location-button" data-action="location"><svg><use href="assets/icons.svg#pin"/></svg><span id="location-label">Greenwich, London</span><svg class="chevron"><use href="assets/icons.svg#chevron-down"/></svg></button><span class="topbar-divider"></span><button class="icon-button" data-action="search" aria-label="Search the observatory (press /)"><svg><use href="assets/icons.svg#search"/></svg></button><button class="icon-button notification-button" data-action="notifications" aria-label="Celestial notices"><svg aria-hidden="true"><use href="assets/icons.svg#bell"/></svg><i aria-hidden="true"></i></button></div>
+        <div class="topbar-actions"><button class="location-button" data-action="location"><svg><use href="assets/icons.svg#pin"/></svg><span id="location-label">Greenwich, London</span><svg class="chevron"><use href="assets/icons.svg#chevron-down"/></svg></button><span class="topbar-divider"></span><button class="icon-button" data-action="search" aria-label="Search the observatory (press /)"><svg><use href="assets/icons.svg#search"/></svg></button><button class="icon-button notification-button" data-action="notifications" aria-label="Celestial notices"><svg aria-hidden="true"><use href="assets/icons.svg#bell"/></svg></button></div>
       </header>
       <main id="main" tabindex="-1"></main>
       <footer class="page-footer"><span>ÆTHER <span class="footer-cross">✧</span> THE OBSERVATORY & PLANETARY ATLAS</span><button data-action="about">About the observatory</button></footer>

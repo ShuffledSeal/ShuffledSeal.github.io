@@ -304,11 +304,21 @@ window.AetherPlanets = (() => {
   // Gentle plate parallax on fine pointers only.
     const plate=main.querySelector('.planet-plate');
     if(plate && matchMedia('(prefers-reduced-motion: no-preference)').matches && matchMedia('(pointer: fine)').matches) {
-      main.querySelector('.atlas-hero').addEventListener('pointermove',event=>{
-        const box=plate.getBoundingClientRect(),dx=(event.clientX-(box.left+box.width/2))/box.width,dy=(event.clientY-(box.top+box.height/2))/box.height;
-        plate.style.transform=`perspective(900px) rotateY(${dx*4}deg) rotateX(${-dy*4}deg)`;
+      // One paint per frame, latest pointer wins; the rect is measured on
+      // entry/resize/scroll rather than on every pointermove.
+      const hero=main.querySelector('.atlas-hero');
+      let box=null,parallaxFrame=0;
+      const measure=()=>{box=plate.getBoundingClientRect();};
+      hero.addEventListener('pointerenter',measure,{signal});
+      window.addEventListener('resize',measure,{signal});
+      window.addEventListener('scroll',()=>{if(box)measure();},{signal,passive:true});
+      hero.addEventListener('pointermove',event=>{
+        if(!box)measure();
+        const dx=(event.clientX-(box.left+box.width/2))/box.width,dy=(event.clientY-(box.top+box.height/2))/box.height;
+        cancelAnimationFrame(parallaxFrame);
+        parallaxFrame=requestAnimationFrame(()=>{parallaxFrame=0;plate.style.transform=`perspective(900px) rotateY(${dx*4}deg) rotateX(${-dy*4}deg)`;});
       },{signal});
-      main.querySelector('.atlas-hero').addEventListener('pointerleave',()=>{plate.style.transform='';},{signal});
+      hero.addEventListener('pointerleave',()=>{cancelAnimationFrame(parallaxFrame);parallaxFrame=0;box=null;plate.style.transform='';},{signal});
     }
     // Sections fade up as they enter view.
     observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('revealed');observer.unobserve(entry.target);}},{threshold:.12});

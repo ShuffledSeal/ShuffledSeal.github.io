@@ -6,7 +6,8 @@
 window.AetherSkirmish = (() => {
   const TAU = Math.PI * 2;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reducedMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  const reduced = () => reducedMQ.matches;
 
   // Movement feel: near-immediate steering, then the visuals overshoot.
   const SWIM = { maxSpeed: 270, accel: 1900, damping: 8, burstSpeed: 720, burstTime: .16, burstCd: .8, burstInvuln: .32, hurtInvuln: .7 };
@@ -70,8 +71,22 @@ window.AetherSkirmish = (() => {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H; canvas.tabIndex = 0;
     canvas.setAttribute('role', 'application');
-    canvas.setAttribute('aria-label', boss ? 'Boss arena. Move with WASD or pointer, fire toward the pointer, Space or right-click to burst.' : 'Skirmish arena. Move with WASD or pointer, fire toward the pointer, Space or right-click to burst.');
+    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. Space or right-click to dash. P pauses.');
     container.appendChild(canvas);
+    const draftBar = document.createElement('div');
+    if (endless) {
+      draftBar.className = 'skirmish-draft'; draftBar.hidden = true;
+      draftBar.innerHTML = '<strong>FIELD REFIT · CHOOSE BEFORE THE NEXT WAVE</strong><button type="button" data-skirmish-refit="guard">1 · Reinforce · +14 plating, quicker dash next wave</button><button type="button" data-skirmish-refit="power">2 · Overclock · +35% bolt damage next wave</button>';
+      container.appendChild(draftBar);
+    }
+    // Screen-reader status: visually hidden, polite, throttled to ~2Hz.
+    const srStatus = document.createElement('p');
+    srStatus.setAttribute('role', 'status');
+    srStatus.setAttribute('aria-live', 'polite');
+    srStatus.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0';
+    container.appendChild(srStatus);
+    canvas.dataset.paused = 'false';
+    canvas.dataset.boltsFired = '0';
     const ctx = canvas.getContext('2d');
     const abort = new AbortController();
     const listen = (el, type, fn, o) => el.addEventListener(type, fn, { ...o, signal: abort.signal });
@@ -88,22 +103,23 @@ window.AetherSkirmish = (() => {
       return timer;
     };
     let player, enemies, bolts, orbs, motes, wells, trails, freezes, parts, popups;
-    let wave, waveIntro, phase, shake = 0, hitStop = 0, flash = 0, dust = 0, kills = 0, boltCount = 0, frameCount = 0;
+    let wave, waveIntro, phase, refit = null, shake = 0, hitStop = 0, flash = 0, dust = 0, kills = 0, boltCount = 0, frameCount = 0;
     let aim = { x: W / 2, y: H - 130 }, keys = new Set(), firing = false, burstDir = { x: 1, y: 0 };
     // Pointer flight is the default: your ship physically follows the cursor.
     // M toggles classic twin-stick. Keyboard movement always overrides the pointer.
     let pilot = (() => { try { return localStorage.getItem('aether-flight-mode') !== 'keyboard'; } catch { return true; } })();
     let pointerActive = false, target = null, targetAngle = -Math.PI / 2;
-    let streak = 0, streakTime = 0, bestStreak = 0, score = 0, supercharge = 0, surge = 0;
-    let hazardTimer = 5.5, hazard = null, hazardIndex = 0, tutorial = 9;
-    let notice = { text: 'MOUSE PILOT · HOLD CLICK: FIRE · RIGHT CLICK: DASH · P: PAUSE', ttl: 6 };
+    let streak = 0, streakTime = 0, bestStreak = 0, score = 0, supercharge = 0;
+    let hazardTimer = 5.5, hazard = null;
+    let echoQueue = [];
+    let notice = { text: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER: FIRE · RIGHT CLICK: DASH · P: PAUSE', ttl: 6 };
     let bossEnt = null, bossPhase = 1;
     let ended = false, paused = false;
     function reset() {
       player = { x: W / 2, y: H - 130, vx: 0, vy: 0, hp: hull.hp, maxHp: hull.hp, burstT: 0, burstCd: 0, invuln: 0, hurtInvuln: 0, boltCd: 0, bank: 0, trail: [] };
       enemies = []; bolts = []; orbs = []; motes = []; wells = []; trails = []; freezes = []; parts = []; popups = [];
-      wave = 0; waveIntro = 1.6; phase = 'intro'; dust = 0; kills = 0; boltCount = 0; ended = false;
-      streak = 0; streakTime = 0; bestStreak = 0; score = 0; supercharge = 0; surge = 0; hazardTimer = 6; hazard = null;
+      wave = 0; waveIntro = 1.6; phase = 'intro'; refit = null; dust = 0; kills = 0; boltCount = 0; ended = false;
+      streak = 0; streakTime = 0; bestStreak = 0; score = 0; supercharge = 0; hazardTimer = 6; hazard = null; echoQueue = [];
       bossEnt = boss ? { id: 'boss', kind: 'maw', name: 'The Umbral Maw', x: W / 2, y: 150, vx: 0, vy: 0, hp: Math.round(620 * mode.hp), maxHp: Math.round(620 * mode.hp), radius: 46, state: 'chase', t: 0, cd: 2, beam: null, hurt: 0, spawnCd: 5 } : null;
     }
     reset();
@@ -111,7 +127,7 @@ window.AetherSkirmish = (() => {
       if (boss) return [];
       const s = options.sector ?? 0;
       const base = [4 + s * 2, 6 + s * 2, 7 + s * 3][wave - 1] || 9;
-      return base + (options.elite ? 2 : 0) + (endless ? Math.min(12, Math.floor((wave - 1) * 1.4)) : 0);
+      return base + (options.elite ? 2 : 0) + (endless ? Math.min(6, Math.floor((wave - 1) * .85)) : 0);
     };
     const waveKinds = () => {
       const s = options.sector ?? 0;
@@ -136,7 +152,7 @@ window.AetherSkirmish = (() => {
       const side = rand() * TAU;
       enemies.push({
         kind, gilded, x: W / 2 + Math.cos(side) * (W / 2 - 60), y: H / 2 + Math.sin(side) * (H / 2 - 60),
-        vx: 0, vy: 0, hp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.max(0, wave - 1) * .12 : 1) * mode.hp, maxHp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.max(0, wave - 1) * .12 : 1) * mode.hp,
+        vx: 0, vy: 0, hp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp, maxHp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp,
         state: 'chase', t: 0, cd: def.cd || def.orbCd || def.beamCd || 2, hurt: 0, frozen: 0, slow: 0, born: 0,
       });
       burst(W / 2 + Math.cos(side) * (W / 2 - 60), H / 2 + Math.sin(side) * (H / 2 - 60), sector.accent, 8, 120);
@@ -154,6 +170,7 @@ window.AetherSkirmish = (() => {
     function step(dt) {
       if (ended) return;
       clock += dt;
+      if (phase === 'draft') return; // an actual breather, not a lethal menu over live hazards
       const p = player;
       // Input → velocity: sharp steering; the view adds the overshoot.
       let mx = (keys.has('d') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('a') || keys.has('ArrowLeft') ? 1 : 0);
@@ -188,26 +205,34 @@ window.AetherSkirmish = (() => {
 
       // The mouse pilots the ship, while the targeting computer leads the closest threat.
       // WASD pilots can still freely aim using the cursor as a traditional twin-stick.
+      // A keyboard-only player (pointer never used) gets the same computer aim.
       const live = (bossEnt ? [...enemies, bossEnt] : enemies).filter(e => e.hp > 0);
       target = live.reduce((closest, e) => {
         const d = Math.hypot(e.x - p.x, e.y - p.y);
         return !closest || d < closest.d ? { e, d } : closest;
       }, null);
-      const autoAim = pilot && !keyboardMoving;
+      const autoAim = !pointerActive || (pilot && !keyboardMoving);
       if (target && autoAim) {
         const e = target.e, travel = Math.min(.55, target.d / 560);
         const ex = e.x + e.vx * travel * .48, ey = e.y + e.vy * travel * .48;
         targetAngle = Math.atan2(ey - p.y, ex - p.x);
       } else targetAngle = Math.atan2(aim.y - p.y, aim.x - p.x);
-      if (firing && p.boltCd <= 0 && phase === 'combat') {
+      const wantsFire = firing || keys.has('j') || keys.has('z') || keys.has('Enter');
+      if (wantsFire && p.boltCd <= 0 && phase === 'combat') {
         p.boltCd = hull.boltCd;
         fireBolt(targetAngle);
       }
-      tutorial = Math.max(0, tutorial - dt);
+      // Echo Plate answers in simulation time: pausing mid-volley stays honest.
+      for (let i = echoQueue.length - 1; i >= 0; i--) {
+        const q = echoQueue[i]; q.t -= dt;
+        if (q.t <= 0) {
+          echoQueue.splice(i, 1);
+          if (phase === 'combat') bolts.push({ x: p.x + Math.cos(q.angle) * 16, y: p.y + Math.sin(q.angle) * 16, vx: Math.cos(q.angle) * 540, vy: Math.sin(q.angle) * 540, dmg: hull.boltDmg * .6 * (endless && refit === 'power' ? 1.35 : 1), life: 1.3, echo: true });
+        }
+      }
       notice.ttl = Math.max(0, notice.ttl - dt);
       streakTime = Math.max(0, streakTime - dt);
       if (!streakTime) streak = 0;
-      surge = Math.max(0, surge - dt);
       updateHazard(dt);
       // Bolts
       for (let i = bolts.length - 1; i >= 0; i--) {
@@ -295,6 +320,8 @@ window.AetherSkirmish = (() => {
           if (sp > max) { e.vx *= max / sp; e.vy *= max / sp; }
           if (e.beam) {
             e.beam.t -= dt;
+            // Windup flip rides the sim clock: pausing mid-telegraph freezes the beam honestly.
+            if (!e.beam.firing && e.beam.t <= def.beamTime) e.beam.firing = true;
             if (e.beam.t <= 0) e.beam = null;
             else if (e.beam.firing) {
               const bdx = p.x - e.x, bdy = p.y - e.y, bd = Math.hypot(bdx, bdy);
@@ -309,7 +336,6 @@ window.AetherSkirmish = (() => {
               e.cd = def.beamCd;
               const ang = Math.atan2(dy, dx);
               e.beam = { t: def.beamWindup + def.beamTime, windup: def.beamWindup, firing: false, dx: Math.cos(ang), dy: Math.sin(ang) };
-              after(() => { if (e.beam) e.beam.firing = true; }, def.beamWindup * 1000);
             }
           }
         }
@@ -364,14 +390,23 @@ window.AetherSkirmish = (() => {
         if (phase === 'intro') { waveIntro -= dt; if (waveIntro <= 0) { phase = 'combat'; if (!enemies.length) spawnWave(); } }
         if (phase === 'combat' && enemies.every(e => e.hp <= 0) && !bossEnt) {
           if (!endless && wave >= 3) return end(true);
-          phase = 'intro'; waveIntro = 1.8;
-          const plating = endless ? Math.max(2, 7 - Math.floor(wave / 4)) : 6;
-          player.hp = Math.min(player.maxHp, player.hp + plating);
-          popup(W / 2, H / 2, `THE FIELD SETTLES · +${plating} HULL-PLATING`, sector.mote);
+          phase = endless ? 'draft' : 'intro'; waveIntro = 1.8;
+          if (endless) { orbs = []; hazard = null; hazardTimer = 4; firing = false; keys.clear(); draftBar.hidden = false; notice = { text: 'FIELD REFIT · 1 REINFORCE / 2 OVERCLOCK', ttl: 4 }; }
+          else { player.hp = Math.min(player.maxHp, player.hp + 6); popup(W / 2, H / 2, 'THE FIELD SETTLES · +6 HULL-PLATING', sector.mote); }
         }
         if (phase === 'intro' && waveIntro <= 0) { phase = 'combat'; spawnWave(); }
       }
     }
+    function chooseRefit(choice) {
+      if (!endless || phase !== 'draft' || paused || destroyed || !['guard', 'power'].includes(choice)) return;
+      refit = choice;
+      if (choice === 'guard') player.hp = Math.min(player.maxHp, player.hp + 14);
+      draftBar.hidden = true; phase = 'intro'; waveIntro = 1.8;
+      notice = { text: choice === 'guard' ? 'REINFORCED · PLATING + QUICK DASH' : 'OVERCLOCKED · BOLTS +35% NEXT WAVE', ttl: 3 };
+      tone(choice === 'guard' ? 540 : 840, .18, 'triangle', .05);
+      canvas.focus({ preventScroll: true });
+    }
+    if (endless) listen(draftBar, 'click', e => chooseRefit(e.target.closest('[data-skirmish-refit]')?.dataset.skirmishRefit));
     function bossStep(b, dt) {
       const def = ENEMIES.maw, p = player;
       b.hurt = Math.max(0, b.hurt - dt);
@@ -437,16 +472,17 @@ window.AetherSkirmish = (() => {
     }
     function fireBolt(angle) {
       boltCount++;
+      canvas.dataset.boltsFired = boltCount;
       const p = player, speed = 540;
       const firedRail = verbs.has('rail') && boltCount % 6 === 0;
       const boosted = supercharge > 0;
       if (boosted) supercharge--;
       const mk = a => bolts.push({ x: p.x + Math.cos(a) * 16, y: p.y + Math.sin(a) * 16,
         vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-        dmg: hull.boltDmg * (firedRail ? 1.6 : 1) * (boosted ? 1.35 : 1),
+        dmg: hull.boltDmg * (firedRail ? 1.6 : 1) * (boosted ? 1.35 : 1) * (endless && refit === 'power' ? 1.35 : 1),
         life: 1.3, pierce: firedRail ? 2 : 0, glow: firedRail || boosted });
       mk(angle);
-      if (verbs.has('echo')) after(() => { if (phase === 'combat') bolts.push({ x: p.x + Math.cos(angle) * 16, y: p.y + Math.sin(angle) * 16, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, dmg: hull.boltDmg * .6, life: 1.3, echo: true }); }, 350);
+      if (verbs.has('echo')) echoQueue.push({ t: .35, angle });
       if (verbs.has('split') && boltCount % 4 === 0) { mk(angle - .22); mk(angle + .22); }
       tone(700 + (boltCount % 4) * 60, .05, 'triangle', .028);
     }
@@ -548,7 +584,7 @@ window.AetherSkirmish = (() => {
     function tryBurst() {
       if(paused)return;
       const p = player;
-      const cdMul = verbs.has('gyro') ? .65 : 1;
+      const cdMul = (verbs.has('gyro') ? .65 : 1) * (endless && refit === 'guard' ? .75 : 1);
       if (p.burstCd > 0 || p.burstT > 0 || phase !== 'combat') return;
       const mx = (keys.has('d') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('a') || keys.has('ArrowLeft') ? 1 : 0);
       const my = (keys.has('s') || keys.has('ArrowDown') ? 1 : 0) - (keys.has('w') || keys.has('ArrowUp') ? 1 : 0);
@@ -568,6 +604,8 @@ window.AetherSkirmish = (() => {
     }
     function end(won) {
       if (ended) return; ended = true;
+      firing = false;
+      updateStatus(true);
       after(() => {
         const gain = dust + (won ? 30 + (options.sector ?? 0) * 10 : 8);
         destroy();
@@ -582,7 +620,6 @@ window.AetherSkirmish = (() => {
         hazardTimer -= dt;
         if (hazardTimer <= 0) {
           const s = options.sector ?? 0;
-          hazardIndex++;
           hazard = s === 0 ? { kind: 'solar', x: 120 + rand() * (W - 240), radius: 58, t: 2.25, duration: 2.25 }
             : s === 1 ? { kind: 'gravity', x: 140 + rand() * (W - 280), y: 120 + rand() * (H - 240), radius: 135, t: 4.2, duration: 4.2 }
             : { kind: 'lightning', y: 100 + rand() * (H - 200), radius: 35, t: 2.4, duration: 2.4 };
@@ -789,7 +826,7 @@ window.AetherSkirmish = (() => {
       }
       ctx.restore();
       // Ship-position reticle in mouse flight; actual targeting reticle in WASD mode.
-      const rx = pilot && pointerActive ? aim.x : aim.x, ry = aim.y;
+      const rx = aim.x, ry = aim.y;
       ctx.strokeStyle = pilot ? '#a7ebde88' : '#ece3c688'; ctx.lineWidth = 1.1;
       ctx.beginPath(); ctx.arc(rx, ry, pilot ? 15 : 9, 0, TAU); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(rx - 18, ry); ctx.lineTo(rx - 7, ry); ctx.moveTo(rx + 7, ry); ctx.lineTo(rx + 18, ry); ctx.stroke();
@@ -810,60 +847,69 @@ window.AetherSkirmish = (() => {
         const q = popups[i]; q.life -= 1 / 60; q.y -= .5;
         if (q.life <= 0) { popups.splice(i, 1); continue; }
         ctx.globalAlpha = Math.min(1, q.life * 2); ctx.fillStyle = q.colour;
-        ctx.font = '600 13px "DM Sans"'; ctx.fillText(q.text, q.x, q.y);
+        ctx.font = '600 19px "DM Sans"'; ctx.fillText(q.text, q.x, q.y);
       }
       ctx.globalAlpha = 1;
       ctx.restore();
-      // HUD frame
-      const hpW = 200;
-      ctx.fillStyle = '#0c130e'; ctx.fillRect(16, 14, hpW, 10);
+      // HUD frame — sized for the canvas as actually displayed (≈348px on phones).
+      const hpW = 220;
+      ctx.fillStyle = '#0c130e'; ctx.fillRect(16, 14, hpW, 14);
       ctx.fillStyle = player.hp / player.maxHp > .3 ? '#9ed7c6' : '#f58e9b';
-      ctx.fillRect(16, 14, hpW * Math.max(0, player.hp / player.maxHp), 10);
-      ctx.strokeStyle = '#c4ac7955'; ctx.strokeRect(16, 14, hpW, 10);
-      ctx.fillStyle = '#e9dcae'; ctx.font = '600 12px "DM Sans"'; ctx.textAlign = 'left';
-      ctx.fillText(`${Math.ceil(Math.max(0, player.hp))} / ${player.maxHp}`, 20, 22);
+      ctx.fillRect(16, 14, hpW * Math.max(0, player.hp / player.maxHp), 14);
+      ctx.strokeStyle = '#c4ac7955'; ctx.strokeRect(16, 14, hpW, 14);
+      ctx.fillStyle = '#e9dcae'; ctx.font = '600 18px "DM Sans"'; ctx.textAlign = 'left';
+      ctx.fillText(`${Math.ceil(Math.max(0, player.hp))} / ${player.maxHp}`, 22, 27);
       // Burst pip
       ctx.fillStyle = player.burstCd <= 0 ? sector.mote : '#5a5f4e';
-      ctx.fillText(player.burstCd <= 0 ? 'DASH READY ✦' : `DASH ${player.burstCd.toFixed(1)}`, 16, 42);
-      ctx.font = '600 11px "DM Sans"'; ctx.fillStyle = '#b8d9cf';
-      ctx.fillText(pilot ? 'MOUSE PILOT · M TO CHANGE' : 'WASD PILOT · M TO CHANGE', 16, 61);
+      ctx.fillText(player.burstCd <= 0 ? 'DASH READY ✦' : `DASH ${player.burstCd.toFixed(1)}`, 16, 52);
+      ctx.font = '600 15px "DM Sans"'; ctx.fillStyle = '#b8d9cf';
+      ctx.fillText(pilot ? 'MOUSE PILOT · M TO CHANGE' : 'WASD PILOT · M TO CHANGE', 16, 74);
       if (streak > 1) {
-        ctx.fillStyle = '#9decc8'; ctx.font = '700 19px "DM Sans"';
-        ctx.fillText(`${streak}× FLOW`, 16, 91);
-        ctx.fillStyle = '#478376'; ctx.fillRect(16, 98, 120, 3);
-        ctx.fillStyle = '#9decc8'; ctx.fillRect(16, 98, 120 * streakTime / 4.2, 3);
+        ctx.fillStyle = '#9decc8'; ctx.font = '700 27px "DM Sans"';
+        ctx.fillText(`${streak}× FLOW`, 16, 106);
+        ctx.fillStyle = '#478376'; ctx.fillRect(16, 114, 150, 4);
+        ctx.fillStyle = '#9decc8'; ctx.fillRect(16, 114, 150 * streakTime / 4.2, 4);
       }
-      ctx.textAlign = 'right';
-      ctx.fillStyle = sector.mote; ctx.fillText(`✦ ${dust}`, W - 18, 26);
-      ctx.fillStyle = '#c7d9d1'; ctx.font = '600 11px "DM Sans"';
-      ctx.fillText(`SCORE ${score.toLocaleString()}`, W - 18, 62);
-      if (!boss) { ctx.fillText(`WAVE ${Math.max(1, wave)} / 3`, W - 18, 44); }
+      ctx.textAlign = 'right'; ctx.font = '600 18px "DM Sans"';
+      ctx.fillStyle = sector.mote; ctx.fillText(`✦ ${dust}`, W - 18, 30);
+      ctx.fillStyle = '#c7d9d1'; ctx.font = '600 15px "DM Sans"';
+      ctx.fillText(`SCORE ${score.toLocaleString()}`, W - 18, 76);
+      if (!boss) { ctx.fillText(endless ? `WAVE ${Math.max(1, wave)}` : `WAVE ${Math.max(1, wave)} / 3`, W - 18, 53); }
+      if (endless && refit && phase !== 'draft') { ctx.fillStyle = '#efd39c'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"'; ctx.fillText(refit === 'guard' ? 'REFIT: QUICK DASH' : 'REFIT: BOLTS +35%', W - 18, 96); }
       else if (bossEnt) {
         ctx.fillStyle = '#e8a0a8'; ctx.textAlign = 'center';
-        ctx.fillRect(W / 2 - 160, 16, 320 * Math.max(0, bossEnt.hp / bossEnt.maxHp), 8);
-        ctx.strokeStyle = '#e8a0a855'; ctx.strokeRect(W / 2 - 160, 16, 320, 8);
-        ctx.fillStyle = '#e9dcae'; ctx.fillText('THE UMBRAL MAW', W / 2, 38);
+        ctx.fillRect(W / 2 - 160, 16, 320 * Math.max(0, bossEnt.hp / bossEnt.maxHp), 10);
+        ctx.strokeStyle = '#e8a0a855'; ctx.strokeRect(W / 2 - 160, 16, 320, 10);
+        ctx.fillStyle = '#e9dcae'; ctx.fillText('THE UMBRAL MAW', W / 2, 44);
       }
       if (phase === 'intro' && !boss) {
-        ctx.fillStyle = '#e9dcae'; ctx.textAlign = 'center'; ctx.font = '24px Cormorant, serif';
+        ctx.fillStyle = '#e9dcae'; ctx.textAlign = 'center'; ctx.font = '32px Cormorant, serif';
         ctx.fillText(wave === 0 ? 'Contacts approaching…' : `Wave ${wave + 1}`, W / 2, H / 2 - 40);
+      }
+      if (phase === 'draft') {
+        ctx.fillStyle = '#08151cdd'; ctx.fillRect(W / 2 - 320, H / 2 - 100, 640, 186);
+        ctx.strokeStyle = '#eed09a'; ctx.strokeRect(W / 2 - 320, H / 2 - 100, 640, 186);
+        ctx.fillStyle = '#f2d89c'; ctx.textAlign = 'center'; ctx.font = '32px Georgia, serif'; ctx.fillText('The field is clear. Choose your refit.', W / 2, H / 2 - 48);
+        ctx.fillStyle = '#d3e8dd'; ctx.font = '18px "DM Sans"'; ctx.fillText('1  REINFORCE · +14 PLATING / QUICKER DASH', W / 2, H / 2 - 2);
+        ctx.fillText('2  OVERCLOCK · +35% BOLT DAMAGE', W / 2, H / 2 + 37);
       }
       if (notice.ttl > 0) {
         ctx.globalAlpha = Math.min(1, notice.ttl / .5);
-        ctx.fillStyle = '#ffe8b3'; ctx.font = '700 16px "DM Sans"'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffe8b3'; ctx.font = '700 22px "DM Sans"'; ctx.textAlign = 'center';
         ctx.fillText(notice.text, W / 2, H - 35);
         ctx.globalAlpha = 1;
       }
       if (paused) {
         ctx.fillStyle='#05111ee1';ctx.fillRect(0,0,W,H);
-        ctx.strokeStyle='#dbc38e77';ctx.strokeRect(W/2-270,H/2-147,540,294);
+        ctx.strokeStyle='#dbc38e77';ctx.strokeRect(W/2-280,H/2-168,560,336);
         ctx.fillStyle='#f7e5c0';ctx.font='46px Cormorant,serif';ctx.textAlign='center';
-        ctx.fillText('The stars can wait.',W/2,H/2-63);
-        ctx.font='600 13px "DM Sans"';ctx.fillStyle='#b7dbd1';
-        ctx.fillText('P  ·  RESUME EXPEDITION',W/2,H/2-10);
-        ctx.fillText('M  ·  SWITCH PILOT MODE',W/2,H/2+22);
-        ctx.fillText('SPACE / RIGHT CLICK  ·  DASH',W/2,H/2+54);
-        ctx.fillText('F  ·  FULLSCREEN',W/2,H/2+86);
+        ctx.fillText('The stars can wait.',W/2,H/2-88);
+        ctx.font='600 18px "DM Sans"';ctx.fillStyle='#b7dbd1';
+        ctx.fillText('P / CLICK  ·  RESUME EXPEDITION',W/2,H/2-32);
+        ctx.fillText('HOLD CLICK / J / Z / ENTER  ·  FIRE',W/2,H/2+6);
+        ctx.fillText('M  ·  SWITCH PILOT MODE',W/2,H/2+44);
+        ctx.fillText('SPACE / RIGHT CLICK  ·  DASH',W/2,H/2+82);
+        ctx.fillText('F  ·  FULLSCREEN',W/2,H/2+120);
       }
       if (flash > 0 && !reduced()) { ctx.fillStyle = `rgba(245,142,155,${flash})`; ctx.fillRect(0, 0, W, H); flash -= .02; }
       if ((frameCount++ & 15) === 0) {
@@ -876,17 +922,50 @@ window.AetherSkirmish = (() => {
         canvas.dataset.score = score; canvas.dataset.streak = bestStreak;
         canvas.dataset.boss = bossEnt?.hp ?? 0;
         canvas.dataset.mode = endless ? 'endless' : 'mission';
+        canvas.dataset.refit = refit || '';
       }
     }
     function tick(now) {
-      if (destroyed) return;
-      if (document.hidden) { last = 0; raf = requestAnimationFrame(tick); return; }
+      // Paused games own no frames: pause() draws one still frame, resume() restarts the loop.
+      if (destroyed || paused) return;
+      if (document.hidden) { last = 0; acc = 0; raf = requestAnimationFrame(tick); return; }
       const elapsed = last ? Math.min(.08, (now - last) / 1000) : 0; last = now;
-      if(paused){draw();raf=requestAnimationFrame(tick);return;}
       if (hitStop > 0 && !reduced()) hitStop -= elapsed;
       else { acc += elapsed; while (acc >= 1 / 120) { step(1 / 120); acc -= 1 / 120; } }
       draw();
+      updateStatus();
       raf = requestAnimationFrame(tick);
+    }
+    function pause() {
+      if (paused || ended || destroyed) return;
+      paused = true; firing = false; keys.clear();
+      if (endless) draftBar.querySelectorAll('button').forEach(button => { button.disabled = true; });
+      acc = 0; last = 0; // no catch-up burst on resume
+      canvas.dataset.paused = 'true';
+      cancelAnimationFrame(raf); raf = 0;
+      tone(360, .1, 'triangle', .035);
+      draw();
+      updateStatus(true);
+    }
+    function resume() {
+      if (!paused || ended || destroyed) return;
+      paused = false;
+      if (endless) draftBar.querySelectorAll('button').forEach(button => { button.disabled = false; });
+      acc = 0; last = 0;
+      canvas.dataset.paused = 'false';
+      tone(660, .1, 'triangle', .035);
+      updateStatus(true);
+      raf = requestAnimationFrame(tick);
+    }
+    let statusNext = 0, statusText = '';
+    function updateStatus(force = false) {
+      const nowMs = performance.now();
+      if (!force && nowMs < statusNext) return;
+      statusNext = nowMs + 500;
+      const text = ended
+        ? (player.hp <= 0 ? `The skiff is lost. Final score ${score}.` : `Hunt complete. Score ${score}.`)
+        : `${paused ? 'Paused. ' : ''}Hull ${Math.ceil(Math.max(0, player.hp))} of ${player.maxHp}. ${boss ? 'Boss: the Umbral Maw.' : `Wave ${Math.max(1, wave)}${endless ? '' : ' of 3'}.`} Score ${score}.`;
+      if (text !== statusText) { statusText = text; srStatus.textContent = text; }
     }
     function point(e) {
       const r = canvas.getBoundingClientRect();
@@ -898,22 +977,29 @@ window.AetherSkirmish = (() => {
     listen(canvas, 'pointerleave', () => { pointerActive = false; firing = false; });
     listen(canvas, 'pointerdown', e => {
       point(e); pointerActive = true; canvas.focus({ preventScroll: true });
-      if (paused) return;
+      if (paused) { resume(); return; } // a deliberate click is a deliberate resume
       if (e.button === 2) tryBurst(); else firing = true;
     });
     listen(window, 'pointerup', () => { firing = false; });
     listen(canvas, 'pointercancel', () => { firing = false; pointerActive = false; });
-    listen(window, 'blur', () => { firing = false; pointerActive = false; keys.clear(); });
+    listen(window, 'blur', () => { firing = false; pointerActive = false; keys.clear(); pause(); });
     listen(canvas, 'contextmenu', e => e.preventDefault());
+    // Menus, dialogs and form fields own their keys; the hunt never steers behind them.
+    const uiOwnsKeys = e => {
+      const t = e.target;
+      if (t instanceof HTMLElement && t !== canvas && (t.isContentEditable || t.closest('input, textarea, select, button, a, [contenteditable], [role="dialog"], [popover]'))) return true;
+      const modal = document.getElementById('modal');
+      if (modal && (modal.open || modal.classList.contains('open'))) return true;
+      return !!document.querySelector('dialog[open]');
+    };
     listen(window, 'keydown', e => {
+      if (uiOwnsKeys(e)) return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) && document.activeElement === canvas) e.preventDefault();
+      if (phase === 'draft' && !e.repeat && document.activeElement === canvas && (k === '1' || k === '2')) { e.preventDefault(); chooseRefit(k === '1' ? 'guard' : 'power'); return; }
+      if (['w', 'a', 's', 'd', 'j', 'z', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) && document.activeElement === canvas) e.preventDefault();
       keys.add(k);
       if (k === ' ' && !e.repeat && document.activeElement === canvas && !paused) tryBurst();
-      if (k === 'p' && !e.repeat && document.activeElement === canvas) {
-        paused = !paused;
-        tone(paused?360:660,.1,'triangle',.035);
-      }
+      if (k === 'p' && !e.repeat) paused ? resume() : pause();
       if (k === 'f' && !e.repeat && document.activeElement === canvas) {
         if (document.fullscreenElement === canvas) document.exitFullscreen?.().catch?.(()=>{});
         else canvas.requestFullscreen?.().catch?.(()=>{});
@@ -938,9 +1024,11 @@ window.AetherSkirmish = (() => {
       abort.abort();
       audio?.close().catch(() => {});
       canvas.remove();
+      draftBar.remove();
+      srStatus.remove();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     }
-    return { destroy, get state() { return { hp: player.hp, wave, dust, kills, phase }; } };
+    return { destroy, pause, resume, get state() { return { hp: player.hp, wave, dust, kills, phase, paused, score, boltsFired: boltCount }; } };
   }
   return { create, INSTRUMENTS, HULLS, SECTORS, ENEMIES };
 })();

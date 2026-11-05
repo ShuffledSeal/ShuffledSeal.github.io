@@ -29,7 +29,7 @@
     let phase = 'build', run = null, ghost = null, lit = new Set(), afterT = 0;
     let banner = null, note = null;
     const g = T.frame(container, W, H, {
-      label: 'The Umbra Terminal. Route the beam to every receiver. Arrow keys move the cursor, 1 and 2 choose mirror or prism, Enter places or turns a piece, E engages the beam.',
+      label: 'The Umbra Terminal. Route the beam to every receiver. Arrow keys move the cursor, 1 and 2 choose mirror or prism, Enter places or turns a piece, E engages the beam. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst } = g;
@@ -320,7 +320,7 @@
       ctx.fillText('T R A Y', 110, GY - 14);
       drawSlot(ctx, 'mirror'); drawSlot(ctx, 'prism');
       ctx.fillStyle = '#b7bda4'; ctx.font = '11px "DM Sans"'; ctx.textAlign = 'left';
-      ['1 · 2 — choose glass', 'click a cell — place', 'click glass — turn', 'right-click — lift', 'E — engage the beam']
+      ['1 · 2 — choose glass', 'click a cell — place', 'click glass — turn', 'right-click — lift', 'E — engage the beam', 'P — pause']
         .forEach((h, i) => ctx.fillText(h, 40, 316 + i * 20));
       // ENGAGE
       const ready = phase === 'build';
@@ -423,7 +423,7 @@
     let reticle = { x: 450, y: 300, on: false };
     let wrongMarks = [], note = null, banner = null;
     const g = T.frame(container, W, H, {
-      label: 'Occultation. One star breathes at its own slow period. Click it before the bell rings. Arrow keys move the reticle, Enter marks.',
+      label: 'Occultation. One star breathes at its own slow period. Click it before the bell rings. Arrow keys move the reticle, Enter marks. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst } = g;
@@ -595,7 +595,7 @@
         ctx.fillText(note.text, 450, 524);
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = '11px "DM Sans"'; ctx.textAlign = 'center';
-      ctx.fillText('click the star that breathes at its own slow period · arrows + Enter mark from the reticle', 450, 546);
+      ctx.fillText('click the star that breathes at its own slow period · arrows + Enter mark from the reticle · P pauses', 450, 546);
     }
     const toGame = e => {
       const r = canvas.getBoundingClientRect();

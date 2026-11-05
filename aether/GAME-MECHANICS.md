@@ -4,10 +4,9 @@
 
 **Where things live:**
 
-- `arcade.js` — the entire game engine: all four games, physics, relics, synergies, power-ups, rendering, input, audio. ~870 lines, one closure per game instance.
+- `arcade.js` — the entire game engine: all four games, physics, relics, synergies, power-ups, rendering, input, audio. ~1745 lines, one closure per game instance.
 - `observatory.js` — the cabinet UI: scoreboard, relic dialog, build panel, recap, persistence, announcements.
 - `GAMEPLAY-EXPANSION-PLAN.md` — the future roadmap (power-up roster, expeditions, bosses).
-- `/tmp/opencode/aether-reports/design-*.md` — fifteen independent design reports behind the roadmap.
 
 ---
 
@@ -76,14 +75,14 @@ Invariants that make daily modes replayable:
 
 - **24 relics**, 6 per game, frozen catalogue in `arcade.js` (`AetherArcade.relics`). **8 synergies**, 2 per game (`AetherArcade.synergies`).
 - Up to **4 drafts per run**. Each draft: sim freezes, a modal offers **3 cards** from that draft's pre-shuffled deck (unowned only), keys 1/2/3 or click, plus an explicit "keep my current build" skip. **Escape is deliberately harmless** (pause instinct ≠ build choice).
-- Draft triggers = per-game milestones, with sim-time drought fallbacks:
+- Draft triggers = per-game milestones, with sim-time drought fallbacks (`arcade.js:89`); drafts are also at least 30 s apart (`MIN_DRAFT_GAP`):
 
 | Game | Milestones (progress) | First fallback | Later fallbacks |
 |---|---|---|---|
-| merge | 3 / 9 / 18 / 30 merges | 12 s | 24 s |
-| hop | 180 / 500 / 1000 / 1600 m | 12 s | 24 s |
-| dash | 5 / 20 / 36 / 55 catches | **8 s** | 24 s |
-| breaker | 6 / 18 / 35 / 60 crystal hits | 12 s | 24 s |
+| merge | 5 / 14 / 28 / 48 merges | 14 s | 34 s |
+| hop | 220 / 550 / 1000 / 1600 m | 14 s | 34 s |
+| dash | 6 / 20 / 38 / 58 catches | **8 s** | 34 s |
+| breaker | 6 / 16 / 32 / 55 crystal hits | 14 s | 34 s |
 
 - Synergies are computed from owned pairs; activating one fires an in-canvas `SYNERGY · NAME` popup, a field ring, and a high tone. Discoveries persist permanently in `voyage.relics` (field guide); powers reset every run.
 - Effects are implemented inline via `has(id)` checks beside the physics — there is no hook system, by design.
@@ -102,6 +101,7 @@ Invariants that make daily modes replayable:
   synergies,                // [{ name, description }]
   stats,                    // { simulationTime, totalMerges, totalCatches, crystalHits, ringsCaught, maxMetres, comets, shields, ... }
   relicProgress,            // { value, target, label }
+  pact,                     // { active, seconds, ready, used, failed } — see 0.8
   pickup,                   // dash: { id, name, glyph, remaining, total } | null
   incoming,                 // dash: { id, name, x } | null  (x enables bots/tests)
 }
@@ -113,11 +113,15 @@ Invariants that make daily modes replayable:
 
 `charge` 0–100, ability button at 100 (X key / tap). Merge +16/merge, breaker +12/hit, dash regenerates 8/s + 7/catch. Hop has no ability (its verb *is* the hold/release).
 
-## 0.8 Feedback primitives (use these, don't invent)
+## 0.8 Stellar Pact (all four games)
+
+Once a run progresses past its threshold (`pactThreshold`: merge 3 merges, hop 350 m, dash 7 catches, breaker 7 hits), the player may invoke a **Stellar Pact** (C key / in-game button, once per run): a **12-second ×2 score** wager (`score` gains are doubled while `pact > 0`). Taking a hit breaks the pact early — **shields cannot absorb that hit**.
+
+## 0.9 Feedback primitives (use these, don't invent)
 
 `burst(x, y, colour, count, force)` particles · `relicField(x, y, radius, colour, life)` expanding ring · `popups.push({x, y, text, colour, life})` floating canvas text · `tone(freq, length, type, volume)` WebAudio blip (gesture-gated, 25 ms retrigger guard) · `shake` / `flash` (suppressed under reduced motion).
 
-## 0.9 Input map
+## 0.10 Input map
 
 | Game | Keyboard | Pointer/touch |
 |---|---|---|
@@ -211,7 +215,11 @@ The skill is *reading the tangent before you commit*. The dotted launch preview 
 - **Win:** survive to 0 s ("Meteor shower: absolutely handled."). 3 lives.
 - **Timer is sacred:** nothing slows `remaining`, spawn cadence, or charge gain — only falling speeds may be slowed.
 
-## Power-ups (the shipped slice)
+## The Moonboat Expedition (shipped)
+
+Two modes share the catcher: **Quick Forecast** is the 75 s instant-retry run above; daily skies take the **expedition** — six authored weathers with per-stage missions (`dashStages`), then the **Umbra Whale** finale at 225 s (catch 20 breath-stars), wrapping at 270 s (`WHALE_AT` / `EXPEDITION_LENGTH`). The last stretch stays gift-free (`giftsUntil` = 67 quick / 255 expedition).
+
+## Power-ups (shipped: five)
 
 Temporary gifts caught like stars, distinct from relics: **active on catch, one timed slot, replace-not-stack, timers freeze with drafts**.
 
@@ -219,10 +227,13 @@ Temporary gifts caught like stars, distinct from relics: **active on catch, one 
 |---|---|---|---|
 | **Lodestone Bloom** | ◎ lilac | **8 s** | `magnet = max(magnet, 8)` — stars arc in from 260 px (300 with Lodestone relic, via existing `magnetReach()`) |
 | **Clock Moth** | ⌛ mint | **6 s** | all falling speeds **×0.55**, uniformly — stars *and* meteors; restores over the remaining window, never instantly |
+| **Moonshield** | ◇ pale green | **3 s** | grants **2 shields** on catch (cap 3) — two meteors bounce off |
+| **Prism Net** | ≋ pink | **8 s** | vertical catch tolerance widens from `r+10` to `r+34` — catch above and below the line |
+| **Star Prism** | ✦ gold | **12 s / 5 charges** | the next **five catches score ×3**; the slot ends when the charges are spent |
 
 **Spawn system (deterministic):** schedule precomputed at `reset()` from `seeded(seed ^ 0x9c4d)` — first gift at **8–12 s**, then every **18–24 s**, never in the last 8 s, ids never repeat back-to-back, lanes rolled in [60, W−60] then nudged along fixed offsets (±80/160/240) until 90 px clear of any high meteor. The course RNG stream is untouched → **daily weather is bit-identical to the pre-pickup game**.
 
-**Feedback contract:** beacon column + `NAME INCOMING` popup for the whole ~4 s fall (≥1.2 s rule) → `POWER UP · NAME` + burst + field + two-tone chime on catch → HUD chip top-left (glyph, name, seconds, draining bar) → `THE MAGIC FADES` at 2 s → per-power expiry line (`THE BLOOM CLOSES` / `THE MOTH FLIES ON`). A missed gift drifts by **without breaking the streak**. `onUpdate` carries `pickup` and `incoming`; `#game-status` announces incoming / active / expired for screen readers.
+**Feedback contract:** beacon column + `NAME INCOMING` popup for the whole ~4 s fall (≥1.2 s rule) → `POWER UP · NAME` + burst + field + two-tone chime on catch → HUD chip top-left (glyph, name, seconds, draining bar) → `THE MAGIC FADES` at 2 s → per-power expiry line (`THE BLOOM CLOSES` / `THE MOTH FLIES ON` / `THE MOON REMEMBERS` / `THE NET FOLDS` / `THE PRISM DIMS`). A missed gift drifts by **without breaking the streak**. `onUpdate` carries `pickup` and `incoming`; `#game-status` announces incoming / active / expired for screen readers.
 
 ## Relics & synergies
 
@@ -247,7 +258,7 @@ Greedy repositioning (Bloom) and precision under pressure (Moth) are the two dec
 - **Arena:** centre (450, 280); paddle rides radius **235** with drawn width matching the *exact* contact test (`235 − 5 − cometRadius`); outer wall at 254, loss past 265.
 - **Paddle:** angle follows pointer angle or ← → (3.5 rad/s); half-arc **0.43 rad** (0.68 while slowed, +0.20 Crescent Crown). Bounce = reflection biased by offset × .8 — **angle your hits to steer**.
 - **Comet:** radius 8 (11 Dense Core), speed floor 285, +4 per paddle return (cap 490). Trail for readability.
-- **Crystals:** three rings (r 62/111/157, counts 6/10/14) rotated by the daily seed; hp 1, armoured hp 2 (34% from level 2). Hit → 25 × min(combo, 8), charge +12.
+- **Crystals:** three rings (r 62/111/157, counts 4/7/10 on wave 1, then 6/10/14) rotated by the daily seed; hp 1, armoured hp 2 (34% from level 2). Hit → 25 × min(combo, 8), charge +12.
 - **Wave clear:** +500, +1 life (cap 3), new board. Launch grace timer 1.2 s (1.25 after a lost comet) orbits the comet safely before release.
 - **THE multiball contract:** *only losing the final comet costs a life* — secondary comets fizz harmlessly. Any future splitter must preserve this.
 - **Slow Orbit (ability):** 5 s at ×0.65 speed (7 s and comets turn inward with Chrono Coil).
@@ -278,17 +289,18 @@ Contact clarity is everything: the drawn paddle *is* the hitbox, and `LAST COMET
 9. **Effects caps:** 280 particles, 14 popups, 3 comets, 4 echoes — the flat-heap, zero-leak record is a release gate.
 10. **Performance gates:** 60 FPS desktop, ~30 FPS under 4× mobile throttle, idle-render behind modals, no per-frame allocations in hot loops, blur banned on mobile/reduced-motion.
 
-## Validation gates (all currently green)
+## Validation gates
+
+Checked-in, reproducible gates (ephemeral `/tmp/opencode/...` scripts are not a suite):
 
 ```sh
-for f in app.js cosmos.js arcade.js observatory.js roomplay.js; do /tmp/opencode/node/bin/node --check "$f"; done
-/tmp/opencode/node/bin/node /tmp/opencode/aether-check/final-quality.cjs        # metadata, engine, axe
-/tmp/opencode/node/bin/node /tmp/opencode/aether-check/relic-and-room-suite.cjs # drafts, rooms, letters, archive
-/tmp/opencode/node/bin/node /tmp/opencode/aether-check/probe-powerups.cjs       # pickup slice
+for f in ./*.js; do node --check "$f" || exit 1; done   # syntax; no dependencies
+npm install                                              # dev-only: Playwright
+npm run test:trials                                      # trial registry check
+npm run test:browser                                     # Playwright browser smoke
 ```
 
 ## Roadmap snapshot (see GAMEPLAY-EXPANSION-PLAN.md)
 
-- **Shipped:** relics + synergies + daily mode + theatre · dash power-up slice (2) · suspended-render fix.
-- **Next:** playtest the slice → +3 dash power-ups (Moonshield, Prism Net, Star Prism) → missions/waves → Umbra Whale finale → Planet Drop Seasons → Comet Surf Skyway → Orbit Breaker Siege → shared extraction → rewards economy (cosmetic only).
-- Design reports for every step are in `/tmp/opencode/aether-reports/design-*.md`.
+- **Shipped:** relics + synergies + daily mode + theatre · dash power-ups (5) · dash Moonboat Expedition with weathers, missions and the Umbra Whale finale · Stellar Pact · suspended-render fix.
+- **Next:** Planet Drop Seasons → Comet Surf Skyway → Orbit Breaker Siege → shared extraction → rewards economy (cosmetic only).

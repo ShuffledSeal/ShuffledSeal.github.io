@@ -1,21 +1,14 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const port = 4174;
 const base = `http://127.0.0.1:${port}`;
-const legacySaveFixture = {
-  'aether-observatory-v1': { name: 'Fixture Keeper', location: 'kyoto', saved: ['saturn'], journal: [] },
-  'aether-grand-tour-v2': {
-    records: { tours: 2, wins: 0, kills: 8, bestDust: 40, bossWins: 0, highScore: 900, bestChain: 3 },
-    // Older active-run records did not carry these optional score fields.
-    active: { seed: 4242, step: 0, hull: 3, maxHull: 3, dust: 10, instruments: [], hullId: 'kite', done: {}, path: [], kills: 0 },
-  },
-  'aether-cartridge-records-v1': { best: { shooter: 321, bastion: 99, labyrinth: 44 } },
-  'aether-wonder-rooms-v1': { discoveries: ['arcade:merge-3'], best: { merge: 120 } },
-  'aether-planet-puzzles-v1': { records: {}, drafts: {}, levels: { saturn: 1 }, endless: {} },
-};
+const fixture = async name => JSON.parse(await readFile(new URL(`fixtures/${name}`, import.meta.url), 'utf8'));
+const legacySaveFixture = await fixture('legacy-saves-v0.json');
+const malformedSaveFixture = await fixture('malformed-saves.json');
 const server = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], {
   cwd: new URL('..', import.meta.url),
   stdio: 'ignore',
@@ -44,7 +37,29 @@ try {
   await page.getByRole('link', { name: /begin your expedition/i }).waitFor({ state: 'visible' });
 
   await page.goto(`${base}/index.html`, { waitUntil: 'networkidle' });
+  await assertVisible(page, '.playground-home');
+  assert.equal(await page.evaluate(() => window.location.hash), '', 'the bare Æther route must open the Observatory overview');
+  await page.goto(`${base}/index.html#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-cabinet');
+  assert.equal(await page.locator('.cartridge-daily-link').count(), 3, 'the three endless cartridges must expose a Daily Vigil');
+  await page.goto(`${base}/index.html?standalone=1&cartridge=labyrinth&challenge=daily#voyage`, { waitUntil: 'networkidle' });
+  const dailyLabyrinth = page.locator('.cartridge-stage .trial-frame canvas');
+  await dailyLabyrinth.waitFor({ state: 'visible' });
+  await assertVisible(page, '[data-labyrinth-action="decoy"]');
+  const firstCourse = await dailyLabyrinth.getAttribute('data-course');
+  assert.ok(firstCourse && firstCourse.includes('|'), 'the daily patrol has a recorded starting formation');
+  await page.reload({ waitUntil: 'networkidle' });
+  await dailyLabyrinth.waitFor({ state: 'visible' });
+  assert.equal(await dailyLabyrinth.getAttribute('data-course'), firstCourse, 'a daily labyrinth must replay the same opening patrol');
+  await page.waitForTimeout(1500);
+  await dailyLabyrinth.focus();
+  await page.keyboard.press('f');
+  await page.waitForFunction(canvas => canvas.dataset.decoy === 'active', await dailyLabyrinth.elementHandle(), { timeout: 4000 });
+  await page.waitForFunction(canvas => Number(canvas.dataset.decoyX) > 0, await dailyLabyrinth.elementHandle());
+  assert.ok(await page.locator('[data-labyrinth-action="decoy"]').isDisabled(), 'a thrown decoy must enter a visible cooldown');
+  await page.goto(`${base}/index.html?standalone=1&cartridge=bastion&challenge=daily#voyage`, { waitUntil: 'networkidle' });
+  await assertVisible(page, '.cartridge-stage .trial-frame canvas');
+  await assertVisible(page, '.cartridge-modes [aria-current="page"]');
   await page.goto(`${base}/index.html?standalone=1&cartridge=shooter#voyage`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(300);
   if (!await page.locator('.cartridge-stage .tour-hunt-frame canvas').count()) throw new Error(`Shooter cartridge did not mount: ${await page.locator('#main').innerText()}\n${browserErrors.join('\n')}`);
@@ -56,6 +71,16 @@ try {
   await assertVisible(page, '.cartridge-stage .trial-frame canvas');
   await page.waitForFunction(canvas => canvas.dataset.mode === 'endless', await page.locator('.cartridge-stage .trial-frame canvas').elementHandle());
   await page.waitForFunction(canvas => canvas.dataset.chamberCount === '4', await page.locator('.cartridge-stage .trial-frame canvas').elementHandle());
+  const stealth = page.locator('.cartridge-stage .trial-frame canvas');
+  await page.waitForFunction(canvas => canvas.dataset.roomTransition === '0.00', await stealth.elementHandle());
+  await stealth.focus();
+  await stealth.press(' ');
+  await page.keyboard.down('d');
+  await page.waitForFunction(canvas => Number(canvas.dataset.playerX) > 418, await stealth.elementHandle(), { timeout: 4000 });
+  await page.keyboard.up('d');
+  await page.keyboard.down('s');
+  await page.waitForFunction(canvas => canvas.dataset.seal === 'collected', await stealth.elementHandle(), { timeout: 3000 });
+  await page.keyboard.up('s');
   await page.evaluate(() => {
     const host = document.createElement('div');
     host.id = 'triune-smoke'; document.body.append(host);
@@ -74,7 +99,10 @@ try {
   assert.ok(starforgeBox, 'the Starforge canvas needs a measurable layout box');
   const socket = (x, y) => ({ x: starforgeBox.width * x, y: starforgeBox.height * y });
   await page.locator('[data-star-tool="mirror"]').click();
+  await starforge.click({ position: socket(.643, .27) });
+  await page.getByText('CHECK THE GATES BEFORE IGNITION', { exact: true }).waitFor({ state: 'visible' });
   await starforge.click({ position: socket(.5, .175) });
+  await page.getByText('NEXT: CONDUCTOR → RIGHT', { exact: true }).waitFor({ state: 'visible' });
   await page.locator('[data-star-tool="conductor"]').click();
   await starforge.click({ position: socket(.702, .5) });
   await page.locator('[data-star-tool="furnace"]').click();
@@ -85,6 +113,25 @@ try {
   await page.waitForFunction(canvas => Number(canvas.dataset.energy) >= 3, await starforge.elementHandle(), { timeout: 12000 });
   await page.waitForSelector('.cartridge-recap', { timeout: 4000 });
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('aether-starforge-v1')).completed), 1, 'a sealed Starforge contract must unlock the next contract');
+
+  await page.evaluate(() => localStorage.setItem('aether-starforge-v1', JSON.stringify({ completed: 0, best: 0 })));
+  await page.reload({ waitUntil: 'networkidle' });
+  const starforgeRace = page.locator('.starforge-canvas');
+  await starforgeRace.waitFor({ state: 'visible' });
+  await page.locator('[data-star-tool="mirror"]').click();
+  await starforgeRace.click({ position: socket(.5, .175) });
+  await page.locator('[data-star-tool="conductor"]').click();
+  await starforgeRace.click({ position: socket(.702, .5) });
+  await page.locator('[data-star-tool="furnace"]').click();
+  await starforgeRace.click({ position: socket(.5, .825) });
+  await page.locator('[data-star-tool="regulator"]').click();
+  await starforgeRace.click({ position: socket(.298, .5) });
+  await page.locator('[data-starforge="run"]').click();
+  await page.waitForFunction(canvas => Number(canvas.dataset.energy) >= 3, await starforgeRace.elementHandle(), { timeout: 12000 });
+  await page.evaluate(() => document.querySelector('[data-starforge="reset"]').click());
+  await page.waitForTimeout(1200);
+  assert.equal(await page.locator('.cartridge-recap').count(), 0, 'a finished-then-reset Starforge must not write a stale recap');
+  assert.ok(await starforgeRace.count(), 'the Starforge canvas must survive the cancelled end timer');
 
   await page.goto(`${base}/index.html?standalone=1#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-cabinet');
@@ -104,14 +151,42 @@ try {
   await page.waitForTimeout(350);
   const after = await arena.getAttribute('data-player-x');
   assert.notEqual(after, before, 'pointer movement must physically move the ship on a scaled canvas');
+
+  await page.keyboard.press('/');
+  await page.locator('#modal[open]').waitFor({ state: 'visible' });
+  await page.waitForFunction(canvas => canvas.dataset.paused === 'true', await arena.elementHandle(), { timeout: 4000 });
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(canvas => canvas.dataset.paused === 'false', await arena.elementHandle(), { timeout: 4000 });
+
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.waitForFunction(canvas => canvas.dataset.paused === 'true', await arena.elementHandle(), { timeout: 4000 });
+  await arena.focus();
+  await page.keyboard.press('p');
+  await page.waitForFunction(canvas => canvas.dataset.paused === 'false', await arena.elementHandle(), { timeout: 4000 });
+
+  const boltsBefore = Number(await arena.getAttribute('data-bolts-fired'));
+  await page.keyboard.down('j');
+  await page.waitForFunction(before => Number(document.querySelector('.tour-hunt-frame canvas').dataset.boltsFired) > before, boltsBefore, { timeout: 4000 });
+  await page.keyboard.up('j');
+
   await page.locator('[data-tour="retreat"]').click();
   await page.locator('.tour-chart').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => {
+    const toast = document.querySelector('#toast');
+    return toast.classList.contains('visible') && /hull/i.test(toast.textContent);
+  }, undefined, { timeout: 4000 });
   const hullAfterRetreat = await page.evaluate(() => JSON.parse(localStorage.getItem('aether-grand-tour-v2')).active.hull);
   assert.equal(hullAfterRetreat, 2, 'aborting a hunt must cost one hull');
   await page.reload({ waitUntil: 'networkidle' });
   await page.locator('.tour-chart').waitFor({ state: 'visible' });
   const hullAfterReload = await page.evaluate(() => JSON.parse(localStorage.getItem('aether-grand-tour-v2')).active.hull);
   assert.equal(hullAfterReload, 2, 'a saved Tour hull must survive a reload');
+  const savedMapBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('aether-grand-tour-v2')).active.map);
+  assert.ok(Array.isArray(savedMapBefore) && savedMapBefore.length === 12, 'an active tour must persist its dealt map');
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.tour-chart').waitFor({ state: 'visible' });
+  const savedMapAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('aether-grand-tour-v2')).active.map);
+  assert.deepEqual(savedMapAfter, savedMapBefore, 'the dealt map must be identical across reloads');
 
   await page.evaluate(() => {
     const host = document.createElement('div');
@@ -133,6 +208,16 @@ try {
   await bastion.press('q');
   await page.waitForFunction(canvas => canvas.dataset.selectedTier === '1' && canvas.dataset.selectedPath === 'left', await bastion.elementHandle());
   await page.evaluate(() => window.__bastionSmoke.destroy());
+  await page.evaluate(() => {
+    window.__prismSmoke = window.AetherTrials.create('bastion', document.querySelector('#bastion-smoke'), { sound: false, seed: 6024, onEnd() {} });
+  });
+  const prism = page.locator('#bastion-smoke canvas');
+  await prism.waitFor({ state: 'visible' });
+  await prism.press('3');
+  const prismBox = await prism.boundingBox();
+  await prism.click({ position: { x: prismBox.width * 456 / 900, y: prismBox.height * 287 / 560 } });
+  await page.waitForFunction(canvas => Number(canvas.dataset.prismShots) >= 1, await prism.elementHandle(), { timeout: 9000 });
+  await page.evaluate(() => { window.__prismSmoke.destroy(); document.querySelector('#bastion-smoke').remove(); });
 
   const trialIds = await page.evaluate(() => window.AetherTrials.list.map(trial => trial.id));
   for (const id of trialIds) {
@@ -145,6 +230,10 @@ try {
     const trialSurface = page.locator('#trial-smoke canvas, #trial-smoke .deepfield-grid');
     if (!await trialSurface.count()) throw new Error(`${id} did not mount an interactive surface under the shared trial host`);
     await page.waitForFunction(surface => surface.getAttribute('role') === 'application' || surface.getAttribute('role') === 'group', await trialSurface.elementHandle());
+    await page.evaluate(() => window.__trialSmoke.pause());
+    await page.waitForFunction(surface => surface.dataset.paused === 'true', await trialSurface.elementHandle(), { timeout: 4000 });
+    await page.evaluate(() => window.__trialSmoke.resume());
+    await page.waitForFunction(surface => surface.dataset.paused !== 'true', await trialSurface.elementHandle(), { timeout: 4000 });
     await page.evaluate(() => { window.__trialSmoke.destroy(); document.querySelector('#trial-smoke').remove(); });
   }
 
@@ -284,9 +373,74 @@ try {
   assert.deepEqual(fixtureErrors, [], `legacy saves must load safely: ${fixtureErrors.join('\n')}`);
   await fixturePage.close();
 
+  const touchPage = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const touchErrors = [];
+  touchPage.on('pageerror', error => touchErrors.push(error.message));
+  await touchPage.addInitScript(() => {
+    const now = new Date(), day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    localStorage.setItem('aether-cartridge-records-v1', JSON.stringify({ best: { labyrinth: 250, [`labyrinth:${day}`]: 77 } }));
+  });
+  await touchPage.goto(`${base}/index.html?standalone=1&cartridge=labyrinth&challenge=daily#voyage`, { waitUntil: 'networkidle' });
+  assert.equal((await touchPage.locator('.cartridge-record strong').textContent())?.trim(), '77', 'Daily Vigil must show its separate local best');
+  assert.ok(await touchPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'the Daily Vigil must fit a phone viewport');
+  const decoyTouch = touchPage.locator('[data-labyrinth-action="decoy"]');
+  await touchPage.waitForFunction(() => !document.querySelector('[data-labyrinth-action="decoy"]').disabled);
+  await decoyTouch.click();
+  await touchPage.waitForFunction(() => document.querySelector('.trial-frame canvas').dataset.decoy === 'active');
+  assert.ok(await decoyTouch.isDisabled(), 'the touch decoy button must enter cooldown after activation');
+  assert.ok(await touchPage.locator('.trial-frame canvas').evaluate(canvas => document.activeElement === canvas), 'gadget buttons must return focus to the game for WASD');
+  await touchPage.keyboard.down('d');
+  await touchPage.waitForFunction(() => Number(document.querySelector('.trial-frame canvas')?.dataset.playerX) > 180, null, { timeout: 3000 });
+  await touchPage.keyboard.up('d');
+  assert.deepEqual(touchErrors, [], `touch Daily Vigil errors: ${touchErrors.join('\n')}`);
+  await touchPage.close();
+
+  const refitPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const refitErrors = [];
+  refitPage.on('pageerror', error => refitErrors.push(error.message));
+  await refitPage.goto(`${base}/index.html#overview`, { waitUntil: 'networkidle' });
+  await refitPage.evaluate(() => {
+    const host = document.createElement('div'); host.id = 'refit-smoke'; document.body.append(host);
+    window.__refitSmoke = window.AetherSkirmish.create(host, { sector: 1, elite: true, endless: true, hull: 'kite', instruments: [], seed: 6024, difficulty: 'standard', sound: false, onEnd() {} });
+  });
+  const refitCanvas = refitPage.locator('#refit-smoke canvas');
+  await refitCanvas.focus();
+  await refitPage.keyboard.down('j');
+  await refitPage.waitForFunction(() => document.querySelector('#refit-smoke canvas')?.dataset.phase === 'draft', null, { timeout: 30000 });
+  await refitPage.keyboard.up('j');
+  await assertVisible(refitPage, '#refit-smoke [data-skirmish-refit="guard"]');
+  const clearedHp = Number(await refitCanvas.getAttribute('data-hp'));
+  await refitPage.keyboard.press('1');
+  await refitPage.waitForFunction(() => document.querySelector('#refit-smoke canvas')?.dataset.refit === 'guard');
+  assert.ok(Number(await refitCanvas.getAttribute('data-hp')) > clearedHp, 'Reinforce must restore plating after a cleared wave');
+  assert.ok(await refitPage.locator('#refit-smoke .skirmish-draft').isHidden(), 'selection must close the breather before combat resumes');
+  await refitPage.evaluate(() => window.__refitSmoke.destroy());
+  assert.deepEqual(refitErrors, [], `endless Skirmish errors: ${refitErrors.join('\n')}`);
+  await refitPage.close();
+
+  const malformedPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const malformedErrors = [];
+  malformedPage.on('pageerror', error => malformedErrors.push(error.message));
+  await malformedPage.addInitScript(fixture => {
+    localStorage.setItem('unrelated-player-data', 'keep me');
+    for (const [key, value] of Object.entries(fixture)) localStorage.setItem(key, JSON.stringify(value));
+  }, malformedSaveFixture);
+  await malformedPage.goto(`${base}/index.html#planet/mercury`, { waitUntil: 'networkidle' });
+  await assertVisible(malformedPage, '#puzzle-board');
+  await malformedPage.goto(`${base}/index.html?standalone=1&cartridge=starforge#voyage`, { waitUntil: 'networkidle' });
+  await malformedPage.waitForFunction(canvas => canvas.dataset.scenario === '1', await malformedPage.locator('.starforge-canvas').elementHandle());
+  await malformedPage.goto(`${base}/index.html#voyage`, { waitUntil: 'networkidle' });
+  await expectText(malformedPage, 'Leg 12 of 12');
+  assert.equal((await malformedPage.locator('.tour-hull').textContent())?.trim(), '♥♡♡', 'invalid hull values must clamp into a survivable recovered run');
+  await expectText(malformedPage, 'Prism Lens');
+  assert.equal(await malformedPage.getByText('not-an-instrument', { exact: false }).count(), 0, 'unknown instruments must not enter a recovered build');
+  assert.equal(await malformedPage.evaluate(() => localStorage.getItem('unrelated-player-data')), 'keep me', 'save recovery must not clear unrelated player data');
+  assert.deepEqual(malformedErrors, [], `wrong-shaped saves must recover safely: ${malformedErrors.join('\n')}`);
+  await malformedPage.close();
+
   assert.deepEqual(browserErrors, [], `browser errors: ${browserErrors.join('\n')}`);
   await browser.close();
-  console.log('Browser smoke passed: landing, cartridge persistence, all registered trials, arcade selection, calendar/journal/puzzle routes, Wonder Rooms, narrow-screen Starforge, save recovery, pointer flight, Comet Surf cancellation, retreat cost, and Bastion upgrades.');
+  console.log('Browser smoke passed: overview, daily records, seeded patrols, keyboard-steered Labyrinth seal/decoy, seeded Skirmish refit, Starforge mirror relocation and first contract, Bastion Prism fire and upgrades, all 16 trials, saves, navigation and teardown.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});

@@ -4,7 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#080f1b" />
-  <meta name="description" content="Æther: The Grand Tour. Twelve legs through the cosmic dark. Twin-stick hunts, tactical defence, stealth expeditions and sixteen run-changing instruments in a complete browser arcade." />
+  <meta name="description" content="Æther: The Grand Tour. Twelve legs through the cosmic dark. Mouse-piloted hunts, tactical defence, stealth expeditions and run-changing instruments in a growing, offline-first browser arcade." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Æther — The Grand Tour" />
+  <meta property="og:description" content="Twelve legs through the cosmic dark: mouse-piloted hunts, tactical defence, stealth expeditions and run-changing instruments in a growing, offline-first browser game." />
   <title>Æther — The Grand Tour | Enter the Expedition</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <style>
@@ -37,7 +40,7 @@
     .art-frame:hover{transform:rotate(0deg) translateY(-7px)}
     .art-frame img{width:100%;display:block;aspect-ratio:8/5;object-fit:cover;border:1px solid #dbc9a148}
     .art-footer{display:flex;justify-content:space-between;gap:15px;font-size:9px;letter-spacing:.15em;color:#e3d2a8;padding:13px 0 0}
-    .seal{position:absolute;right:-22px;bottom:-37px;width:121px;aspect-ratio:1;border:1px solid #e5d39aa6;outline:6px solid #091521;display:grid;place-content:center;text-align:center;border-radius:50%;background:linear-gradient(150deg,#1d3540,#152126);transform:rotate(12deg);box-shadow:0 6px 24px #050b13a8}
+    .seal{position:absolute;right:-18px;top:-30px;z-index:2;width:121px;aspect-ratio:1;border:1px solid #e5d39aa6;outline:6px solid #091521;display:grid;place-content:center;text-align:center;border-radius:50%;background:linear-gradient(150deg,#1d3540,#152126);transform:rotate(12deg);box-shadow:0 6px 24px #050b13a8}
     .seal strong{font:35px Cormorant,serif;color:var(--gold)}.seal small{font-size:7px;letter-spacing:.15em;color:#c4d3d0}
     .statbar{border-top:1px solid #cbbb9966;border-bottom:1px solid #cbbb9966;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:24px 0;gap:25px}
     .stat{padding:7px 0 9px;border-right:1px solid #ceba9740}.stat:last-child{border:0}
@@ -59,20 +62,20 @@
     .finale{text-align:center;padding:80px 0 115px}.finale h2{font:clamp(54px,6.9vw,105px)/.9 Cormorant,Georgia,serif;margin:0 auto 30px;max-width:860px;color:#e9debF}.finale .button{margin:auto}
     .footer{display:flex;justify-content:space-between;gap:25px;border-top:1px solid #ccb78e55;padding:26px 0 50px;color:#91a8a6;font-size:10px;letter-spacing:.1em;line-height:1.8}
     @media(max-width:930px){.hero{grid-template-columns:1fr;min-height:0;gap:45px}.hero h1{font-size:clamp(70px,14vw,115px)}.hero-visual{max-width:750px}.experiences{grid-template-columns:1fr 1fr}.manifesto{grid-template-columns:1fr}.section-head{display:block}.section-head p:last-child{max-width:560px}}
-    @media(max-width:650px){.nav-links{gap:12px;font-size:9px}.nav-links a:first-child{display:none}.mark{font-size:22px}.hero{padding:50px 0}.seal{width:88px;right:-8px;bottom:-20px}.seal strong{font-size:25px}.statbar{grid-template-columns:1fr 1fr}.stat:nth-child(2){border:0}.stat strong{font-size:38px}.experiences{grid-template-columns:1fr}.section{padding-top:80px}.manifesto{margin:60px 0}.footer{flex-direction:column}}
+    @media(max-width:650px){.nav-links{gap:12px;font-size:9px}.nav-links a:first-child{display:none}.mark{font-size:20px;gap:10px}.mark-suffix{display:none}.hero{padding:50px 0}.seal{width:88px;right:-6px;top:-16px}.seal strong{font-size:25px}.statbar{grid-template-columns:1fr 1fr}.stat:nth-child(2){border:0}.stat strong{font-size:38px}.experiences{grid-template-columns:1fr}.section{padding-top:80px}.manifesto{margin:60px 0}.footer{flex-direction:column}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
 <body>
-  <header class="site-nav"><a class="mark" href="grand-tour.html"><span class="mark-star">✧</span> ÆTHER <span aria-hidden="true">/</span> GRAND TOUR</a><nav class="nav-links" aria-label="Primary"><a href="#cartridges">THE CARTRIDGES</a><a href="#manifesto">FIELD NOTES</a><a href="index.html#overview">THE OBSERVATORY</a></nav></header>
+  <header class="site-nav"><a class="mark" href="grand-tour.html"><span class="mark-star">✧</span> ÆTHER <span class="mark-suffix" aria-hidden="true">/</span> <span class="mark-suffix">GRAND TOUR</span></a><nav class="nav-links" aria-label="Primary"><a href="#cartridges">THE CARTRIDGES</a><a href="#manifesto">FIELD NOTES</a><a href="index.html#overview">THE OBSERVATORY</a></nav></header>
   <div class="page">
     <main>
       <section class="hero"><div>
         <p class="eyebrow">THE GRAND TOUR · THE CARTOGRAPHER'S EDITION</p>
         <h1>The sky<br />is <em>not</em><br />empty.</h1>
         <p class="intro">A twelve-leg voyage through impossible skies, strange machinery, and the distant edge of everything.</p>
-        <p class="support">Pilot a hand-built starship. Fight creatures made of light. Outsmart watchers in the ruins of old observatories. Forge ridiculous machines to hold the last star. Every decision bends the next journey.</p>
-        <div class="button-row"><a class="button" href="index.html?standalone=1#voyage">BEGIN YOUR EXPEDITION <span aria-hidden="true">✦</span></a><a class="button button-ghost" href="#cartridges">DISCOVER THE GAMES</a></div>
+        <p class="support">Pilot a hand-built starship. Fight creatures made of light. Outsmart watchers in the ruins of old observatories. Forge strange machines to hold the last star. Every decision bends the next journey.</p>
+        <div class="button-row"><a class="button" href="index.html?standalone=1&tour=1#voyage">BEGIN YOUR EXPEDITION <span aria-hidden="true">✦</span></a><a class="button button-ghost" href="#cartridges">DISCOVER THE GAMES</a></div>
         <p class="fineprint">PLAY IN YOUR BROWSER · NO INSTALLER · LOCAL SAVE · KEYBOARD AND MOUSE</p>
       </div><div class="hero-visual"><div class="art-frame"><img src="assets/combat-preview.webp" alt="An actual Grand Tour encounter: a painted starfield, planetary rings, enemy ships and the player skiff." /><div class="art-footer"><span>FLIGHT RECORDER · 01 / 12</span><span>THE INNER WORLDS · EXPEDITION ARCHIVE</span></div></div><div class="seal"><strong>Æ</strong><small>THE STAR<br />KEEPERS' GUILD</small></div></div></section>
         <div class="statbar" aria-label="Game content"><div class="stat"><strong>12</strong><small>Legs of the voyage</small></div><div class="stat"><strong>16</strong><small>Different trials</small></div><div class="stat"><strong>16</strong><small>Run-changing instruments</small></div><div class="stat"><strong>4</strong><small>Distinct ship hulls</small></div></div>
@@ -83,9 +86,9 @@
         <article class="experience"><img src="assets/labyrinth-preview.webp" alt="An overhead stealth labyrinth with guards casting search cones" loading="lazy"/><div class="content"><span class="number">03 · ADVENTURE</span><h3>Steal the light back.</h3><p>Four chambers of shifting patrols. Read visible sentry cones, cloak through fields, collect starkeys, then choose two of three routes through the Triune Archive.</p><p><a href="index.html?standalone=1&cartridge=labyrinth#voyage">PLAY GLASS LABYRINTH →</a></p></div></article>
       </div></section>
         <section id="manifesto" class="manifesto"><div><p class="eyebrow">THE SHAPE OF A JOURNEY</p><h2>No two skies<br /><em>quite alike.</em></h2></div><p>One run takes you from Mercury's warm light to Neptune's dead-cold relay. Between hunts you'll find puzzles, instruments, a chandlery, strange bargains and sanctuaries. A dead ship resets the expedition; your records, unlocked hulls and the stories you've gathered carry forward.</p><ul><li>Three selectable difficulties, from Wanderer to Eclipse.</li><li>Rule-altering instruments: gravity wells, piercing beams, aurora healing and more.</li><li>Sixteen playable trials, including stealth, strategy, puzzle and timing expeditions.</li><li>Permanent records, discoverable builds, and four ship profiles.</li><li>Hand-drawn procedural atmosphere and synthesised sound, entirely offline.</li></ul><p>Designed as an exploratory browser game, with no account or telemetry. Your progress stays on your device.</p></section>
-      <section class="finale"><p class="eyebrow">THE OBSERVATORY IS WAITING</p><h2>Even the dark<br /><em>has something to say.</em></h2><a class="button" href="index.html?standalone=1#voyage">ENTER THE GRAND TOUR <span aria-hidden="true">✦</span></a></section>
+      <section class="finale"><p class="eyebrow">THE OBSERVATORY IS WAITING</p><h2>Even the dark<br /><em>has something to say.</em></h2><a class="button" href="index.html?standalone=1&tour=1#voyage">ENTER THE GRAND TOUR <span aria-hidden="true">✦</span></a></section>
     </main>
-    <footer class="footer"><span>ÆTHER · A GAME OF DISTANT PLACES</span><span>AN ORIGINAL, OFFLINE-FIRST BROWSER EXPERIENCE</span><a href="index.html#overview">RETURN TO THE OBSERVATORY</a></footer>
+    <footer class="footer"><span>ÆTHER · A GAME OF DISTANT PLACES</span><span>A LIVING BUILD — NEW EXPEDITIONS ADDED REGULARLY</span><span>MADE BY <a href="../">SHUFFLEDSEAL</a></span><a href="index.html#overview">RETURN TO THE OBSERVATORY</a></footer>
   </div>
 </body>
 </html>

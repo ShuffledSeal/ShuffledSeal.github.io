@@ -54,7 +54,7 @@
     let msg = '', msgUntil = 0;
 
     const g = frame(container, W, H, {
-      label: 'The Aurora Loom. Weave each pair of matching anchors with a ribbon that crosses nothing. Drag between anchors, or click each in turn, or press 1 to 5 and weave with the arrow keys. Escape releases a ribbon.',
+      label: 'The Aurora Loom. Weave each pair of matching anchors with a ribbon that crosses nothing. Drag between anchors, or click each in turn, or press 1 to 5 and weave with the arrow keys. Escape releases a ribbon. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -203,7 +203,7 @@
     function end(won) {
       if (over) return; over = 1;
       const score = Math.round(totalScore * (verbs.has('trail') ? 1.25 : 1));
-      g.after(() => { options.onEnd({ won, score }); g.destroy(); }, 900);
+      g.after(() => { g.destroy(); options.onEnd({ won, score }); }, 900);
     }
     function step() {
       if (over) return;
@@ -351,7 +351,7 @@
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = '11px "DM Sans"'; ctx.textAlign = 'center';
-      ctx.fillText(!draft ? 'Drag between matching anchors · or press 1–5 and weave with arrow keys · U unweaves a ribbon'
+      ctx.fillText(!draft ? 'Drag between matching anchors · or press 1–5 and weave with arrow keys · U unweaves a ribbon · P pauses'
         : draft.parked ? 'Click the anchor to set the ribbon — or Escape to release it'
         : 'Weave to the matching anchor. Cross nothing — not ribbon, not anchor, not cloud.', 450, H - 16);
     }
@@ -455,7 +455,7 @@
     let summaryAt = 0, over = 0;
 
     const g = frame(container, W, H, {
-      label: 'The Alignment Clock. Four hands orbit at rising speeds. Press 1 to 4, or click a hand, to still it inside its brass arc.',
+      label: 'The Alignment Clock. Four hands orbit at rising speeds. Press 1 to 4, or click a hand, to still it inside its brass arc. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -509,7 +509,7 @@
     }
     function end(won, score) {
       if (over) return; over = 1;
-      g.after(() => { options.onEnd({ won, score }); g.destroy(); }, 900);
+      g.after(() => { g.destroy(); options.onEnd({ won, score }); }, 900);
     }
     function step() {
       if (over) return;
@@ -592,7 +592,7 @@
       ctx.textAlign = 'right';
       ctx.fillText(done.length ? `AVERAGE ${Math.round(done.reduce((a, b) => a + b, 0) / done.length * 100)}%` : 'AVERAGE —', W - 20, 30);
       ctx.fillStyle = '#b7bda4'; ctx.font = '11px "DM Sans"'; ctx.textAlign = 'center';
-      ctx.fillText(`Still each hand as it crosses its mark — click a hand or press 1–4${verbs.has('echo') ? ' · the echo re-spins a stilled hand once' : ''}`, 450, H - 16);
+      ctx.fillText(`Still each hand as it crosses its mark — click a hand or press 1–4 · P pauses${verbs.has('echo') ? ' · the echo re-spins a stilled hand once' : ''}`, 450, H - 16);
     }
     listen(canvas, 'keydown', e => {
       const i = ['1', '2', '3', '4'].indexOf(e.key);

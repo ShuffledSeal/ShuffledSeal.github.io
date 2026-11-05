@@ -20,6 +20,7 @@ window.AetherTrials = (() => {
     const abort = new AbortController();
     const listen = (el, type, fn, opts) => el.addEventListener(type, fn, { ...opts, signal: abort.signal });
     let destroyed = false, raf = 0, last = 0, acc = 0, clock = 0, audio, audioGain, sound = hooks.sound !== false;
+    let paused = false;
     const timers = new Set();
     const after = (fn, delay) => {
       const timer = setTimeout(() => {
@@ -72,9 +73,51 @@ window.AetherTrials = (() => {
       drawParticles(dt);
       raf = requestAnimationFrame(tick);
     }
+    // Pausing freezes the simulation behind a static frame with an overlay;
+    // resuming resets the frame timestamps and accumulator so there is no
+    // catch-up burst. Both are idempotent and safe after destroy.
+    function paintPaused() {
+      try { hooks.draw?.(ctx, 0, clock); drawParticles(0); } catch {}
+      ctx.save();
+      ctx.fillStyle = 'rgba(8,12,16,.66)'; ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = '#e9dcae'; ctx.font = '600 26px "DM Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', width / 2, height / 2 - 8);
+      ctx.fillStyle = '#b7bda4'; ctx.font = '13px "DM Sans", sans-serif';
+      ctx.fillText('Press P to resume', width / 2, height / 2 + 20);
+      ctx.restore();
+    }
+    function pause() {
+      if (destroyed || paused) return;
+      paused = true;
+      cancelAnimationFrame(raf); raf = 0;
+      canvas.setAttribute('data-paused', 'true');
+      paintPaused();
+    }
+    function resume() {
+      if (destroyed || !paused) return;
+      paused = false;
+      canvas.removeAttribute('data-paused');
+      last = 0; acc = 0;
+      raf = requestAnimationFrame(tick);
+    }
+    // P toggles pause only while the trial surface holds focus. While paused,
+    // further canvas input is swallowed so the frozen scene cannot be moved.
+    listen(canvas, 'keydown', e => {
+      if (e.key.toLowerCase() === 'p') { e.preventDefault(); paused ? resume() : pause(); return; }
+      if (paused) {
+        if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    });
+    const eatWhilePaused = e => { if (paused) e.stopImmediatePropagation(); };
+    listen(canvas, 'pointerdown', eatWhilePaused);
+    listen(canvas, 'pointermove', eatWhilePaused);
+    listen(canvas, 'pointerup', eatWhilePaused);
+    listen(window, 'blur', pause);
     raf = requestAnimationFrame(tick);
     return {
-      canvas, ctx, listen, tone, burst, particles, drawParticles, starfield, after,
+      canvas, ctx, listen, tone, burst, particles, drawParticles, starfield, after, pause, resume,
+      get paused() { return paused; },
       get clock() { return clock; },
       destroy() {
         if (destroyed) return;
@@ -95,7 +138,7 @@ window.AetherTrials = (() => {
   // the gold window; the closer to the rim, the brighter the parry.
   function flare(container, options) {
     const W = 900, H = 560;
-    const g = frame(container, W, H, { label: 'Solar Shield. Block flares with the matching arrow key or by tapping that side of the sun.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'Solar Shield. Block flares with the matching arrow key or by tapping that side of the sun. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(41);
     const scale = options.speedScale || 1;
@@ -183,7 +226,7 @@ window.AetherTrials = (() => {
     const W = 900, H = 560;
     let state = { sun: { x: 450, y: 280, r: 58 }, moon: { x: 180, y: 420, r: 40 }, round: 0, hold: 0, best: 0, drift: 0 };
     const scores = [];
-    const g = frame(container, W, H, { label: 'Syzygy. Drag the moon over the sun and hold the alignment.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'Syzygy. Drag the moon over the sun and hold the alignment. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(77, 60);
     let pointer = null, over = 0;
@@ -242,7 +285,7 @@ window.AetherTrials = (() => {
       ctx.fillText(`TOTALITY ${['Ⅰ', 'Ⅱ', 'Ⅲ'][Math.min(2, state.round)]} · ${scores.join(' · ') || '—'}`, 20, 30);
       ctx.fillStyle = '#d8c48b'; ctx.fillRect(20, H - 30, (W - 40) * clamp(state.hold / 2.2, 0, 1), 4);
       ctx.fillStyle = '#b7bda4'; ctx.font = '11px "DM Sans"'; ctx.textAlign = 'center';
-      ctx.fillText(cover > .82 ? 'Hold the shadow…' : 'Drag the moon over the sun', 450, H - 16);
+      ctx.fillText(cover > .82 ? 'Hold the shadow…' : 'Drag the moon over the sun · P pauses', 450, H - 16);
     }
     const move = e => {
       const r = canvas.getBoundingClientRect();
@@ -279,7 +322,7 @@ window.AetherTrials = (() => {
     }
     reset();
     const keys = new Set();
-    const g = frame(container, W, H, { label: 'Debris Field. Steer with arrow keys, fire with Space. Break every rock.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'Debris Field. Steer with arrow keys, fire with Space. Break every rock. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(99, 70);
     function end(won) { if (over) return; over = 1; g.after(() => { g.destroy(); options.onEnd({ won, score: Math.round(score) }); }, 600); }
@@ -367,7 +410,7 @@ window.AetherTrials = (() => {
     const scale = options.speedScale || 1;
     let head = { x: 450, y: 280 }, trail = [], ices = [], score = 0, over = 0, dir = { x: 1, y: 0 }, target = 40, forgiven = false;
     let growClock = 0;
-    const g = frame(container, W, H, { label: 'Ice Tail. Steer the comet, gather ice, never cross your own tail.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'Ice Tail. Steer the comet, gather ice, never cross your own tail. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(55, 80);
     const place = () => ices.push({ x: 60 + Math.random() * (W - 120), y: 60 + Math.random() * (H - 120) });
@@ -457,10 +500,34 @@ window.AetherTrials = (() => {
     }
     const verbs = options.verbs || new Set();
     const status = document.createElement('p'); status.className = 'deepfield-status'; status.setAttribute('role', 'status');
-    const board = document.createElement('div'); board.className = 'deepfield-grid'; board.setAttribute('role', 'group'); board.setAttribute('aria-label', 'Deep field survey. Reveal every safe sector; flag the supernovae.');
-    container.append(status, board);
+    const board = document.createElement('div'); board.className = 'deepfield-grid'; board.setAttribute('role', 'group'); board.setAttribute('aria-label', 'Deep field survey. Reveal every safe sector; flag the supernovae. Press P to pause.');
+    board.tabIndex = 0; // voyage focuses the trial surface; a div needs this
+    const badge = document.createElement('p'); badge.className = 'deepfield-paused'; badge.hidden = true;
+    badge.style.cssText = 'margin:.4em 0;font-weight:600;color:#e9dcae;';
+    badge.textContent = '❚❚ Paused — press P to resume.';
+    container.append(status, board, badge);
     const abort = new AbortController();
-    let destroyed = false, endTimer = 0;
+    let destroyed = false, endTimer = 0, paused = false;
+    function pause() {
+      if (destroyed || paused) return;
+      paused = true;
+      board.setAttribute('data-paused', 'true');
+      board.inert = true;
+      board.style.opacity = '.45';
+      badge.hidden = false;
+    }
+    function resume() {
+      if (destroyed || !paused) return;
+      paused = false;
+      board.removeAttribute('data-paused');
+      board.inert = false;
+      board.style.opacity = '';
+      badge.hidden = true;
+    }
+    board.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 'p') { e.preventDefault(); paused ? resume() : pause(); }
+    }, { signal: abort.signal });
+    window.addEventListener('blur', () => pause(), { signal: abort.signal });
     function end(won) {
       if (over) return; over = 1;
       endTimer = setTimeout(() => {
@@ -469,7 +536,7 @@ window.AetherTrials = (() => {
       }, 800);
     }
     function reveal(p) {
-      if (!alive || revealed.has(p) || flagged.has(p)) return;
+      if (!alive || paused || revealed.has(p) || flagged.has(p)) return;
       revealed.add(p);
       const cell = board.children[p];
       cell.classList.add('revealed'); cell.disabled = true;
@@ -505,8 +572,8 @@ window.AetherTrials = (() => {
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) cell.addEventListener(ev, () => clearTimeout(hold), { signal: abort.signal });
       board.appendChild(cell);
     }
-    status.textContent = `${novae} supernovae hide in the field. Right-click, long-press, or press F to flag.`;
-    return { canvas: board, destroy() { destroyed = true; clearTimeout(endTimer); abort.abort(); } };
+    status.textContent = `${novae} supernovae hide in the field. Right-click, long-press, or press F to flag. Press P to pause.`;
+    return { canvas: board, pause, resume, get paused() { return paused; }, destroy() { destroyed = true; clearTimeout(endTimer); abort.abort(); } };
   }
 
   // ── The long way round · Free Return ────────────────────────────────────
@@ -516,7 +583,7 @@ window.AetherTrials = (() => {
     const planets = [{ x: 560, y: 200, r: 44, m: 52000 }, { x: 330, y: 400, r: 30, m: 24000 }];
     const target = { x: 800, y: 460, r: 34 };
     let probe = { x: 110, y: 110, vx: 0, vy: 0 }, flying = false, trace = [], attempts = 3, aim = null, over = 0, won = false;
-    const g = frame(container, W, H, { label: 'Free Return. Drag from the probe to aim a gravity-assist to the target beacon.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'Free Return. Drag from the probe to aim a gravity-assist to the target beacon. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(31, 60);
     function end(w) { if (over) return; over = 1; won = w; g.after(() => { g.destroy(); options.onEnd({ won: w, score: w ? 350 + (3 - attempts) * 150 : 40 }); }, 700); }
@@ -572,7 +639,7 @@ window.AetherTrials = (() => {
       ctx.fillStyle = '#e9dcae'; ctx.font = '600 15px "DM Sans"'; ctx.textAlign = 'left';
       ctx.fillText(`ATTEMPTS ${'◆'.repeat(attempts)}`, 20, 30);
       ctx.fillStyle = '#b7bda4'; ctx.font = '11px "DM Sans"'; ctx.textAlign = 'center';
-      if (!flying && !over) ctx.fillText('Drag from the probe to set its course. The wells bend everything.', 450, H - 16);
+      if (!flying && !over) ctx.fillText('Drag from the probe to set its course. The wells bend everything. · P pauses', 450, H - 16);
     }
     listen(canvas, 'pointerdown', e => {
       if (flying || over) return;
@@ -597,7 +664,7 @@ window.AetherTrials = (() => {
     const W = 900, H = 560;
     const pad = { x: 620, w: 110 };
     let craft = { x: 170, y: 90, vx: 30, vy: 0, a: 0 }, fuel = 100, over = 0, dust = [], forgiven = false;
-    const g = frame(container, W, H, { label: 'The Descent. Rotate with arrow keys, thrust with Up or Space. Land gently on the pad.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'The Descent. Rotate with arrow keys, thrust with Up or Space. Land gently on the pad. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(83, 44);
     const keys = new Set();
@@ -672,7 +739,7 @@ window.AetherTrials = (() => {
     const W = 900, H = 560;
     const scale = options.speedScale || 1;
     let moonlets = [], paddle = { y: 280 }, escapes = 0, score = 0, saved = 0, over = 0, spawnAt = 0, clockLocal = 0;
-    const g = frame(container, W, H, { label: 'Shepherd. Keep the moonlets inside the ring with your paddle.', sound: options.sound, step, draw });
+    const g = frame(container, W, H, { label: 'Shepherd. Keep the moonlets inside the ring with your paddle. Press P to pause.', sound: options.sound, step, draw });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(66, 60);
     function end(won) { if (over) return; over = 1; g.after(() => { g.destroy(); options.onEnd({ won, score: Math.round(score) }); }, 600); }
@@ -739,7 +806,7 @@ window.AetherTrials = (() => {
     const keys = new Set();
     listen(canvas, 'keydown', e => { if (['ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); keys.add(e.key); } });
     listen(window, 'keyup', e => keys.delete(e.key));
-    const keyStep = () => { if (keys.has('ArrowUp')) paddle.y = clamp(paddle.y - 7, 130, 430); if (keys.has('ArrowDown')) paddle.y = clamp(paddle.y + 7, 130, 430); };
+    const keyStep = () => { if (g.paused) return; if (keys.has('ArrowUp')) paddle.y = clamp(paddle.y - 7, 130, 430); if (keys.has('ArrowDown')) paddle.y = clamp(paddle.y + 7, 130, 430); };
     const keyTimer = setInterval(keyStep, 16);
     const origDestroy = g.destroy;
     g.destroy = () => { clearInterval(keyTimer); origDestroy(); };

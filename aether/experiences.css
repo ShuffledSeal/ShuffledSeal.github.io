@@ -468,8 +468,8 @@
 .cabinet-empty h2 { font-size: 37px; margin: 16px 0; }
 .cabinet-empty p { max-width: 420px; font-size: 12px; line-height: 1.9; color: #b2bea9; margin-bottom: 22px; }
 
-body[data-observatory-theme="midnight"] { --bg: #121b29; --sidebar: #101723; --panel: #192431; --muted: #9baabb; --line: #b4bcd128; --gold: #bdafd7; --gold-bright: #dacbfa; --exp-muted: #a9b6c3; --exp-border: #c8b8df33; background: var(--bg); }
-body[data-observatory-theme="rose"] { --bg: #251d23; --sidebar: #1c171d; --panel: #2d222a; --muted: #b4a3ab; --line: #cbb4b528; --gold: #d2ad9d; --gold-bright: #f0cbbb; --exp-muted: #bdadb3; --exp-border: #d6b5aa33; background: var(--bg); }
+/* Theme variable sets (midnight / rose) live solely in atelier.css — it loads
+   last and owns the shared art direction. Only component-level rules remain here. */
 body[data-observatory-theme="midnight"] .instrument-panel, body[data-observatory-theme="rose"] .instrument-panel { background: var(--panel); }
 body[data-observatory-theme="rose"] .keepsake { background: #2b222c; }
 body[data-observatory-theme="midnight"] .keepsake { background: #192634; }

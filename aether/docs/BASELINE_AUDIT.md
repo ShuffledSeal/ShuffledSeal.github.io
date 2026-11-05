@@ -1,13 +1,13 @@
 # Æther Baseline Audit
 
 **Date:** 2026-11-04
-**Repository:** `/home/abdoodly/projects/ShuffledSeal.github.io-unstable`
-**Branch / commit:** `master` / `f3442a7`
+**Repository:** the `aether/` subdirectory of the `ShuffledSeal.github.io` GitHub Pages repository
+**Branch / commit:** `main` / `8cfd823`, plus uncommitted working-tree changes (versioned save fixtures under `tests/fixtures/`, save-recovery coverage in `tests/browser-smoke.mjs` and `voyage.js`, and documentation edits)
 
 ## Runtime And Entry Points
 
 - Static vanilla HTML, CSS, and JavaScript; Canvas 2D and Web Audio.
-- `/aether/` defaults to the Game Cartridges cabinet. The Observatory overview remains available through the sidebar.
+- `/aether/` defaults to the Observatory overview. The Game Cartridges cabinet is at `#voyage`.
 - `index.html` loads shared app code, arcade games, Tour/cartridge systems, trials, and wonder rooms with deferred scripts.
 - `grand-tour.html` remains a separate public expedition entry point.
 
@@ -37,12 +37,13 @@
 
 - `for f in ./*.js; do node --check "$f" || exit 1; done` passed before the current documentation increment.
 - `npm run test:trials` verifies 16 registered Grand Tour trials.
-- `npm run test:browser` verifies root cartridge landing, direct cartridge mounting, valid legacy-save loading, Tour pointer flight, retreat persistence across reload, corrupt-save recovery, scaled Comet Surf cancellation, Wonder Room pointer recovery, and Bastion upgrades.
+- `npm run test:browser` verifies root cartridge landing, direct cartridge mounting, mount/teardown of every registered trial, arcade game selection, calendar/journal/puzzle routes, Wonder Room routes with telescope/world pointer recovery, Tour pointer flight and retreat persistence across reload, scaled Comet Surf pointer-cancel handling, narrow-screen Starforge layout, Bastion site/upgrade flow, and uncaught browser errors.
+- Save safety coverage (working tree; fixtures not yet committed): `tests/fixtures/legacy-saves-v0.json` loads cleanly, `tests/fixtures/malformed-saves.json` recovers with hull values clamped and unknown instruments rejected, corrupt JSON falls back safely, and unrelated localStorage keys are preserved.
 
 ## Confirmed Gaps
 
 1. Browser smoke does not yet exercise all four arcade games, every trial lifecycle, or wonder-room save/reload flows.
-2. Explicit versioned migrations do not yet exist for the six storage contracts; new schema changes need fixture coverage before release.
+2. The Grand Tour now has a versioned, fixture-covered migration boundary; other save schemas still need an explicit version before their next structural change.
 3. Mobile touch, reduced-motion, browser zoom, and performance evidence are not yet recorded.
 4. No performance baseline is currently measured; do not claim performance optimisation without one.
 5. The deployed GitHub Pages cache may lag a pushed commit; verify the public route after each publish.

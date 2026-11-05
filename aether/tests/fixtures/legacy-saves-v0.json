@@ -1,0 +1,11 @@
+{
+  "aether-observatory-v1": { "name": "Fixture Keeper", "location": "kyoto", "saved": ["saturn"], "journal": [] },
+  "aether-grand-tour-v2": {
+    "records": { "tours": 2, "wins": 0, "kills": 8, "bestDust": 40, "bossWins": 0, "highScore": 900, "bestChain": 3 },
+    "active": { "seed": 4242, "step": 0, "hull": 3, "maxHull": 3, "dust": 10, "instruments": [], "hullId": "kite", "done": {}, "path": [], "kills": 0 }
+  },
+  "aether-cartridge-records-v1": { "best": { "shooter": 321, "bastion": 99, "labyrinth": 44 } },
+  "aether-wonder-rooms-v1": { "discoveries": ["arcade:merge-3"], "best": { "merge": 120 } },
+  "aether-planet-puzzles-v1": { "records": {}, "drafts": {}, "levels": { "saturn": 1 }, "endless": {} },
+  "aether-starforge-v1": { "completed": 1, "best": 3 }
+}

@@ -1,0 +1,26 @@
+{
+  "aether-observatory-v1": { "name": ["not a name"], "location": "nowhere", "saved": "saturn", "journal": {} },
+  "aether-grand-tour-v2": {
+    "version": 0,
+    "records": { "tours": -9, "wins": "many", "kills": 1e309 },
+    "active": {
+      "seed": 19,
+      "step": 999,
+      "difficulty": "impossible",
+      "hull": -4,
+      "maxHull": "three",
+      "dust": -100,
+      "instruments": ["prism-lens", "prism-lens", "not-an-instrument"],
+      "hullId": "__proto__",
+      "done": { "0:0": "won", "bad": "won", "1:0": "maybe" },
+      "path": [12, "A valid log line"],
+      "kills": -2,
+      "highScore": "huge",
+      "bestChain": null
+    }
+  },
+  "aether-cartridge-records-v1": { "best": ["wrong shape"] },
+  "aether-wonder-rooms-v1": { "discoveries": [null, "bad space", "arcade:dash-10"], "photos": "many", "best": [] },
+  "aether-planet-puzzles-v1": { "records": [], "drafts": { "mercury:0": { "actions": [null, { "type": "cell", "value": 999999 }] } }, "levels": { "mercury": 99 }, "endless": [] },
+  "aether-starforge-v1": { "completed": "all", "best": 1e309 }
+}

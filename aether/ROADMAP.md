@@ -94,7 +94,7 @@ Avoid expanding marketing claims faster than implementation, piling on particle 
 1. Extract the ZIP; keep all files in the same directory structure.
 2. Run `python3 -m http.server 4173` from the folder that contains `index.html`.
 3. Open `http://localhost:4173/grand-tour.html` or `http://localhost:4173/`.
-4. For GitHub Pages, copy **the contents of the extracted folder** into the published repository root, commit, and push. If GitHub Pages publishes from `/docs`, copy there instead.
-5. Hard-refresh your browser after deployment. Existing local saves stay in the browser; consider backing them up before replacing the live site.
+4. Æther deploys as the **`/aether/` subdirectory** of the `ShuffledSeal.github.io` repository, which GitHub Pages publishes from the root of the `main` branch. Keep these files inside `aether/` — **never copy the contents of this folder over the repository root**, or you will overwrite the root portfolio site (root `index.html`, `portfolio.html`).
+5. Commit and push to `main` to deploy. Hard-refresh your browser afterwards: GitHub Pages/CDN caching can lag a pushed commit, so verify the live `/aether/` route after each publish. Existing local saves stay in the browser; consider backing them up before replacing the live site.
 
 **Deployment note:** This package is ready for *manual* deployment. No changes have been pushed to your GitHub repository from this session.

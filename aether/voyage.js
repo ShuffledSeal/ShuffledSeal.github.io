@@ -6,6 +6,7 @@
 window.AetherVoyage = (() => {
   const KEY = 'aether-grand-tour-v2';
   const CARTRIDGE_KEY = 'aether-cartridge-records-v1';
+  const STORE_VERSION = 1;
   const $ = (s, r = main) => r.querySelector(s);
   const esc = escapeHTML;
   let controller, gameHandle = null, trialHandle = null;
@@ -14,30 +15,81 @@ window.AetherVoyage = (() => {
   const HULLS = window.AetherSkirmish.HULLS;
   const SECTORS = window.AetherSkirmish.SECTORS;
   const CARTRIDGES = {
-    shooter: { name: 'Starfall Skirmish', eyebrow: '01 · ACTION', icon: '✦', brief: 'An endless arena vigil. Read telegraphs, dash through pressure, and push your FLOW score.', controls: 'MOUSE PILOT · HOLD CLICK FIRE · SPACE / RIGHT CLICK DASH', trial: null },
+    shooter: { name: 'Starfall Skirmish', eyebrow: '01 · ACTION', icon: '✦', brief: 'An endless arena vigil. Read telegraphs, dash through pressure, and push your FLOW score.', controls: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER FIRE · SPACE / RIGHT CLICK DASH', trial: null },
     bastion: { name: 'Aether Bastion', eyebrow: '02 · STRATEGY', icon: '◇', brief: 'An endless siege board. Build, specialize, and outlast escalating crystal tides.', controls: '1–4 BUILD · CLICK PLACE / SELECT · Q / E UPGRADE · SPACE PULSE', trial: 'bastion' },
-    labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · ENDLESS STEALTH', icon: '◈', brief: 'An endless infiltration. Study sentry cones, choose routes through the Triune Archive, and survive sharper circuits.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL', trial: 'labyrinth' },
+    labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · ENDLESS STEALTH', icon: '◈', brief: 'An endless infiltration. Steal optional archive seals and escape without losing a heart for bonus points, or take the safer two-key route. Lure watchers with prism decoys.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL · F DECOY · P PAUSE', trial: 'labyrinth' },
     starforge: { name: 'Starforge', eyebrow: '04 · FACTORY', icon: '✦', brief: 'Build an orbital factory. Align moving machinery, route starlight, and contain the heat you create.', controls: 'SELECT DEVICE · CLICK ORBIT · SPACE IGNITES / PAUSES', trial: null },
   };
 
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
   function shuffle(arr, rand) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const owns = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+  const safeInt = (value, fallback = 0, min = 0, max = 1e9) => Number.isInteger(value) ? Math.max(min, Math.min(max, value)) : fallback;
+
+  // A persisted chart is only trusted when every node matches a known kind.
+  // The trial registry can change between versions; a malformed or stale chart
+  // falls back to buildMap(seed) rather than re-dealing done-keys onto new
+  // encounters. (Keep this free of late-bound consts: readStore runs early.)
+  function validNode(node) {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return false;
+    switch (node.kind) {
+      case 'hunt': return Number.isInteger(node.sector) && node.sector >= 0 && node.sector < SECTORS.length;
+      case 'trial': return window.AetherTrials.list.some(t => t.id === node.trial);
+      case 'oddity': return Number.isInteger(node.oddity) && node.oddity >= 0 && node.oddity < 4; // buildMap deals oddities 0–3
+      case 'chandlery': case 'mutation': case 'sanctuary': case 'boss': return true;
+      default: return false;
+    }
+  }
+  const validateMap = map => Array.isArray(map) && map.length === 12 && map.every(leg => Array.isArray(leg) && leg.length >= 1 && leg.length <= 2 && leg.every(validNode));
+
+  function migrateActive(value) {
+    const saved = record(value);
+    if (!Number.isInteger(saved.seed)) return null;
+    const hullId = typeof saved.hullId === 'string' && owns(HULLS, saved.hullId) ? saved.hullId : 'kite';
+    const defaultHull = HULLS[hullId].hp > 60 ? 4 : 3;
+    const maxHull = safeInt(saved.maxHull, defaultHull, 1, 12);
+    const instruments = Array.isArray(saved.instruments)
+      ? [...new Set(saved.instruments.filter(id => typeof id === 'string' && owns(I, id)))].slice(0, Object.keys(I).length)
+      : [];
+    const done = Object.fromEntries(Object.entries(record(saved.done)).filter(([key, state]) => /^(?:[0-9]|1[01]):[01]$/.test(key) && ['won', 'failed', 'left'].includes(state)));
+    return {
+      seed: saved.seed >>> 0,
+      step: safeInt(saved.step, 0, 0, 11),
+      difficulty: ['explorer', 'standard', 'eclipse'].includes(saved.difficulty) ? saved.difficulty : 'standard',
+      hull: safeInt(saved.hull, maxHull, 1, maxHull),
+      maxHull,
+      dust: safeInt(saved.dust),
+      instruments,
+      hullId,
+      done,
+      path: Array.isArray(saved.path) ? saved.path.filter(line => typeof line === 'string').slice(-100).map(line => line.slice(0, 240)) : [],
+      kills: safeInt(saved.kills),
+      highScore: safeInt(saved.highScore),
+      bestChain: safeInt(saved.bestChain),
+      map: validateMap(saved.map) ? saved.map : null, // null → old save; hydrate rebuilds from the seed
+      nextDraftBonus: saved.nextDraftBonus === true,
+      freeInstrument: saved.freeInstrument === true,
+    };
+  }
 
   function readStore() {
     let raw = {};
     try { raw = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
-    const r = raw.records && typeof raw.records === 'object' ? raw.records : {};
+    raw = record(raw);
+    const r = record(raw.records);
     return {
+      version: STORE_VERSION,
       records: {
-        tours: Number.isInteger(r.tours) ? r.tours : 0,
-        wins: Number.isInteger(r.wins) ? r.wins : 0,
-        kills: Number.isInteger(r.kills) ? r.kills : 0,
-        bestDust: Number.isInteger(r.bestDust) ? r.bestDust : 0,
-        bossWins: Number.isInteger(r.bossWins) ? r.bossWins : 0,
-        highScore: Number.isInteger(r.highScore) ? r.highScore : 0,
-        bestChain: Number.isInteger(r.bestChain) ? r.bestChain : 0,
+        tours: safeInt(r.tours),
+        wins: safeInt(r.wins),
+        kills: safeInt(r.kills),
+        bestDust: safeInt(r.bestDust),
+        bossWins: safeInt(r.bossWins),
+        highScore: safeInt(r.highScore),
+        bestChain: safeInt(r.bestChain),
       },
-      active: raw.active && typeof raw.active === 'object' && Number.isInteger(raw.active.seed) ? raw.active : null,
+      active: migrateActive(raw.active),
     };
   }
   const store = readStore();
@@ -45,8 +97,15 @@ window.AetherVoyage = (() => {
   function readCartridgeRecords() {
     let raw = {};
     try { raw = JSON.parse(localStorage.getItem(CARTRIDGE_KEY)) || {}; } catch {}
-    const best = raw.best && typeof raw.best === 'object' ? raw.best : {};
-    return { best: Object.fromEntries(Object.keys(CARTRIDGES).map(id => [id, Number.isFinite(best[id]) ? Math.max(0, Math.round(best[id])) : 0])) };
+    const best = record(record(raw).best);
+    const scores = Object.fromEntries(Object.keys(CARTRIDGES).map(id => [id, Number.isFinite(best[id]) ? safeInt(Math.round(best[id])) : 0]));
+    // Keep a small local archive of daily scores; old cartridge records remain unchanged.
+    const earliest = new Date(); earliest.setDate(earliest.getDate() - 45);
+    for (const [key, value] of Object.entries(best)) {
+      const match = /^(shooter|bastion|labyrinth):(\d{4}-\d{2}-\d{2})$/.exec(key);
+      if (match && match[2] >= dateKey(earliest) && Number.isFinite(value)) scores[key] = safeInt(Math.round(value));
+    }
+    return { best: scores };
   }
   const cartridgeRecords = readCartridgeRecords();
   function saveCartridgeRecords() { try { localStorage.setItem(CARTRIDGE_KEY, JSON.stringify(cartridgeRecords)); } catch {} }
@@ -55,10 +114,16 @@ window.AetherVoyage = (() => {
     return id && CARTRIDGES[id] ? id : null;
   }
   const cartridgeHref = id => `index.html?standalone=1&cartridge=${id}#voyage`;
-  function recordCartridge(id, score) {
-    const previous = cartridgeRecords.best[id] || 0;
+  const dailyDate = () => dateKey(new Date());
+  const dailyMode = id => id !== 'starforge' && new URLSearchParams(location.search).get('challenge') === 'daily';
+  const dailySeed = (id, day) => { let hash = 2166136261; for (const char of `${id}:${day}`) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return hash >>> 0; };
+  const dailyHref = id => `index.html?standalone=1&cartridge=${id}&challenge=daily#voyage`;
+  function recordCartridge(id, score, day = null) {
+    const key = day ? `${id}:${day}` : id;
+    const previous = cartridgeRecords.best[key] || 0;
     const best = Math.max(previous, Math.max(0, Math.round(score || 0)));
-    cartridgeRecords.best[id] = best;
+    cartridgeRecords.best[key] = best;
+    if (day) cartridgeRecords.best[id] = Math.max(cartridgeRecords.best[id] || 0, best);
     saveCartridgeRecords();
     return { best, newBest: best > previous };
   }
@@ -68,6 +133,7 @@ window.AetherVoyage = (() => {
     store.active = run ? {
       seed: run.seed, step: run.step, difficulty: run.difficulty || 'standard', hull: run.hull, maxHull: run.maxHull, dust: run.dust,
       instruments: run.instruments, hullId: run.hullId, done: run.done, path: run.path, kills: run.kills, highScore: run.highScore || 0, bestChain: run.bestChain || 0,
+      map: run.map, nextDraftBonus: run.nextDraftBonus === true, freeInstrument: run.freeInstrument === true,
     } : null;
     save();
   }
@@ -140,16 +206,19 @@ window.AetherVoyage = (() => {
     return content;
   }
   function hydrate(saved) {
-    return { ...saved, difficulty: saved.difficulty || 'standard', node: null, nodeKey: null, map: buildMap(saved.seed), over: false, won: false };
+    // The dealt chart persists with the run; only pre-map saves rebuild it.
+    return { ...saved, difficulty: saved.difficulty || 'standard', node: null, nodeKey: null, map: saved.map ?? buildMap(saved.seed), over: false, won: false };
   }
 
   function renderCartridge(id) {
     const card = CARTRIDGES[id];
-    return `<div class="view-enter tour-page cartridge-page"><section class="view-header cartridge-header"><div><p class="eyebrow">ÆTHER CARTRIDGE · ${card.eyebrow}</p><h1>${card.name}.</h1><p>${card.brief}</p></div><div class="cartridge-record"><span>PERSONAL BEST</span><strong>${(cartridgeRecords.best[id] || 0).toLocaleString()}</strong></div></section><div id="cartridge-stage" class="cartridge-stage" aria-live="polite"></div><div class="cartridge-footer"><a class="button" href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a><span>${card.controls}</span></div></div>`;
+    const daily = dailyMode(id), day = dailyDate();
+    const key = daily ? `${id}:${day}` : id;
+    return `<div class="view-enter tour-page cartridge-page"><section class="view-header cartridge-header"><div><p class="eyebrow">ÆTHER CARTRIDGE · ${card.eyebrow}${daily ? ' · DAILY VIGIL' : ''}</p><h1>${card.name}.</h1><p>${card.brief}</p>${id === 'starforge' ? '' : `<div class="cartridge-modes" aria-label="Challenge mode"><a class="button" href="${cartridgeHref(id)}" ${daily ? '' : 'aria-current="page"'}>Endless run</a><a class="button" href="${dailyHref(id)}" ${daily ? 'aria-current="page"' : ''}>Daily Vigil · ${day}</a></div>`}${daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : ''}</div><div class="cartridge-record"><span>${daily ? 'TODAY’S BEST' : 'PERSONAL BEST'}</span><strong>${(cartridgeRecords.best[key] || 0).toLocaleString()}</strong></div></section><div id="cartridge-stage" class="cartridge-stage" aria-live="polite"></div><div class="cartridge-footer"><a class="button" href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a><span>${card.controls}</span></div></div>`;
   }
 
   function renderLanding() {
-    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · GAME CARTRIDGES</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Four distinct games with separate score chases and clean restarts. Pick a cartridge and play immediately.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<a class="cartridge-card cartridge-${id}" href="${cartridgeHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>PLAY NOW</b><small>BEST ${cartridgeRecords.best[id] || '—'}</small></footer></a>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
+    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · GAME CARTRIDGES</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Four distinct games with separate score chases and clean restarts. Pick a cartridge and play immediately.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<div class="cartridge-choice"><a class="cartridge-card cartridge-${id}" href="${cartridgeHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>PLAY NOW</b><small>BEST ${cartridgeRecords.best[id] || '—'}</small></footer></a>${id === 'starforge' ? '' : `<a class="cartridge-daily-link" href="${dailyHref(id)}">Daily Vigil · same sky for every attempt ↗</a>`}</div>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
     <div class="tour-landing"><div>
       <p class="section-label">THE HANGAR · CHOOSE YOUR SKIFF</p><p class="tour-feature-lead">A twelve-leg odyssey across living starfields. Every instrument bends the rules. Every death writes another story.</p>
       <div class="hangar">${Object.entries(HULLS).map(([id, h]) => {
@@ -209,7 +278,7 @@ window.AetherVoyage = (() => {
     return `<div class="view-enter tour-page"><section class="tour-recap"><p class="eyebrow">${won ? 'THE MAW IS QUIET' : 'THE TOUR ENDS EARLY'}</p><h1>${won ? 'Neptune, in person.' : 'The sky keeps the rest.'}</h1>
     <p class="tour-recap-line">${won ? 'Twelve legs, one skiff, and the Maw behind you. ' + hullNote : 'The plating gave out — but the logbook didn’t. The next skiff launches knowing more.'}</p>
     <dl class="tour-stats"><div><dt>Stardust banked</dt><dd>✦ ${run.dust}</dd></div><div><dt>Threats cleared</dt><dd>${run.kills}</dd></div><div><dt>Top arena score</dt><dd>${(run.highScore || 0).toLocaleString()}</dd></div><div><dt>Best flow chain</dt><dd>${run.bestChain || 0}×</dd></div><div><dt>Difficulty</dt><dd>${run.difficulty || 'standard'}</dd></div><div><dt>Legs resolved</dt><dd>${Object.values(run.done).filter(v => v === 'won').length} / 12</dd></div><div><dt>Instruments carried</dt><dd>${run.instruments.length ? run.instruments.map(id => I[id].name).join(' · ') : 'None'}</dd></div></dl>
-    <div class="tour-recap-actions"><button class="button button-primary" data-tour="begin">Set out again →</button><button class="button" data-tour="journal">Save the logbook to the field journal</button><a class="button" href="#planetarium">Back to the atlas</a></div>
+    <div class="tour-recap-actions"><button class="button button-primary" data-tour="begin">Set out again →</button><button class="button" data-tour="journal" ${run.journalLogged ? 'disabled' : ''}>${run.journalLogged ? 'Saved to the field journal ✓' : 'Save the logbook to the field journal'}</button><a class="button" href="#planetarium">Back to the atlas</a></div>
     ${run.path.length ? `<details class="tour-log" open><summary>The logbook</summary>${run.path.map(line => `<p>${esc(line)}</p>`).join('')}</details>` : ''}</section></div>`;
   }
 
@@ -220,7 +289,7 @@ window.AetherVoyage = (() => {
     teardown();
     // Hull choice happens on the landing page; default kite.
     const hullId = unlockedHull(pendingHull) ? pendingHull : 'kite';
-    run = { seed: Math.floor(Math.random() * 0xffffffff), step: 0, difficulty: pendingDifficulty, hull: (HULLS[hullId].hp > 60 ? 4 : 3) + (pendingDifficulty === 'explorer' ? 1 : pendingDifficulty === 'eclipse' ? -1 : 0), maxHull: (HULLS[hullId].hp > 60 ? 4 : 3) + (pendingDifficulty === 'explorer' ? 1 : pendingDifficulty === 'eclipse' ? -1 : 0), dust: 0, instruments: [], hullId, kills: 0, highScore: 0, bestChain: 0, done: {}, path: [], node: null, nodeKey: null, map: null, over: false, won: false };
+    run = { seed: Math.floor(Math.random() * 0xffffffff), step: 0, difficulty: pendingDifficulty, hull: (HULLS[hullId].hp > 60 ? 4 : 3) + (pendingDifficulty === 'explorer' ? 1 : pendingDifficulty === 'eclipse' ? -1 : 0), maxHull: (HULLS[hullId].hp > 60 ? 4 : 3) + (pendingDifficulty === 'explorer' ? 1 : pendingDifficulty === 'eclipse' ? -1 : 0), dust: 0, instruments: [], hullId, kills: 0, highScore: 0, bestChain: 0, done: {}, path: [], node: null, nodeKey: null, map: null, over: false, won: false, journalLogged: false };
     run.map = buildMap(run.seed);
     store.records.tours++;
     store.active = null;
@@ -228,7 +297,18 @@ window.AetherVoyage = (() => {
     render();
     toast(`The ${HULLS[hullId].name} lifts off. First contact ahead.`);
   }
-  function teardown() { gameHandle?.destroy(); gameHandle = null; trialHandle?.destroy(); trialHandle = null; }
+  function teardown() { gameHandle?.destroy(); gameHandle = null; trialHandle?.destroy(); trialHandle = null; toastQueue = []; }
+
+  // Toasts are erased by the render() that follows a node finishing, so
+  // reason messages queue up and paint after the chart re-renders.
+  let toastQueue = [];
+  let restoreChartFocus = false;
+  const queueToast = message => { if (message) toastQueue.push(message); };
+  // Drains the queue, returning the message to show once rendering settles.
+  function drainToasts() {
+    const queued = toastQueue; toastQueue = [];
+    return queued.length ? queued[queued.length - 1] : null;
+  }
 
   function finishNode(state, note) {
     if (!run?.node) return;
@@ -250,12 +330,15 @@ window.AetherVoyage = (() => {
       store.active = null;
       save();
     } else saveRun();
+    restoreChartFocus = true;
+    const pendingToast = drainToasts(); // drain before render: unmount clears the queue
     render();
+    if (pendingToast) toast(pendingToast);
   }
   function loseHull(reason) {
     run.hull = Math.max(0, run.hull - 1);
     run.path.push(reason);
-    toast(reason);
+    queueToast(reason);
   }
 
   // ── Node hosts ───────────────────────────────────────────────────────────
@@ -273,26 +356,30 @@ window.AetherVoyage = (() => {
   function mountCartridge(id) {
     const card = CARTRIDGES[id], stage = $('#cartridge-stage');
     if (!card || !stage) return;
+    const day = dailyMode(id) ? dailyDate() : null;
+    const seed = day ? dailySeed(id, day) : (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     const end = ({ won, score = 0 }) => {
-      const record = recordCartridge(id, score);
-      stage.innerHTML = `<div class="cartridge-recap"><p class="eyebrow">${won ? 'RUN COMPLETE' : 'RUN ENDED'}</p><h2>${won ? 'A new mark in the ledger.' : 'The sky keeps score.'}</h2><dl><div><dt>RUN SCORE</dt><dd>${Math.round(score).toLocaleString()}</dd></div><div><dt>PERSONAL BEST</dt><dd>${record.best.toLocaleString()}</dd></div></dl><p>${record.newBest ? 'NEW PERSONAL BEST' : 'One more run is waiting.'}</p><div class="tour-recap-actions"><button class="button button-primary" data-tour="cartridge-replay">PLAY AGAIN</button><a class="button" href="index.html?standalone=1#voyage">CARTRIDGE CABINET</a></div></div>`;
+      const record = recordCartridge(id, score, day);
+      stage.innerHTML = `<div class="cartridge-recap"><p class="eyebrow">${won ? 'RUN COMPLETE' : 'RUN ENDED'}${day ? ' · DAILY VIGIL' : ''}</p><h2>${won ? 'A new mark in the ledger.' : 'The sky keeps score.'}</h2><dl><div><dt>RUN SCORE</dt><dd>${Math.round(score).toLocaleString()}</dd></div><div><dt>${day ? 'TODAY’S BEST' : 'PERSONAL BEST'}</dt><dd>${record.best.toLocaleString()}</dd></div></dl><p>${record.newBest ? day ? 'NEW DAILY BEST' : 'NEW PERSONAL BEST' : 'One more run is waiting.'}</p><div class="tour-recap-actions"><button class="button button-primary" data-tour="cartridge-replay">PLAY AGAIN</button><a class="button" href="index.html?standalone=1#voyage">CARTRIDGE CABINET</a></div></div>`;
     };
     if (id === 'shooter') {
-      stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> ENDLESS VIGIL</span><strong>STARFALL SKIRMISH</strong><span class="flight-controls">${card.controls}</span></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Build FLOW</span></div>`;
-      gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: true, hull: 'kite', instruments: [], seed: (Date.now() ^ 0x5f3759df) >>> 0, difficulty: 'standard', onEnd({ won, score }) { end({ won, score }); } });
+      // Controls live in the persistent cartridge footer; the brief stays a brief.
+      stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> ENDLESS VIGIL</span><strong>STARFALL SKIRMISH</strong></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Build FLOW</span></div>`;
+      gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: true, hull: 'kite', instruments: [], seed, difficulty: 'standard', onEnd({ won, score }) { end({ won, score }); } });
     } else if (id === 'starforge') {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ORBITAL FACTORY</span><strong>THE LAST CELESTIAL FOUNDRY</strong></div><div class="starforge-frame"></div>`;
       gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { onEnd: end });
     } else {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ENDLESS CARTRIDGE</span><strong>${id === 'bastion' ? 'THE CITADEL HAS NO DAWN' : 'THE ARCHIVE REWRITES ITSELF · EVERY CIRCUIT SHARPENS THE WATCHERS'}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
-      trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: true, verbs: new Set(), onEnd: end });
-      $('.trial-frame canvas', stage)?.focus({ preventScroll: true });
+      trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: true, daily: Boolean(day), seed, verbs: new Set(), onEnd: end });
+      // Focus the trial's own surface (a div for Deep Field), not canvas-only.
+      (trialHandle?.canvas ?? $('.trial-frame canvas', stage))?.focus?.({ preventScroll: true });
     }
   }
 
   function mountHunt(node, stage) {
     const isBoss = node.kind === 'boss';
-    stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> LIVE COMBAT</span><strong>${isBoss ? 'THE NEPTUNE RELAY' : 'SECTOR ' + ((node.sector ?? 2) + 1) + ' · ' + SECTORS[node.sector ?? 2].name.toUpperCase()}</strong><span class="flight-controls">MOUSE: PILOT · HOLD CLICK: FIRE · RIGHT CLICK / SPACE: DASH · M: TWIN-STICK · P: PAUSE</span></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read orange telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Chain kills for FLOW</span></div>`;
+    stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> LIVE COMBAT</span><strong>${isBoss ? 'THE NEPTUNE RELAY' : 'SECTOR ' + ((node.sector ?? 2) + 1) + ' · ' + SECTORS[node.sector ?? 2].name.toUpperCase()}</strong><span class="flight-controls">MOUSE: PILOT · HOLD CLICK / J / Z / ENTER: FIRE · RIGHT CLICK / SPACE: DASH · M: TWIN-STICK · P: PAUSE</span></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read orange telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Chain kills for FLOW</span></div>`;
     gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), {
       sector: node.sector ?? 2, elite: node.elite, boss: isBoss, hull: run.hullId, instruments: run.instruments,
       seed: run.seed + run.step * 977, difficulty: run.difficulty || 'standard',
@@ -335,7 +422,8 @@ window.AetherVoyage = (() => {
         }
       },
     });
-    $('.trial-frame canvas', stage)?.focus({ preventScroll: true });
+    // Focus the trial's own surface (a div for Deep Field), not canvas-only.
+    (trialHandle?.canvas ?? $('.trial-frame canvas', stage))?.focus?.({ preventScroll: true });
   }
 
   function mountOddity(node, stage) {
@@ -375,7 +463,7 @@ window.AetherVoyage = (() => {
     stage.querySelectorAll('[data-draft]').forEach(card => card.addEventListener('click', () => {
       run.instruments.push(card.dataset.draft);
       applyInstrument(card.dataset.draft);
-      toast(`${I[card.dataset.draft].name} joins the build.`);
+      queueToast(`${I[card.dataset.draft].name} joins the build.`);
       finishNode('won', `Drafted ${I[card.dataset.draft].name}.`);
     }));
   }
@@ -388,16 +476,35 @@ window.AetherVoyage = (() => {
     stage.innerHTML = `<div class="tour-refuge"><div class="refuge-lantern" aria-hidden="true">☕</div><h2>The kettle is already on.</h2><p>+1 hull, +15 stardust. The relay can wait one quiet minute.</p><button class="button button-primary" data-tour="rest">Rest here</button><button class="tour-inline-exit" data-tour="leave">Leave without resting</button></div>`;
   }
 
+  // Pause contract: app.js calls these when modals open/close; both are safe
+  // no-ops on the cabinet, landing and chart screens where nothing is mounted.
+  function pause() { gameHandle?.pause?.(); trialHandle?.pause?.(); }
+  function resume() { gameHandle?.resume?.(); trialHandle?.resume?.(); }
+
   // ── Mount / events ───────────────────────────────────────────────────────
+  let tourLandingScrolled = false;
   function mount(view) {
     if (view !== 'voyage') return;
     controller = new AbortController();
     const signal = controller.signal;
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); }, { signal });
     const direct = cartridgeId();
     if (direct) mountCartridge(direct);
     else if (run?.node) mountNode();
     const chart = $('.tour-chart'), currentStep = $('.tour-step.current');
     if (chart && currentStep) chart.scrollLeft = currentStep.offsetLeft - chart.clientWidth / 2 + currentStep.clientWidth / 2;
+    if (restoreChartFocus) {
+      // The previously focused node button was removed by the re-render; hand
+      // focus to the current leg's first reachable node instead of <body>.
+      restoreChartFocus = false;
+      ($(`.tour-step.current [data-tour-node]:not([disabled])`) || main).focus({ preventScroll: true });
+    }
+    if (!direct && !run && !tourLandingScrolled && new URLSearchParams(location.search).get('tour') === '1') {
+      // Landing linked from grand-tour.html's CTA: arrive at the expedition
+      // setup, not the cartridge cabinet. Deferred past the router's scrollTo.
+      tourLandingScrolled = true;
+      requestAnimationFrame(() => ($('.tour-expedition-divider') || $('.tour-landing'))?.scrollIntoView({ behavior: 'instant', block: 'start' }));
+    }
     main.addEventListener('click', event => {
       const difficultyBtn = event.target.closest('[data-difficulty]');
       if (difficultyBtn && !run) {
@@ -414,7 +521,7 @@ window.AetherVoyage = (() => {
         return;
       }
       const nodeBtn = event.target.closest('[data-tour-node]');
-      if (nodeBtn && !run.node) {
+      if (nodeBtn && !run?.node) {
         const [s, i] = nodeBtn.dataset.tourNode.split(':').map(Number);
         if (s !== run.step || run.done[`${s}:${i}`]) return;
         run.node = run.map[s][i]; run.nodeKey = `${s}:${i}`;
@@ -437,9 +544,13 @@ window.AetherVoyage = (() => {
       else if (action === 'salvage-hull') { run.hull = Math.min(run.maxHull, run.hull + 1); finishNode('won', 'Salvaged plating from the trial. +1 hull.'); }
       else if (action === 'salvage-dust') { run.dust += Math.round(60 * dustMul()); finishNode('won', 'Took the dust and ran. +60.'); }
       else if (action === 'journal') {
+        if (run.journalLogged) return; // one logbook per run, no duplicates
+        run.journalLogged = true;
         const body = `THE GRAND TOUR — ${run.won ? 'COMPLETED' : 'LOST AT SEA'}\nSkiff: ${HULLS[run.hullId].name}\nStardust: ${run.dust} · Threats cleared: ${run.kills}\n\n${run.path.join('\n')}`;
         state.journal.unshift({ id: crypto.randomUUID(), title: run.won ? 'Neptune, in person' : 'The sky kept the rest', body, subject: 'The Grand Tour', date: dateKey(new Date()) });
         persist(); toast('The logbook is pressed into the field journal.');
+        const btn = $('[data-tour="journal"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Saved to the field journal ✓'; }
       }
     }, { signal });
   }
@@ -447,6 +558,6 @@ window.AetherVoyage = (() => {
 
   viewNames.voyage = 'Game cartridges';
   renderers.voyage = renderVoyage;
-  searchItems.push({ id: 'voyage', name: 'Game cartridges', kind: 'page', subtitle: 'Three complete Æther games', icon: 'meteor' });
-  return { mount, unmount };
+  searchItems.push({ id: 'voyage', name: 'Game cartridges', kind: 'page', subtitle: `${Object.keys(CARTRIDGES).length} complete Æther games`, icon: 'meteor' });
+  return { mount, unmount, pause, resume };
 })();

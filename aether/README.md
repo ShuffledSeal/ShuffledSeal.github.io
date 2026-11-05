@@ -16,7 +16,7 @@ cd /path/to/ShuffledSeal.github.io-unstable/aether
 python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-Open **http://localhost:4173**. The app can also be deployed to any static web host.
+Open **http://localhost:4173** to enter the Observatory overview. Game cartridges remain at `#voyage`. The app can also be deployed to any static web host.
 
 Or run the local browser launcher from the Æther directory:
 
@@ -28,15 +28,17 @@ It serves `grand-tour.html` on `127.0.0.1:4173` and opens the system browser whe
 
 ## Verification
 
-The browser game has no runtime dependencies. Playwright is used only for development smoke checks:
+The browser game has no runtime dependencies. Playwright is used only for development checks:
 
 ```sh
 npm install
 npm run test:trials
 npm run test:browser
+npm run test:cartridges
 ```
 
-The browser smoke test starts a local server and verifies cartridge persistence, all registered trials, arcade selection, calendar/journal/puzzle interactions, Wonder Room routes, scaled-canvas pointer recovery, narrow-screen layout, corrupt saves, and uncaught browser errors.
+The browser smoke test starts a local server and verifies cartridge persistence, all registered trials, arcade selection, calendar/journal/puzzle interactions, Wonder Room routes, scaled-canvas pointer recovery, narrow-screen layout, checked-in legacy/malformed save fixtures, and uncaught browser errors.
+The cartridge depth test starts its own local server and plays all six Starforge contracts plus a misaligned failure and a pause/vent run, a clean Labyrinth seal extraction and timed loss, both Skirmish refits and a defeat, and Bastion's endless siege, mission win, and no-build loss. In Bastion's endless siege, clearing each wave now pauses to forecast a lane favoured by the next threat mix, not a guaranteed spawn location. Place or refine towers, then choose Repair (+1 core for 120 alloy), Overdrive (+30% tower damage for the next wave for 120 alloy), or Save (free). Use the buttons or Z/X/C; 1–4 still selects towers. A wave-clear cache adds 80 alloy; the authored three-wave mission is unchanged. Virtual game time speeds up long contracts, but this is not a substitute for human balance testing across seeds or devices.
 
 ## Explore
 
@@ -65,21 +67,23 @@ Eight field guides — one per planet — each pairing illustrated plates and ro
 
 ### Cartridge cabinet
 
-The Voyage landing is now a cartridge-first anthology. These direct, replayable routes have their own personal-best records and never alter an in-progress Grand Tour save:
+The cartridge cabinet at `#voyage` is an optional anthology destination; the bare `/aether/` route opens the Observatory overview. These direct, replayable routes have their own personal-best records and never alter an in-progress Grand Tour save:
 
-- `index.html?standalone=1&cartridge=shooter#voyage` — Starfall Skirmish score attack.
+- `index.html?standalone=1&cartridge=shooter#voyage` — Starfall Skirmish score attack. At each endless-wave clear choose Reinforce (plating and a quicker dash for the next wave) or Overclock (+35% bolt damage for that wave) with 1/2 or the on-screen buttons. The field is safe during a refit; later enemy counts and health have caps rather than growing forever.
 - `index.html?standalone=1&cartridge=bastion#voyage` — Aether Bastion strategy run.
-- `index.html?standalone=1&cartridge=labyrinth#voyage` — Glass Labyrinth endless stealth run. Four authored chambers loop with sharper Watchers; the Triune Archive offers three routes but needs only two keys.
-- `index.html?standalone=1&cartridge=starforge#voyage` — Starforge orbital factory contracts. Align moving Mirror, Conductor, Furnace, and cooling devices with their gate marks, deliver ember units, use a one-time emergency vent, survive eclipses, and defeat the Dying Clock.
+- `index.html?standalone=1&cartridge=labyrinth#voyage` — Glass Labyrinth endless stealth run. Four authored chambers loop with sharper Watchers and remixed patrol starts on later circuits; throw a prism decoy with F (or its on-screen button) to lure a sentry along its patrol, then collect cyan fragments to recharge it faster. Each chamber has an optional archive seal worth 300, plus 300 more for exiting without losing a heart. WASD and pointer movement both work. The Triune Archive offers three routes but needs only two keys.
+- `index.html?standalone=1&cartridge=starforge#voyage` — Starforge orbital factory contracts. The Mirror catches the core ray at the fixed top gate; Conductor at right carries it, Furnace at bottom converts it. The on-screen guide and gate links show alignment and missing devices. Replacing a device moves it (it cannot silently duplicate). Align the cooling devices too, deliver ember units, vent once, survive eclipses, and defeat the Dying Clock.
 
 The twelve-leg Grand Tour remains available as the optional long-form expedition below the cabinet. Aborting a hunt or trial costs one hull; non-combat locations provide a clear no-reward exit.
+
+Starfall Skirmish, Aether Bastion, and Glass Labyrinth also offer **Daily Vigil** from the cabinet or their mode switch. Each uses the same local-date encounter seed on repeat attempts and saves a separate best for that day (alongside the all-time best); it needs no account or network. Glass Labyrinth remixes the opening watcher positions for the daily run. Starforge instead retains its six authored contracts and independent replay/score chase.
 
 A run-based roguelite expedition from the Sun's doorstep to the Umbral Maw at Neptune. Arena **hunts** are the core game — sharp twin-stick movement, a burst dash with i-frames, telegraphed enemies (chasers, weavers, shards, maws), waves, and a two-phase boss. Around them: rule-rewriting **instruments** (drafts and the chandlery), trials that pay salvage, oddities with consequences, and sanctuaries. Death resets the run; what persists is knowledge, records, and new hulls in the hangar.
 
 - **Hunts** — three waves per sector, elites at finales, stardust motes off every kill.
 - **Instruments** — Lodestone Coil, Echo Plate, Prism Lens, Rime Coating, Static Net and more; their verbs also rewrite the trials (wells bend gravity in Free Return, echoes repeat actions, parallax doubles every fifth success…).
 - **Trials** — sixteen distinct cartridges: the original cosmic challenges plus Aurora Loom, Alignment Clock, Umbra Terminal, Occultation, Constellation Chain, Perihelion Run, Aether Bastion, and Glass Labyrinth. In Aether Bastion, select an installed tower and press `Q` or `E` to commit it to one of two upgrade paths; refine it twice, or right-click to reclaim alloy.
-- **Hull forms** — Swift Kite is yours; the Iron Bell and Moth Wing unlock through play.
+- **Hull forms** — Swift Kite is yours; the Iron Bell, Moth Wing, and Comet Wraith unlock through play (complete a tour, defeat the Umbral Maw, reach 100 threats cleared).
 
 Each arcade game also offers **three persistent fieldwork seals** (twelve total), tracking meaningful goals within individual runs. After progressing far enough in a run, you may invoke a **Stellar Pact** with **C** or the in-game button: a twelve-second double-score wager that ends early if you take a hit; shields cannot protect you from that hit. Your seals and personal records carry forward across attempts. Complete the first seal in each arcade game, then claim the Orchestra’s first musical constellation to uncover the **Observatory Chorus** achievement in the discovery cabinet.
 

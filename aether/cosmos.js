@@ -25,9 +25,19 @@ window.AetherArt = (() => {
     }
     ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
   }
-  function orb(ctx, x, y, r, tier = 4, face = true, angle = 0, stretch = 1, clock = 0) {
+  // Orbs are pure in (tier, radius, face, blink): cache each as a supersampled
+  // sprite and place it through the caller's transform, instead of rebuilding
+  // gradients and re-tracing every band for every ball on every frame.
+  const orbCache = new Map();
+  function orbSprite(tier, r, face, blink) {
+    const key = `${tier}:${r}:${face ? 1 : 0}:${blink ? 1 : 0}`;
+    let sprite = orbCache.get(key);
+    if (sprite) { orbCache.delete(key); orbCache.set(key, sprite); return sprite; }
+    const scale = 2, extent = tier === 6 ? r * 1.56 : r + 1, size = Math.ceil(extent * 2 * scale) + 2;
+    sprite = document.createElement('canvas'); sprite.width = size; sprite.height = size; sprite.scale = scale;
+    const ctx = sprite.getContext('2d');
+    ctx.scale(scale, scale); ctx.translate(size / (2 * scale), size / (2 * scale));
     const colour = colours[tier % colours.length];
-    ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.scale(stretch, 1 / stretch);
     if (tier === 6) {
       ctx.strokeStyle = '#e6c58b88'; ctx.lineWidth = r * .18;
       ctx.beginPath(); ctx.ellipse(0, 0, r * 1.38, r * .35, -.4, 0, TAU); ctx.stroke();
@@ -49,15 +59,26 @@ window.AetherArt = (() => {
     }
     ctx.restore();
     if (face) {
-      const blink = Math.sin(clock * 1.7 + tier * 2) > .994 ? .12 : 1;
+      const lid = blink ? .12 : 1;
       ctx.fillStyle = '#18212d';
-      for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(side * r * .23, r * .06, Math.max(1.5, r * .065), Math.max(1.2, r * .09 * blink), 0, 0, TAU); ctx.fill(); }
+      for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(side * r * .23, r * .06, Math.max(1.5, r * .065), Math.max(1.2, r * .09 * lid), 0, 0, TAU); ctx.fill(); }
       ctx.strokeStyle = '#18212d'; ctx.lineWidth = Math.max(1.3, r * .045);
       ctx.beginPath(); ctx.arc(0, r * .15, r * .12, .2, Math.PI - .2); ctx.stroke();
       ctx.fillStyle = '#f1ad9b66';
       ctx.beginPath(); ctx.ellipse(-r * .4, r * .24, r * .12, r * .06, 0, 0, TAU); ctx.fill();
     }
     if (tier === 6) { ctx.strokeStyle = '#e6c58b'; ctx.lineWidth = r * .13; ctx.beginPath(); ctx.ellipse(0, 0, r * 1.38, r * .35, -.4, 0, Math.PI); ctx.stroke(); }
+    if (orbCache.size > 96) orbCache.delete(orbCache.keys().next().value);
+    orbCache.set(key, sprite);
+    return sprite;
+  }
+  function orb(ctx, x, y, r, tier = 4, face = true, angle = 0, stretch = 1, clock = 0) {
+    // Radius is quantised to a half pixel so the brief birth-pop growth does
+    // not churn the cache; steady-state radii are integers and always hit.
+    const sprite = orbSprite(tier, Math.max(1, Math.round(r * 2) / 2), face, face && Math.sin(clock * 1.7 + tier * 2) > .994);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.scale(stretch, 1 / stretch);
+    const half = sprite.width / (2 * sprite.scale);
+    ctx.drawImage(sprite, -half, -half, half * 2, half * 2);
     ctx.restore();
   }
   function specks(seed, count = 50, w = 600, h = 380) {
@@ -144,19 +165,43 @@ window.AetherArt = (() => {
     spriteCache.set(key, sprite);
     return sprite;
   }
+  // The star field is fixed by seed: compute positions once, reuse the ambient
+  // light gradient per canvas size, and skip stars outside the viewport.
+  // (An offscreen bitmap cannot reproduce this layer faithfully — star sizes
+  // and twinkle are screen-space and independent of zoom.)
+  let skyField = null;
+  function starField() {
+    if (!skyField) {
+      const rnd = random(912);
+      skyField = Array.from({ length: 360 }, (_, i) => ({ x: rnd() * 1900 - 150, y: rnd() * 1200 - 150, r: .4 + rnd() * 1.6, shaped: i % 29 === 0 }));
+    }
+    return skyField;
+  }
+  const skyLights = new Map();
+  function skyLight(width, height) {
+    const key = width + 'x' + height;
+    let light = skyLights.get(key);
+    if (!light) {
+      light = document.createElement('canvas').getContext('2d').createRadialGradient(width / 2 + 20, height / 2, 5, width / 2 + 20, height / 2, 400);
+      light.addColorStop(0, '#54425a33'); light.addColorStop(1, '#15232a00');
+      if (skyLights.size > 6) skyLights.delete(skyLights.keys().next().value);
+      skyLights.set(key, light);
+    }
+    return light;
+  }
   function sky(ctx, view, width = 760, height = 500, time = 0) {
     const x = view.x ?? 800, y = view.y ?? 450, zoom = view.zoom || 1;
     const pos = t => ({ x: width / 2 + (t.x - x) * zoom, y: height / 2 + (t.y - y) * zoom });
     ctx.fillStyle = '#0c1722'; ctx.fillRect(0, 0, width, height);
-    const light = ctx.createRadialGradient(width / 2 + 20, height / 2, 5, width / 2 + 20, height / 2, 400);
-    light.addColorStop(0, '#54425a33'); light.addColorStop(1, '#15232a00'); ctx.fillStyle = light; ctx.fillRect(0, 0, width, height);
-    const rnd = random(912);
-    for (let i = 0; i < 360; i++) {
-      const p = pos({ x: rnd() * 1900 - 150, y: rnd() * 1200 - 150 });
-      const r = .4 + rnd() * 1.6;
+    ctx.fillStyle = skyLight(width, height); ctx.fillRect(0, 0, width, height);
+    const stars = starField();
+    for (let i = 0; i < stars.length; i++) {
+      const s = stars[i], px = width / 2 + (s.x - x) * zoom, py = height / 2 + (s.y - y) * zoom;
+      // A 6px margin exceeds the largest star glyph (4.5px), so culling never clips.
+      if (px < -6 || px > width + 6 || py < -6 || py > height + 6) continue;
       ctx.globalAlpha = .25 + .5 * (.5 + .5 * Math.sin(time * .7 + i));
-      if (i % 29 === 0) star(ctx, p.x, p.y, 4.5, '#eee0b8');
-      else { ctx.fillStyle = '#e8dfc7'; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); }
+      if (s.shaped) star(ctx, px, py, 4.5, '#eee0b8');
+      else { ctx.fillStyle = '#e8dfc7'; ctx.beginPath(); ctx.arc(px, py, s.r, 0, TAU); ctx.fill(); }
     }
     ctx.globalAlpha = 1;
     const frame = Math.floor(time * 6) % 6;
@@ -172,45 +217,88 @@ window.AetherArt = (() => {
       if (view.labels) { ctx.font = '12px Georgia'; ctx.fillStyle = '#c5c5b6'; ctx.textAlign = 'center'; ctx.fillText(t.name, p.x, p.y + 62 * z); }
     });
   }
+  function worldMark(c, m, model, r, time) {
+    const x = m.x * r, y = m.y * r, radius = m.r * r;
+    if (m.type === 'land') {
+      c.fillStyle = `hsl(${(model.hue + 65) % 360} 32% 45%)`; c.beginPath();
+      for (let j = 0; j < 14; j++) { const a = j / 14 * TAU, shape = radius * (1 + Math.sin(j * 2.7 + x) * .22); c.lineTo(x + Math.cos(a) * shape, y + Math.sin(a) * shape * .8); } c.closePath(); c.fill();
+    } else if (m.type === 'crater') {
+      c.fillStyle = '#222a3966'; c.beginPath(); c.ellipse(x, y, radius, radius * .8, .2, 0, TAU); c.fill(); c.strokeStyle = '#f2e2c466'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, radius, radius * .8, .2, .2, Math.PI); c.stroke();
+    } else {
+      c.strokeStyle = '#f2e2c499'; c.lineWidth = 3; c.beginPath();
+      for (let j = 0; j < 50; j++) { const a = j * .23 + time * 24 / model.speed * .2, length = radius * j / 50; c.lineTo(x + Math.cos(a) * length, y + Math.sin(a) * length * .5); } c.stroke();
+    }
+  }
+  // The painted surface is the expensive part, and it only changes when a
+  // brush stroke lands. Cache it as three device-resolution layers per world
+  // model (backdrop / surface / finish), rebuilt only when the model's shape
+  // or marks change. Moons and storm spirals stay live, in their original
+  // paint order: storms animate between the cached surface and the shade.
+  const worldCache = new WeakMap();
+  function worldLayers(cache, model, still, scale) {
+    const w = Math.round(760 * scale), h = Math.round(500 * scale);
+    // Reassigning width/height always clears the bitmap, so cached canvases
+    // can be repainted in place on every brush stroke without reallocating.
+    const backdrop = cache.backdrop || document.createElement('canvas'), surface = cache.surface || document.createElement('canvas'), finish = cache.finish || document.createElement('canvas');
+    backdrop.width = w; backdrop.height = h; surface.width = w; surface.height = h; finish.width = w; finish.height = h;
+    const cx = 380, cy = 245, r = 90 + model.size * 30, tilt = model.tilt * Math.PI / 180;
+    const marks = model.marks || [];
+    const b = backdrop.getContext('2d'); b.scale(scale, scale);
+    b.fillStyle = '#101d27'; b.fillRect(0, 0, 760, 500);
+    const rnd = random(891);
+    for (let i = 0; i < 70; i++) { b.globalAlpha = .2 + rnd() * .4; b.fillStyle = '#e8dfc7'; b.beginPath(); b.arc(rnd() * 760, rnd() * 500, .5 + rnd() * 1.2, 0, TAU); b.fill(); } b.globalAlpha = 1;
+    b.strokeStyle = '#e3d2a418'; b.lineWidth = 1;
+    for (let i = 0, n = model.moons >>> 0; i < n; i++) { const radius = r + 55 + i * 28; b.beginPath(); b.ellipse(cx, cy, radius, radius * .48, -.18, 0, TAU); b.stroke(); }
+    const c = surface.getContext('2d'); c.scale(scale, scale);
+    const glow = c.createRadialGradient(cx, cy, r * .9, cx, cy, r + 18 + model.atmosphere * .4);
+    glow.addColorStop(0, `hsl(${model.hue} 55% 72% / ${model.atmosphere / 200})`); glow.addColorStop(1, `hsl(${model.hue} 55% 72% / 0)`);
+    c.fillStyle = glow; c.fillRect(cx - 240, cy - 240, 480, 480);
+    c.save(); c.translate(cx, cy); c.rotate(tilt);
+    if (model.rings) { c.strokeStyle = '#decca8aa'; c.lineWidth = 15; c.beginPath(); c.ellipse(0, 0, r * 1.48, r * .3, -.2, 0, TAU); c.stroke(); }
+    const body = c.createRadialGradient(-r * .35, -r * .4, r * .05, r * .2, r * .25, r * 1.35);
+    body.addColorStop(0, '#fff7de'); body.addColorStop(.3, `hsl(${model.hue} 46% 64%)`); body.addColorStop(1, '#1a2531');
+    c.fillStyle = body; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.save(); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.clip();
+    c.strokeStyle = '#ffffff12'; c.lineWidth = 12;
+    for (let i = -3; i < 4; i++) { c.beginPath(); c.ellipse(0, i * r * .3, r * 1.1, r * .1, -.1, 0, TAU); c.stroke(); }
+    for (const m of marks.slice(0, still)) worldMark(c, m, model, r, 0);
+    c.restore(); c.restore();
+    const f = finish.getContext('2d'); f.scale(scale, scale);
+    f.save(); f.translate(cx, cy); f.rotate(tilt);
+    f.save(); f.beginPath(); f.arc(0, 0, r, 0, TAU); f.clip();
+    const shade = f.createRadialGradient(-r * .4, -r * .4, r * .1, r * .25, r * .3, r * 1.4);
+    shade.addColorStop(0, '#fff9d524'); shade.addColorStop(.4, '#fff9d500'); shade.addColorStop(1, '#0d1728aa'); f.fillStyle = shade; f.fillRect(-r, -r, r * 2, r * 2);
+    f.restore();
+    if (model.rings) { f.strokeStyle = '#e8cd9b'; f.lineWidth = 11; f.beginPath(); f.ellipse(0, 0, r * 1.48, r * .3, -.2, 0, Math.PI); f.stroke(); }
+    f.restore();
+    return { backdrop, surface, finish, sig: '' };
+  }
   function world(ctx, model, time = 0) {
     const cx = 380, cy = 245, r = 90 + model.size * 30, tilt = model.tilt * Math.PI / 180;
-    ctx.fillStyle = '#101d27'; ctx.fillRect(0, 0, 760, 500);
-    const rnd = random(891);
-    for (let i = 0; i < 70; i++) { ctx.globalAlpha = .2 + rnd() * .4; ctx.fillStyle = '#e8dfc7'; ctx.beginPath(); ctx.arc(rnd() * 760, rnd() * 500, .5 + rnd() * 1.2, 0, TAU); ctx.fill(); } ctx.globalAlpha = 1;
+    const marks = model.marks || [];
+    // Storm spirals animate with time, so they (and any later marks, to keep
+    // paint order exact) are drawn live; everything before the first storm
+    // is static and lives in the cached layers.
+    const firstStorm = marks.findIndex(m => m.type === 'storm');
+    const still = firstStorm < 0 ? marks.length : firstStorm;
+    const scale = Math.max(1, Math.min(2, ctx.getTransform?.().a || 1));
+    const sig = [model.size, model.tilt, model.moons, model.rings ? 1 : 0, model.hue, model.atmosphere, marks.length, still, scale].join('|');
+    let cache = worldCache.get(model);
+    if (!cache || cache.sig !== sig) { cache = worldLayers(cache || {}, model, still, scale); cache.sig = sig; worldCache.set(model, cache); }
+    ctx.drawImage(cache.backdrop, 0, 0, 760, 500);
     const moons = Array.from({ length: model.moons }, (_, i) => {
       const radius = r + 55 + i * 28, angle = time * Math.sqrt(model.mass) / (4 + i * 3) + i * 2.2;
-      ctx.strokeStyle = '#e3d2a418'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cx, cy, radius, radius * .48, -.18, 0, TAU); ctx.stroke();
       return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius * .48, r: 7 + i * 2 };
     });
     moons.filter(m => m.y < cy).forEach(m => orb(ctx, m.x, m.y, m.r, 0, false));
-    const glow = ctx.createRadialGradient(cx, cy, r * .9, cx, cy, r + 18 + model.atmosphere * .4);
-    glow.addColorStop(0, `hsl(${model.hue} 55% 72% / ${model.atmosphere / 200})`); glow.addColorStop(1, `hsl(${model.hue} 55% 72% / 0)`);
-    ctx.fillStyle = glow; ctx.fillRect(cx - 240, cy - 240, 480, 480);
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt);
-    if (model.rings) { ctx.strokeStyle = '#decca8aa'; ctx.lineWidth = 15; ctx.beginPath(); ctx.ellipse(0, 0, r * 1.48, r * .3, -.2, 0, TAU); ctx.stroke(); }
-    const body = ctx.createRadialGradient(-r * .35, -r * .4, r * .05, r * .2, r * .25, r * 1.35);
-    body.addColorStop(0, '#fff7de'); body.addColorStop(.3, `hsl(${model.hue} 46% 64%)`); body.addColorStop(1, '#1a2531');
-    ctx.fillStyle = body; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.clip();
-    ctx.strokeStyle = '#ffffff12'; ctx.lineWidth = 12;
-    for (let i = -3; i < 4; i++) { ctx.beginPath(); ctx.ellipse(0, i * r * .3, r * 1.1, r * .1, -.1, 0, TAU); ctx.stroke(); }
-    for (const m of model.marks || []) {
-      const x = m.x * r, y = m.y * r, radius = m.r * r;
-      if (m.type === 'land') {
-        ctx.fillStyle = `hsl(${(model.hue + 65) % 360} 32% 45%)`; ctx.beginPath();
-        for (let j = 0; j < 14; j++) { const a = j / 14 * TAU, shape = radius * (1 + Math.sin(j * 2.7 + x) * .22); ctx.lineTo(x + Math.cos(a) * shape, y + Math.sin(a) * shape * .8); } ctx.closePath(); ctx.fill();
-      } else if (m.type === 'crater') {
-        ctx.fillStyle = '#222a3966'; ctx.beginPath(); ctx.ellipse(x, y, radius, radius * .8, .2, 0, TAU); ctx.fill(); ctx.strokeStyle = '#f2e2c466'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, radius, radius * .8, .2, .2, Math.PI); ctx.stroke();
-      } else {
-        ctx.strokeStyle = '#f2e2c499'; ctx.lineWidth = 3; ctx.beginPath();
-        for (let j = 0; j < 50; j++) { const a = j * .23 + time * 24 / model.speed * .2, length = radius * j / 50; ctx.lineTo(x + Math.cos(a) * length, y + Math.sin(a) * length * .5); } ctx.stroke();
-      }
+    ctx.drawImage(cache.surface, 0, 0, 760, 500);
+    if (still < marks.length) {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt);
+      ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.clip();
+      for (const m of marks.slice(still)) worldMark(ctx, m, model, r, time);
+      ctx.restore(); ctx.restore();
     }
-    const shade = ctx.createRadialGradient(-r * .4, -r * .4, r * .1, r * .25, r * .3, r * 1.4);
-    shade.addColorStop(0, '#fff9d524'); shade.addColorStop(.4, '#fff9d500'); shade.addColorStop(1, '#0d1728aa'); ctx.fillStyle = shade; ctx.fillRect(-r, -r, r * 2, r * 2);
-    ctx.restore();
-    if (model.rings) { ctx.strokeStyle = '#e8cd9b'; ctx.lineWidth = 11; ctx.beginPath(); ctx.ellipse(0, 0, r * 1.48, r * .3, -.2, 0, Math.PI); ctx.stroke(); }
-    ctx.restore();
+    ctx.drawImage(cache.finish, 0, 0, 760, 500);
     moons.filter(m => m.y >= cy).forEach(m => orb(ctx, m.x, m.y, m.r, 0, false));
     return { cx, cy, r, tilt };
   }

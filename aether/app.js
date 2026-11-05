@@ -324,7 +324,8 @@ function render() {
   document.querySelector('#profile-name').textContent = state.name;
   document.querySelector('.avatar').textContent = state.name.replace(/^The /i, '').charAt(0).toUpperCase();
   document.querySelector('#location-label').textContent = currentLocation().name;
-  document.querySelectorAll('[data-view]').forEach(link => {
+  // Scope to the actual navigation links — body also carries data-view for styling.
+  document.querySelectorAll('.primary-nav [data-view]').forEach(link => {
     if (link.dataset.view === state.view || (state.view.startsWith('planet/') && link.dataset.view === 'planetarium')) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
     // Compact tablet navigation hides the link text, so keep an accessible name.
@@ -356,11 +357,12 @@ function handleRoute() {
   closeMenu();
   if (modal.open) closeModal();
   if (route === 'main') {
-    if (!main.hasChildNodes()) { state.view = 'voyage'; render(); }
+    if (!main.hasChildNodes()) { state.view = 'overview'; render(); }
     return;
   }
-  if (route && !Object.hasOwn(renderers, route)) history.replaceState(null, '', '#voyage');
-  state.view = Object.hasOwn(renderers, route) ? route : 'voyage';
+  const fallback = new URLSearchParams(location.search).has('standalone') ? 'voyage' : 'overview';
+  if (route && !Object.hasOwn(renderers, route)) history.replaceState(null, '', `#${fallback}`);
+  state.view = Object.hasOwn(renderers, route) ? route : fallback;
   render();
   window.scrollTo({ top: 0, behavior: 'instant' });
   // User-initiated route changes move focus into the new view so keyboard users
@@ -382,6 +384,7 @@ function describeTrigger(el) {
 
 function showModal(content, focusSelector) {
   window.AetherExperiences?.pause();
+  window.AetherVoyage?.pause?.();
   if (!modal.open) {
     modalTrigger = document.activeElement;
     modalTriggerSelector = describeTrigger(document.activeElement);
@@ -490,7 +493,6 @@ function openMoon() {
 }
 
 function openNotifications() {
-  document.querySelector('.notification-button i').style.display = 'none';
   showModal(`<p class="eyebrow">LETTERS FROM THE NIGHT SKY</p><h2 id="modal-title">A few things to look up for.</h2><p class="modal-description">The next appointments in your celestial almanac.</p><div class="notifications-list">${upcomingEvents(3).map(eventRow).join('') || '<p class="modal-description">You’ve reached the end of this year’s almanac. There are still eight extraordinary worlds waiting in the planetarium.</p>'}</div><div class="modal-actions"><button class="button" data-action="go-calendar">Open the celestial calendar ${icon('arrow-right')}</button></div>`);
 }
 
@@ -647,9 +649,16 @@ async function toggleAmbience() {
   }
 }
 
+function setMenuButton(open) {
+  const button = document.querySelector('.mobile-menu');
+  button.setAttribute('aria-expanded', String(open));
+  button.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+  button.querySelector('use').setAttribute('href', `assets/icons.svg#${open ? 'close' : 'menu'}`);
+}
+
 function closeMenu() {
   document.body.classList.remove('menu-open');
-  document.querySelector('.mobile-menu').setAttribute('aria-expanded', 'false');
+  setMenuButton(false);
   document.querySelector('.sidebar').inert = window.innerWidth <= 720;
   document.querySelector('.workspace').inert = false;
 }
@@ -671,7 +680,7 @@ document.addEventListener('click', event => {
     case 'close-modal': closeModal(); break;
     case 'menu': {
       const expanded = document.body.classList.toggle('menu-open');
-      target.setAttribute('aria-expanded', String(expanded));
+      setMenuButton(expanded);
       document.querySelector('.sidebar').inert = !expanded;
       document.querySelector('.workspace').inert = expanded;
       if (expanded) document.querySelector('.primary-nav a').focus();
@@ -827,12 +836,9 @@ document.addEventListener('keydown', event => {
     closeModal();
     return;
   }
-  if (((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') || (event.key === '/' && !editing && !modal.open)) {
+  // Both search shortcuts honour the same guards: never while editing or with a modal open.
+  if ((((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') || event.key === '/') && !editing && !modal.open) {
     event.preventDefault();
-    const draft = modal.open ? modal.querySelector('#journal-form') : null;
-    if (draft && (draft.querySelector('#entry-title').value.trim() || draft.querySelector('#entry-body').value.trim())) {
-      return toast('Finish your observation, or set down the pen, before searching.');
-    }
     openSearch();
   }
   if (event.key === 'Escape') {
@@ -874,6 +880,7 @@ modal.addEventListener('click', event => {
 });
 
 modal.addEventListener('close', () => {
+  window.AetherVoyage?.resume?.();
   const fallback = modalTriggerSelector ? document.querySelector(modalTriggerSelector) : null;
   const target = modalTrigger?.isConnected ? modalTrigger : fallback;
   target?.focus({ preventScroll: true });

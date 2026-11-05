@@ -438,6 +438,7 @@
     if (topbar) topbar.inert = false;
     document.querySelector('.page-footer')?.removeAttribute('inert');
     worldRenderer = null; plateDeveloping = false;
+    thumbnailObserver?.disconnect(); thumbnailObserver = null;
   }
   function mount(view) {
     controller = new AbortController();
@@ -693,6 +694,20 @@
     const canvas = $('#scope-canvas'), ctx = canvas.getContext('2d');
     let dragging = false, previous, raf, closest, scopePointer = null, clock = 0, last = 0, travel = null;
     let lastAnnounced = '';
+    // DOM readouts only need a write when their displayed value actually changes.
+    let lastCoords = null, lastTargetLabel = null, lastSharpness = -1, lastCaptureDisabled = null, lastInFocus = null;
+    function syncReadout() {
+      const coords = `${Math.round(telescope.x)} / ${Math.round(telescope.y)}`;
+      if (coords !== lastCoords) { lastCoords = coords; $('#scope-coordinates').textContent = coords; }
+      const targetLabel = closest ? closest.name + ' · in your sights' : 'Sweep the sky to find a wonder';
+      if (targetLabel !== lastTargetLabel) { lastTargetLabel = targetLabel; $('#scope-target').textContent = targetLabel; }
+      const sharpness = closest?.sharpness || 0;
+      if (sharpness !== lastSharpness) { lastSharpness = sharpness; $('#scope-sharpness').textContent = `${sharpness}% sharpness`; $('#focus-fill').style.width = `${sharpness}%`; }
+      const captureDisabled = !telescope.open || !closest || closest.sharpness < 80;
+      if (captureDisabled !== lastCaptureDisabled) { lastCaptureDisabled = captureDisabled; $('#scope-capture').disabled = captureDisabled; }
+      const inFocus = Boolean(closest && closest.sharpness >= 80);
+      if (inFocus !== lastInFocus) { lastInFocus = inFocus; $('.scope-reticle').classList.toggle('in-focus', inFocus); }
+    }
     function announceReadiness() {
       const status = $('#scope-status'); if (!status) return;
       const ready = closest && closest.sharpness >= 80;
@@ -711,12 +726,7 @@
         const sharpness = Math.max(0, 100 - Math.abs(telescope.focus - t.focus) * 4);
         if (distance < 65 && (!closest || distance < closest.distance)) closest = { ...t, distance, sharpness };
       });
-      $('#scope-coordinates').textContent = `${Math.round(telescope.x)} / ${Math.round(telescope.y)}`;
-      $('#scope-target').textContent = closest ? closest.name + ' · in your sights' : 'Sweep the sky to find a wonder';
-      $('#scope-sharpness').textContent = `${closest?.sharpness || 0}% sharpness`;
-      $('#focus-fill').style.width = `${closest?.sharpness || 0}%`;
-      $('#scope-capture').disabled = !telescope.open || !closest || closest.sharpness < 80;
-      $('.scope-reticle').classList.toggle('in-focus', Boolean(closest && closest.sharpness >= 80));
+      syncReadout();
       if (telescope.open) announceReadiness();
     }
     const queue = () => draw();
@@ -782,12 +792,31 @@
     // Half-scale canvases keep a full cabinet light; CSS stretches them to fit.
     return `<canvas class="photo-thumbnail" data-photo="${esc(photo.id)}" width="380" height="250" role="img" aria-label="${esc(photo.name)}"></canvas>`;
   }
+  let thumbnailObserver = null;
+  function renderPhotoThumbnail(canvas) {
+    const photo = voyage.photos.find(p => p.id === canvas.dataset.photo); if (!photo) return;
+    const frame = photoFrame(photo), ctx = canvas.getContext('2d');
+    ctx.setTransform(canvas.width / 760, 0, 0, canvas.height / 500, 0, 0);
+    window.AetherArt.sky(ctx, frame, 760, 500, frame.time); canvas.style.filter = photoFilter(photo);
+  }
   function mountPhotoThumbnails() {
     voyage.photos.filter(p => p.developed).forEach(p => {
       const image = $(`[data-keepsake="${CSS.escape(p.id)}"] .keepsake-image`);
       if (image) image.innerHTML = photoThumbnail(p) + '<span>PHOTOGRAPH</span>';
     });
-    $$('canvas[data-photo]').forEach(canvas => { const photo = voyage.photos.find(p => p.id === canvas.dataset.photo); if (!photo) return; const frame = photoFrame(photo); const ctx = canvas.getContext('2d'); ctx.setTransform(canvas.width / 760, 0, 0, canvas.height / 500, 0, 0); window.AetherArt.sky(ctx, frame, 760, 500, frame.time); canvas.style.filter = photoFilter(photo); });
+    // Painting a full sky per plate is heavy; only render thumbnails as they
+    // approach the viewport instead of all at once on route mount.
+    const canvases = $$('canvas[data-photo]');
+    if (!('IntersectionObserver' in window)) { canvases.forEach(renderPhotoThumbnail); return; }
+    thumbnailObserver?.disconnect();
+    thumbnailObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        thumbnailObserver.unobserve(entry.target);
+        renderPhotoThumbnail(entry.target);
+      }
+    }, { rootMargin: '300px' });
+    canvases.forEach(canvas => thumbnailObserver.observe(canvas));
   }
   function updatePlate() {
     const photo = voyage.photos.find(p => p.id === currentPhoto); if (!photo || !$('#plate-image')) return;

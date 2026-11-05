@@ -10,7 +10,7 @@
 
 ## Architecture and where to edit
 
-This is **static vanilla HTML/CSS/JS**, Canvas 2D + Web Audio + localStorage, no bundled package manager, build step or test harness. Keep GitHub Pages deployment possible without a server, CDN, framework or new dependencies unless a separately authorised architectural change warrants it.
+This is **static vanilla HTML/CSS/JS**, Canvas 2D + Web Audio + localStorage, with no runtime dependencies, build step or framework; `package.json` and `tests/` are dev-only (Playwright smoke) and never ship to players. Keep GitHub Pages deployment possible without a server, CDN, framework or new dependencies unless a separately authorised architectural change warrants it.
 
 | Area | Source / contract |
 | --- | --- |
@@ -58,7 +58,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 # Open /grand-tour.html and /index.html?standalone=1#voyage in a real browser
 ```
 
-When available, use a checked-in Playwright/browser test, screenshots and performance measurements; **no test runner is currently shipped**. Never cite ephemeral `/tmp/opencode/...` scripts as a reproducible suite. In a Git worktree also run `git diff --check` (archive itself may have no `.git`).
+Two checked-in suites ship under `tests/` and run via npm scripts — `npm run test:trials` (trial registry) and `npm run test:browser` (Playwright browser smoke); they need `npm install` first (Playwright is dev-only and never ships to players). Prefer them, plus screenshots and performance measurements, over ad-hoc checks. Never cite ephemeral `/tmp/opencode/...` scripts as a reproducible suite. In a Git worktree also run `git diff --check` (archive itself may have no `.git`).
 
 **Fast smoke:** landing CTA → new/continue voyage → hunt mouse movement, aiming, shooting, M/WASD, dash, pause → changed trial win/fail/salvage → exit/re-enter without stale loops → Observatory/arcade still navigable → old/new save → responsive 390/768/1440 px and reduced motion. See `OPENCODE-QUALITY.md` for exact detailed rubrics, edge cases and test matrix.
 
