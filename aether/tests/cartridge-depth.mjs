@@ -234,7 +234,7 @@ try {
           await page.clock.runFor(200);
           assert.equal(await canvas.getAttribute('data-wave'), String(nextWave), 'one click launches exactly one new wave');
           assert.ok(Number(await canvas.getAttribute('data-survived')) >= survived, 'survival time must never move backwards');
-          assert.equal(await page.locator('.bastion-orders').isHidden(), true);
+           assert.equal(await page.locator('[data-bastion-forecast]').isHidden(), true);
           if (order === 'overdrive' && nextWave !== 4) {
             assert.equal(await canvas.getAttribute('data-alloy'), String(alloy - 120));
             assert.equal(await canvas.getAttribute('data-overdrive'), '1');
@@ -266,7 +266,8 @@ try {
     await page.close();
   }
 
-  // Authored Bastion mission must end in a win with a defendable mixed board.
+   // The authored Bastion campaign starts in a safe planning phase. The
+   // dedicated bastion-campaign suite drives all six waves to a full win.
   {
     const page = await open(browser);
     await page.goto(`${base}/index.html#overview`, { waitUntil: 'networkidle' });
@@ -276,21 +277,18 @@ try {
       window.__missionEnd = [];
       window.__mission = AetherTrials.create('bastion', host, { sound: false, seed: 6024, onEnd: result => window.__missionEnd.push(result) });
     });
-    const canvas = page.locator('#mission-bastion canvas'), box = await canvas.boundingBox();
-    const build = async (type, row, col) => {
-      await canvas.press(String(type));
-      await canvas.click({ position: { x: box.width * (180 + 92 * col) / 900, y: box.height * (151 + 68 * row) / 560 } });
-    };
-    await build(3, 2, 3); await build(1, 0, 2);
-    const additions = { 2: [2, 1, 2], 3: [1, 3, 2], 4: [1, 4, 2], 5: [4, 2, 6], 7: [1, 1, 3] };
-    for (let period = 0; period < 25 && await canvas.count(); period++) {
-      await page.clock.runFor(5000);
-      if (additions[period] && await canvas.count()) await build(...additions[period]);
-    }
-    const results = await page.evaluate(() => window.__missionEnd);
-    assert.equal(results.length, 1);
-    assert.equal(results[0].won, true, 'a seeded three-wave mission with a mixed board must be winnable');
-    assert.ok(results[0].score > 0);
+     const canvas = page.locator('#mission-bastion canvas');
+     assert.equal(await canvas.getAttribute('data-planning'), 'true');
+     assert.match(await page.locator('[data-bastion-manifest]').textContent(), /Lane 2: 4 scout/);
+     const before = await canvas.getAttribute('data-survived');
+     await page.clock.runFor(8000);
+     assert.equal(await canvas.getAttribute('data-survived'), before, 'planning must not advance survival time');
+     await page.locator('[data-bastion-order="save"]').click();
+     await page.clock.runFor(1500);
+     assert.equal(await canvas.getAttribute('data-planning'), 'false', 'order launches the forecast wave');
+     assert.ok(Number(await canvas.getAttribute('data-scheduled')) < 8, 'the authored schedule advances');
+     await page.evaluate(() => window.__mission.destroy());
+     assert.deepEqual(await page.evaluate(() => window.__missionEnd), [], 'destroy during campaign must not resolve a stale win or loss');
     await page.close();
   }
 
@@ -313,10 +311,10 @@ try {
 
   // Reduced-motion play surfaces retain their objective and controls on phone,
   // tablet and desktop widths. This is a layout/browser check, not a device lab.
-  for (const width of [390, 768, 1440]) {
+   for (const width of [390, 768, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
     page.on('pageerror', error => errors.push(error.message));
-    for (const id of ['shooter', 'bastion', 'labyrinth', 'starforge']) {
+     for (const id of ['shooter', 'bastion', 'labyrinth', 'starforge', 'chain']) {
       await page.goto(`${base}/index.html?standalone=1&cartridge=${id}#voyage`, { waitUntil: 'networkidle' });
       assert.equal(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), true);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${id} must fit a ${width}px viewport`);
@@ -327,7 +325,7 @@ try {
 
   assert.deepEqual(errors, [], `page errors during depth checks: ${errors.join('\n')}`);
   await browser.close();
-  console.log('Cartridge depth passed: all 6 Starforge contracts, misalignment, pause and vent; clean Labyrinth seal extraction, timeout and teardown; both Skirmish refits, defeat and safe intermission; Bastion siege forecasts/orders, mission victory and defeat; all 4 cartridges at 390/768/1440px under reduced motion.');
+   console.log('Cartridge depth passed: all 6 Starforge contracts, misalignment, pause and vent; clean Labyrinth seal extraction, timeout and teardown; both Skirmish refits, defeat and safe intermission; Bastion siege forecasts/orders, campaign planning/launch and defeat; all 5 cartridges at 390/768/1440px under reduced motion.');
 } finally {
   server.kill('SIGTERM');
   await once(server, 'exit').catch(() => {});

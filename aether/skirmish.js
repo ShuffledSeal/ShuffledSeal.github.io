@@ -52,6 +52,20 @@ window.AetherSkirmish = (() => {
     comet: { name: 'Comet Wraith', desc: 'Dangerous momentum. A swift hunter built for close encounters.', hp: 52, speed: 1.18, boltCd: .18, boltDmg: 9, burst: 1.25, unlock: 'Reach 100 threats cleared' },
   };
 
+  // Cadence is relative to the hull's Pulse cycle. Ranges are world pixels.
+  const WEAPONS = {
+    pulse: { name: 'Pulse', key: '1', range: 700, speed: 540, cycle: 1, damage: 1, colour: '#f1f4ac', note: '700 range · steady fire · immediate recovery' },
+    scatter: { name: 'Scatter', key: '2', range: 225, speed: 470, cycle: 2.7, damage: .54, colour: '#ffc18c', note: '225 range · five-pellet fan · close in for full damage' },
+    lance: { name: 'Lance', key: '3', range: 940, speed: 1100, cycle: 2.8, charge: .45, damage: 3.4, colour: '#9eeef8', note: '940 range · hold to charge · pierces four targets' },
+    mortar: { name: 'Mortar', key: '4', range: 460, speed: 420, cycle: 4.1, damage: 3.2, radius: 76, colour: '#cfb1ff', note: '100–460 range · delayed blast · lead clustered threats' },
+  };
+  const WEAPON_IDS = Object.keys(WEAPONS);
+  const ACTS = [
+    { name: 'Break the screen', hint: 'Drifters rush; the rear weaver keeps its distance.' },
+    { name: 'Crossfire', hint: 'Lancers lock their aim. Flank the volley; sweep the shards.' },
+    { name: 'Silence the command', hint: 'The command Maw charges a beam. Clear its escorts, then strike.' },
+  ];
+
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
 
   function create(container, options) {
@@ -71,14 +85,27 @@ window.AetherSkirmish = (() => {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H; canvas.tabIndex = 0;
     canvas.setAttribute('role', 'application');
-    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. Space or right-click to dash. P pauses.');
+    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. 1–4 select weapons. Space or right-click to dash. P pauses.');
     container.appendChild(canvas);
+    const weaponBar = document.createElement('div');
+    // NB: deliberately NOT .skirmish-draft — tests assert that selector is a single
+    // (hideable) breather bar. Layout is inlined; voyage.css owns the pressed state.
+    weaponBar.className = 'skirmish-armory';
+    weaponBar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border:1px solid #d8c49466;background:#122527;color:#f3d9a4;font:600 12px "DM Sans",sans-serif';
+    weaponBar.setAttribute('role', 'group'); weaponBar.setAttribute('aria-label', 'Hunt weapons');
+    const armoryButtonStyle = "min-height:44px;padding:10px 16px;border:1px solid #d8c494;background:#263b3b;color:#e5efdf;font:600 12px 'DM Sans',sans-serif;cursor:pointer";
+    weaponBar.innerHTML = `<strong style="flex:1 0 100%;text-align:center">ARMORY · 1–4 SELECT · HOLD FIRE · SWITCHING PRESERVES RECOVERY</strong>` + WEAPON_IDS.map(id => `<button type="button" data-skirmish-weapon="${id}" aria-pressed="false" style="${armoryButtonStyle}">${WEAPONS[id].key} · ${WEAPONS[id].name}</button>`).join('');
+    const weaponHelp = document.createElement('span');
+    weaponHelp.style.cssText = 'flex:1 0 100%;text-align:center;line-height:1.6';
+    weaponBar.appendChild(weaponHelp);
+    container.appendChild(weaponBar);
+    const missionStatus = document.createElement('p');
+    missionStatus.dataset.skirmishObjective = '';
+    missionStatus.style.cssText = 'margin:0;padding:12px 16px;background:#102024;color:#e5efdf;font:600 13px/1.6 sans-serif';
+    container.appendChild(missionStatus);
     const draftBar = document.createElement('div');
-    if (endless) {
-      draftBar.className = 'skirmish-draft'; draftBar.hidden = true;
-      draftBar.innerHTML = '<strong>FIELD REFIT · CHOOSE BEFORE THE NEXT WAVE</strong><button type="button" data-skirmish-refit="guard">1 · Reinforce · +14 plating, quicker dash next wave</button><button type="button" data-skirmish-refit="power">2 · Overclock · +35% bolt damage next wave</button>';
-      container.appendChild(draftBar);
-    }
+    draftBar.className = 'skirmish-draft'; draftBar.hidden = true;
+    container.appendChild(draftBar);
     // Screen-reader status: visually hidden, polite, throttled to ~2Hz.
     const srStatus = document.createElement('p');
     srStatus.setAttribute('role', 'status');
@@ -112,6 +139,10 @@ window.AetherSkirmish = (() => {
     let streak = 0, streakTime = 0, bestStreak = 0, score = 0, supercharge = 0;
     let hazardTimer = 5.5, hazard = null;
     let echoQueue = [];
+    let weapon = (() => { try { const id = options.weapon || localStorage.getItem('aether-hunt-weapon'); return WEAPONS[id] ? id : 'pulse'; } catch { return 'pulse'; } })();
+    let charge = 0, pending = [], waveTime = 0, draftChoices = [], objectiveText = '';
+    let blasts = [];
+    const fieldRelics = [];
     let notice = { text: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER: FIRE · RIGHT CLICK: DASH · P: PAUSE', ttl: 6 };
     let bossEnt = null, bossPhase = 1;
     let ended = false, paused = false;
@@ -119,6 +150,7 @@ window.AetherSkirmish = (() => {
       player = { x: W / 2, y: H - 130, vx: 0, vy: 0, hp: hull.hp, maxHp: hull.hp, burstT: 0, burstCd: 0, invuln: 0, hurtInvuln: 0, boltCd: 0, bank: 0, trail: [] };
       enemies = []; bolts = []; orbs = []; motes = []; wells = []; trails = []; freezes = []; parts = []; popups = [];
       wave = 0; waveIntro = 1.6; phase = 'intro'; refit = null; dust = 0; kills = 0; boltCount = 0; ended = false;
+      charge = 0; pending = []; waveTime = 0; blasts = [];
       streak = 0; streakTime = 0; bestStreak = 0; score = 0; supercharge = 0; hazardTimer = 6; hazard = null; echoQueue = [];
       bossEnt = boss ? { id: 'boss', kind: 'maw', name: 'The Umbral Maw', x: W / 2, y: 150, vx: 0, vy: 0, hp: Math.round(620 * mode.hp), maxHp: Math.round(620 * mode.hp), radius: 46, state: 'chase', t: 0, cd: 2, beam: null, hurt: 0, spawnCd: 5 } : null;
     }
@@ -141,21 +173,37 @@ window.AetherSkirmish = (() => {
     function spawnWave() {
       wave++;
       const n = waveBudget(), pool = waveKinds();
-      for (let i = 0; i < n; i++) spawnEnemy(pool[Math.floor(rand() * pool.length)]);
+      waveTime = 0;
+      if (endless) {
+        for (let i = 0; i < n; i++) spawnEnemy(pool[Math.floor(rand() * pool.length)]);
+      } else {
+        // Authored roles, two readable packets rather than one random pile.
+        const roster = wave === 1 ? ['drifter', 'drifter', 'drifter', 'weaver']
+          : wave === 2 ? ['shard', 'shard', 'drifter', 'lancer', 'weaver', 'shard']
+          : ['maw', 'drifter', 'drifter', 'lancer', 'shard', 'shard', 'weaver'];
+        const firstPacket = Math.ceil(n * .55);
+        for (let i = 0; i < n; i++) scheduleEnemy(roster[i % roster.length], i < firstPacket ? 0 : 4.5);
+        if (refit === 'pursuit') scheduleEnemy('lancer', 4.5, true);
+      }
       if ((options.elite && wave === 3) || (endless && wave % 4 === 0)) spawnEnemy((options.sector ?? 0) > 0 ? 'blossom' : 'weaver', true);
       if (lure && (wave === 3 || (endless && wave % 5 === 0))) spawnEnemy('maw', true);
-      notice = { text: endless && wave % 4 === 0 ? `WAVE ${wave} · GILDED HARBINGER` : wave === 3 && !endless ? 'FINAL WAVE · HOLD YOUR GROUND' : `WAVE ${wave} · CONTACTS INBOUND`, ttl: 2.5 };
+      notice = { text: !endless ? `ACT ${wave} · ${ACTS[wave - 1].name.toUpperCase()}` : wave % 4 === 0 ? `WAVE ${wave} · GILDED HARBINGER` : `WAVE ${wave} · CONTACTS INBOUND`, ttl: 2.5 };
       waveIntro = 1.4;
     }
-    function spawnEnemy(kind, gilded = false) {
-      const def = ENEMIES[kind];
+    function entryPoint() {
       const side = rand() * TAU;
+      return { x: W / 2 + Math.cos(side) * (W / 2 - 60), y: H / 2 + Math.sin(side) * (H / 2 - 60) };
+    }
+    function scheduleEnemy(kind, at, gilded = false) { pending.push({ kind, at, gilded, ...entryPoint(), warning: .9 }); }
+    function spawnEnemy(kind, gilded = false, entry = null) {
+      const def = ENEMIES[kind];
+      const pos = entry || entryPoint();
       enemies.push({
-        kind, gilded, x: W / 2 + Math.cos(side) * (W / 2 - 60), y: H / 2 + Math.sin(side) * (H / 2 - 60),
+        kind, gilded, x: pos.x, y: pos.y,
         vx: 0, vy: 0, hp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp, maxHp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp,
         state: 'chase', t: 0, cd: def.cd || def.orbCd || def.beamCd || 2, hurt: 0, frozen: 0, slow: 0, born: 0,
       });
-      burst(W / 2 + Math.cos(side) * (W / 2 - 60), H / 2 + Math.sin(side) * (H / 2 - 60), sector.accent, 8, 120);
+      burst(pos.x, pos.y, sector.accent, 8, 120);
     }
 
     function burst(x, y, colour, n = 16, force = 180) {
@@ -169,8 +217,23 @@ window.AetherSkirmish = (() => {
     // ── Sim ────────────────────────────────────────────────────────────────
     function step(dt) {
       if (ended) return;
-      clock += dt;
       if (phase === 'draft') return; // an actual breather, not a lethal menu over live hazards
+      clock += dt;
+      if (phase === 'intro') {
+        waveIntro -= dt;
+        if (waveIntro <= 0) { phase = 'combat'; if (!boss) spawnWave(); }
+      }
+      if (phase === 'combat' && pending.length) {
+        waveTime += dt;
+        if (!enemies.some(e => e.hp > 0)) waveTime = Math.max(waveTime, Math.min(...pending.map(e => e.at)));
+        for (let i = pending.length - 1; i >= 0; i--) {
+          const entry = pending[i];
+          if (waveTime < entry.at) continue;
+          entry.warning -= dt;
+          if (entry.warning <= 0) { spawnEnemy(entry.kind, entry.gilded, entry); pending.splice(i, 1); }
+        }
+      }
+      blasts.forEach(b => { b.life -= dt; }); blasts = blasts.filter(b => b.life > 0);
       const p = player;
       // Input → velocity: sharp steering; the view adds the overshoot.
       let mx = (keys.has('d') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('a') || keys.has('ArrowLeft') ? 1 : 0);
@@ -213,21 +276,29 @@ window.AetherSkirmish = (() => {
       }, null);
       const autoAim = !pointerActive || (pilot && !keyboardMoving);
       if (target && autoAim) {
-        const e = target.e, travel = Math.min(.55, target.d / 560);
+        const e = target.e, travel = Math.min(.8, target.d / WEAPONS[weapon].speed);
         const ex = e.x + e.vx * travel * .48, ey = e.y + e.vy * travel * .48;
         targetAngle = Math.atan2(ey - p.y, ex - p.x);
       } else targetAngle = Math.atan2(aim.y - p.y, aim.x - p.x);
       const wantsFire = firing || keys.has('j') || keys.has('z') || keys.has('Enter');
       if (wantsFire && p.boltCd <= 0 && phase === 'combat') {
-        p.boltCd = hull.boltCd;
-        fireBolt(targetAngle);
+        const def = WEAPONS[weapon];
+        charge += dt;
+        if (!def.charge || charge >= def.charge) {
+          p.boltCd = hull.boltCd * def.cycle;
+          fireBolt(targetAngle, autoAim && target ? target.d : Math.hypot(aim.x - p.x, aim.y - p.y));
+          charge = 0;
+        }
+      } else if (charge > 0) {
+        // Releasing a half-charged lance vents it; switching cannot bank a charge.
+        charge = 0; p.boltCd = Math.max(p.boltCd, .16);
       }
       // Echo Plate answers in simulation time: pausing mid-volley stays honest.
       for (let i = echoQueue.length - 1; i >= 0; i--) {
         const q = echoQueue[i]; q.t -= dt;
         if (q.t <= 0) {
           echoQueue.splice(i, 1);
-          if (phase === 'combat') bolts.push({ x: p.x + Math.cos(q.angle) * 16, y: p.y + Math.sin(q.angle) * 16, vx: Math.cos(q.angle) * 540, vy: Math.sin(q.angle) * 540, dmg: hull.boltDmg * .6 * (endless && refit === 'power' ? 1.35 : 1), life: 1.3, echo: true });
+          if (phase === 'combat') emitVolley(q.id, q.angle, q.distance, q.damage * .6, q.rail, true);
         }
       }
       notice.ttl = Math.max(0, notice.ttl - dt);
@@ -237,24 +308,36 @@ window.AetherSkirmish = (() => {
       // Bolts
       for (let i = bolts.length - 1; i >= 0; i--) {
         const b = bolts[i];
-        b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
-        if (b.life <= 0 || b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) { bolts.splice(i, 1); continue; }
+        const travelDt = Math.min(dt, b.life);
+        const oldX = b.x, oldY = b.y;
+        b.x += b.vx * travelDt; b.y += b.vy * travelDt; b.life -= dt;
+        if (b.weapon === 'mortar') {
+          if (b.life <= 0) { detonate(b); bolts.splice(i, 1); }
+          continue;
+        }
+        if (b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) { bolts.splice(i, 1); continue; }
         let hitSomething = false;
         const targets = bossEnt && bossEnt.hp > 0 ? [...enemies, bossEnt] : enemies;
         for (const e of targets) {
-          if (e.hp <= 0 || e.frozen > 0) continue;
+          if (e.hp <= 0 || b.hits.has(e)) continue;
           const def = ENEMIES[e.kind];
           const r = e.radius ?? def.radius;
-          if (Math.hypot(e.x - b.x, e.y - b.y) < r + 5) {
+          const sx = b.x - oldX, sy = b.y - oldY;
+          const along = clamp(((e.x - oldX) * sx + (e.y - oldY) * sy) / (sx * sx + sy * sy || 1), 0, 1);
+          if (Math.hypot(e.x - oldX - sx * along, e.y - oldY - sy * along) < r + 5) {
             hitSomething = true;
-            damageEnemy(e, b.dmg, b);
+            b.hits.add(e);
+            // Scatter pellets leave the muzzle full-strength and lose force downrange.
+            const falloff = b.weapon === 'scatter' && b.maxLife ? .45 + .55 * Math.max(0, b.life / b.maxLife) : 1;
+            damageEnemy(e, b.dmg * falloff, b);
             if (b.pierce && b.pierce > 0) {
-              b.pierce--; b.dmg *= .65; b.x += b.vx * .025; b.y += b.vy * .025;
+              b.pierce--; b.dmg *= .8;
             } else bolts.splice(i, 1);
             break;
           }
         }
         if (hitSomething) continue;
+        if (b.life <= 0) bolts.splice(i, 1);
       }
       // Enemy logic
       for (const e of enemies) {
@@ -387,26 +470,81 @@ window.AetherSkirmish = (() => {
       }
       // Waves
       if (!boss) {
-        if (phase === 'intro') { waveIntro -= dt; if (waveIntro <= 0) { phase = 'combat'; if (!enemies.length) spawnWave(); } }
-        if (phase === 'combat' && enemies.every(e => e.hp <= 0) && !bossEnt) {
+        if (phase === 'combat' && !pending.length && enemies.every(e => e.hp <= 0) && !bossEnt) {
+          if (refit === 'pursuit') { dust += 24; popup(W / 2, H / 2 - 70, '+24 SIGNAL BOUNTY', sector.mote); }
           if (!endless && wave >= 3) return end(true);
-          phase = endless ? 'draft' : 'intro'; waveIntro = 1.8;
-          if (endless) { orbs = []; hazard = null; hazardTimer = 4; firing = false; keys.clear(); draftBar.hidden = false; notice = { text: 'FIELD REFIT · 1 REINFORCE / 2 OVERCLOCK', ttl: 4 }; }
-          else { player.hp = Math.min(player.maxHp, player.hp + 6); popup(W / 2, H / 2, 'THE FIELD SETTLES · +6 HULL-PLATING', sector.mote); }
+          openRefit();
         }
-        if (phase === 'intro' && waveIntro <= 0) { phase = 'combat'; spawnWave(); }
       }
     }
+    function openRefit() {
+      phase = 'draft'; orbs = []; bolts = []; echoQueue = []; charge = 0;
+      hazard = null; hazardTimer = 4; firing = false; keys.clear();
+      // Field salvage is recovered before the menu; no need to circle an empty arena.
+      for (const mote of motes) {
+        if (!mote.kind) dust += 2;
+        if (mote.kind === 'repair') player.hp = Math.min(player.maxHp, player.hp + 8);
+      }
+      motes = [];
+      draftChoices = endless ? [
+        { id: 'guard', text: 'Reinforce · +14 plating, quicker dash next wave' },
+        { id: 'power', text: 'Overclock · +35% weapon damage next wave' },
+      ] : wave === 1 ? [
+        { id: 'guard', text: 'Patch & evade · +14 plating, quicker dash next act' },
+        { id: 'pursuit', text: 'Pursue signal · extra gilded lancer; +24 dust if cleared' },
+      ] : [
+        { id: 'shelter', text: 'Ground the storm · no sector hazards in the final act' },
+        { id: 'power', text: 'Overclock · +35% weapon damage in the final act' },
+      ];
+      const pool = ['echo-plate', 'lodestone-coil', 'rime-coating', 'static-net', 'longwake-sail', 'parallax-mirror', 'starforged-rail', 'tempest-fuse', 'aurora-siphon']
+        .filter(id => !fieldRelics.includes(id) && !(options.instruments || []).includes(id));
+      for (let i = 0; i < 2 && pool.length; i++) {
+        const id = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+        draftChoices.push({ id, text: `${INSTRUMENTS[id].name} · ${INSTRUMENTS[id].text} Lasts this hunt.` });
+      }
+      draftBar.innerHTML = `<strong>FIELD REFIT · CHOOSE ONE · ${endless ? `WAVE ${wave + 1}` : ACTS[wave].name.toUpperCase()}</strong>` + draftChoices.map((choice, i) => `<button type="button" data-skirmish-refit="${choice.id}">${i + 1} · ${choice.text}</button>`).join('');
+      draftBar.hidden = false;
+      notice = { text: 'FIELD REFIT · 1–4 CHOOSE · WEAPONS ALSO AVAILABLE BELOW', ttl: 4 };
+      updateStatus(true);
+    }
     function chooseRefit(choice) {
-      if (!endless || phase !== 'draft' || paused || destroyed || !['guard', 'power'].includes(choice)) return;
+      if (phase !== 'draft' || paused || destroyed || !draftChoices.some(c => c.id === choice)) return;
       refit = choice;
       if (choice === 'guard') player.hp = Math.min(player.maxHp, player.hp + 14);
+      if (INSTRUMENTS[choice]) {
+        fieldRelics.push(choice);
+        INSTRUMENTS[choice].verbs.forEach(verb => verbs.add(verb));
+      }
       draftBar.hidden = true; phase = 'intro'; waveIntro = 1.8;
-      notice = { text: choice === 'guard' ? 'REINFORCED · PLATING + QUICK DASH' : 'OVERCLOCKED · BOLTS +35% NEXT WAVE', ttl: 3 };
+      notice = { text: INSTRUMENTS[choice] ? `${INSTRUMENTS[choice].name.toUpperCase()} · ONLINE FOR THIS HUNT` : draftChoices.find(c => c.id === choice).text.toUpperCase(), ttl: 3 };
       tone(choice === 'guard' ? 540 : 840, .18, 'triangle', .05);
       canvas.focus({ preventScroll: true });
     }
-    if (endless) listen(draftBar, 'click', e => chooseRefit(e.target.closest('[data-skirmish-refit]')?.dataset.skirmishRefit));
+    function syncArmory() {
+      for (const button of weaponBar.querySelectorAll('[data-skirmish-weapon]')) button.setAttribute('aria-pressed', String(button.dataset.skirmishWeapon === weapon));
+      weaponHelp.textContent = `${WEAPONS[weapon].name} — ${WEAPONS[weapon].note}`;
+      canvas.dataset.weapon = weapon;
+    }
+    function setWeapon(id, quiet = false) {
+      if (!WEAPONS[id] || destroyed) return;
+      if (weapon !== id) {
+        weapon = id; charge = 0; // a half-charge never survives the swap
+        try { localStorage.setItem('aether-hunt-weapon', id); } catch {}
+        if (!quiet) {
+          notice = { text: `${WEAPONS[id].name.toUpperCase()} · ${WEAPONS[id].note.toUpperCase()}`, ttl: 2.2 };
+          tone(560 + WEAPON_IDS.indexOf(id) * 90, .09, 'triangle', .04);
+        }
+      }
+      syncArmory();
+    }
+    listen(weaponBar, 'click', e => {
+      const id = e.target.closest('[data-skirmish-weapon]')?.dataset.skirmishWeapon;
+      if (!id) return;
+      setWeapon(id);
+      canvas.focus({ preventScroll: true });
+    });
+    syncArmory();
+    listen(draftBar, 'click', e => chooseRefit(e.target.closest('[data-skirmish-refit]')?.dataset.skirmishRefit));
     function bossStep(b, dt) {
       const def = ENEMIES.maw, p = player;
       b.hurt = Math.max(0, b.hurt - dt);
@@ -470,21 +608,59 @@ window.AetherSkirmish = (() => {
         end(true);
       }
     }
-    function fireBolt(angle) {
+    // One trigger pull = one volley. Weapons differ in pattern, reach and recovery;
+    // instruments (echo/split/rail) layer on top of whatever is in hand.
+    function emitVolley(id, angle, distance, damageMul = 1, rail = false, echo = false) {
+      const def = WEAPONS[id], p = player;
+      const power = hull.boltDmg * def.damage * damageMul * (rail ? 1.6 : 1) * (refit === 'power' ? 1.35 : 1);
+      const mk = a => bolts.push({
+        x: p.x + Math.cos(a) * 16, y: p.y + Math.sin(a) * 16,
+        vx: Math.cos(a) * def.speed, vy: Math.sin(a) * def.speed,
+        dmg: power, life: def.range / def.speed, maxLife: def.range / def.speed,
+        pierce: id === 'lance' ? 4 : rail ? 2 : 0,
+        weapon: id, colour: def.colour, hits: new Set(), echo, glow: rail,
+      });
+      if (id === 'mortar') {
+        // Lobbed shell: flight time is set by the clamped aim distance, so the blast
+        // lands where aimed — never closer than 100, never past the 460 reach.
+        const d = clamp(distance || def.range, 100, def.range);
+        bolts.push({
+          x: p.x + Math.cos(angle) * 16, y: p.y + Math.sin(angle) * 16,
+          vx: Math.cos(angle) * def.speed, vy: Math.sin(angle) * def.speed,
+          dmg: power, life: d / def.speed, maxLife: d / def.speed, pierce: 0,
+          weapon: id, colour: def.colour, radius: def.radius, hits: new Set(), echo, glow: rail,
+        });
+      } else if (id === 'scatter') {
+        for (const off of [-.3, -.15, 0, .15, .3]) mk(angle + off);
+      } else mk(angle);
+      if (verbs.has('echo') && !echo) echoQueue.push({ t: .35, id, angle, distance, damage: damageMul, rail });
+      if (verbs.has('split') && !echo && id === 'pulse' && boltCount % 4 === 0) { mk(angle - .22); mk(angle + .22); }
+    }
+    function detonate(b) {
+      const r = b.radius || WEAPONS.mortar.radius;
+      blasts.push({ x: b.x, y: b.y, r, life: .34, max: .34, colour: b.colour });
+      const pool = bossEnt ? [...enemies, bossEnt] : [...enemies];
+      for (const e of pool) {
+        if (e.hp <= 0) continue;
+        const d = Math.hypot(e.x - b.x, e.y - b.y);
+        const reach = r + (e.radius ?? ENEMIES[e.kind].radius);
+        if (d < reach) damageEnemy(e, b.dmg * (1 - .45 * Math.min(1, d / reach)), b);
+      }
+      burst(b.x, b.y, b.colour, 22, 260);
+      shake = Math.max(shake, 5); hitStop = Math.max(hitStop, .04);
+      tone(120, .32, 'sine', .07);
+    }
+    function fireBolt(angle, distance) {
       boltCount++;
       canvas.dataset.boltsFired = boltCount;
-      const p = player, speed = 540;
       const firedRail = verbs.has('rail') && boltCount % 6 === 0;
       const boosted = supercharge > 0;
       if (boosted) supercharge--;
-      const mk = a => bolts.push({ x: p.x + Math.cos(a) * 16, y: p.y + Math.sin(a) * 16,
-        vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-        dmg: hull.boltDmg * (firedRail ? 1.6 : 1) * (boosted ? 1.35 : 1) * (endless && refit === 'power' ? 1.35 : 1),
-        life: 1.3, pierce: firedRail ? 2 : 0, glow: firedRail || boosted });
-      mk(angle);
-      if (verbs.has('echo')) echoQueue.push({ t: .35, angle });
-      if (verbs.has('split') && boltCount % 4 === 0) { mk(angle - .22); mk(angle + .22); }
-      tone(700 + (boltCount % 4) * 60, .05, 'triangle', .028);
+      emitVolley(weapon, angle, distance, boosted ? 1.35 : 1, firedRail);
+      if (weapon === 'scatter') tone(300, .07, 'square', .035);
+      else if (weapon === 'lance') tone(920, .22, 'sawtooth', .05);
+      else if (weapon === 'mortar') tone(210, .16, 'sine', .05);
+      else tone(700 + (boltCount % 4) * 60, .05, 'triangle', .028);
     }
     function damageEnemy(e, dmg, bolt, quiet = false) {
       e.hp -= dmg; e.hurt = .12;
@@ -584,7 +760,7 @@ window.AetherSkirmish = (() => {
     function tryBurst() {
       if(paused)return;
       const p = player;
-      const cdMul = (verbs.has('gyro') ? .65 : 1) * (endless && refit === 'guard' ? .75 : 1);
+      const cdMul = (verbs.has('gyro') ? .65 : 1) * (refit === 'guard' ? .75 : 1);
       if (p.burstCd > 0 || p.burstT > 0 || phase !== 'combat') return;
       const mx = (keys.has('d') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('a') || keys.has('ArrowLeft') ? 1 : 0);
       const my = (keys.has('s') || keys.has('ArrowDown') ? 1 : 0) - (keys.has('w') || keys.has('ArrowUp') ? 1 : 0);
@@ -616,6 +792,7 @@ window.AetherSkirmish = (() => {
     // ── Sector hazards: telegraphed, readable, and mechanically distinct ──
     function updateHazard(dt) {
       if (ended || phase !== 'combat' || !player.hp) return;
+      if (refit === 'shelter') { hazard = null; return; } // Ground the storm: the final act flies clean.
       if (!hazard) {
         hazardTimer -= dt;
         if (hazardTimer <= 0) {
@@ -776,6 +953,23 @@ window.AetherSkirmish = (() => {
         ctx.beginPath(); ctx.arc(o.x, o.y, o.ring ? 7 : 6, 0, TAU); ctx.fill();
         ctx.strokeStyle = sector.bg; ctx.lineWidth = 2; ctx.stroke();
       }
+      // Blasts bloom and fade where mortar shells land.
+      for (const b of blasts) {
+        const t = 1 - b.life / b.max;
+        ctx.globalAlpha = (1 - t) * .7; ctx.fillStyle = b.colour;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (.35 + .65 * t), 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1 - t; ctx.strokeStyle = '#fff3f8'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * t, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      // Scheduled contacts flash their breach point before they arrive.
+      for (const e of pending) {
+        if (waveTime < e.at) continue;
+        ctx.globalAlpha = .45 + .35 * Math.sin(clock * 14);
+        ctx.strokeStyle = e.gilded ? '#f2d38a' : '#ff9eaa'; ctx.lineWidth = 2; ctx.setLineDash([6, 7]);
+        ctx.beginPath(); ctx.arc(e.x, e.y, 22 + 4 * Math.sin(clock * 7), 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(e.x - 9, e.y); ctx.lineTo(e.x + 9, e.y); ctx.moveTo(e.x, e.y - 9); ctx.lineTo(e.x, e.y + 9); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
       for (const e of enemies) drawEnemy(e);
       if (bossEnt) drawEnemy(bossEnt);
       // The Maw beam has one full second of visual warning before it ignites.
@@ -802,10 +996,26 @@ window.AetherSkirmish = (() => {
         const mx = (a.x1 + a.x2) / 2 + 14, my = (a.y1 + a.y2) / 2 - 14;
         ctx.quadraticCurveTo(mx, my, a.x2, a.y2); ctx.stroke(); ctx.globalAlpha = 1;
       }
-      // Bolts
+      // Bolts — each weapon reads differently at a glance.
       for (const b of bolts) {
-        ctx.strokeStyle = b.glow ? '#9eeef8' : b.echo ? '#9ed7c6' : '#f1f4ac'; ctx.lineWidth = b.glow ? 5 : 3; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * .022, b.y - b.vy * .022); ctx.stroke();
+        if (b.weapon === 'mortar') {
+          // Lobbed shell: it climbs a fake arc while a dashed ring marks the blast site.
+          const prog = b.maxLife ? 1 - b.life / b.maxLife : 0;
+          const lift = Math.sin(prog * Math.PI) * 30;
+          const ix = b.x + b.vx * b.life, iy = b.y + b.vy * b.life;
+          ctx.globalAlpha = .45; ctx.strokeStyle = b.colour; ctx.lineWidth = 1.6; ctx.setLineDash([4, 6]);
+          ctx.beginPath(); ctx.arc(ix, iy, (b.radius || 76) * .55, 0, TAU); ctx.stroke();
+          ctx.setLineDash([]); ctx.globalAlpha = 1;
+          ctx.fillStyle = b.colour;
+          ctx.beginPath(); ctx.arc(b.x, b.y - lift, 5.5, 0, TAU); ctx.fill();
+          ctx.strokeStyle = '#141a15'; ctx.lineWidth = 1.4; ctx.stroke();
+          continue;
+        }
+        ctx.strokeStyle = b.glow ? '#9eeef8' : b.echo ? '#9ed7c6' : b.colour || '#f1f4ac';
+        ctx.lineWidth = b.weapon === 'lance' ? 5 : b.glow ? 5 : b.weapon === 'scatter' ? 2.6 : 3;
+        ctx.lineCap = 'round';
+        const trailLen = b.weapon === 'lance' ? .045 : .022;
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * trailLen, b.y - b.vy * trailLen); ctx.stroke();
       }
       // Player kite and thruster trails
       const p = player;
@@ -864,6 +1074,14 @@ window.AetherSkirmish = (() => {
       ctx.fillText(player.burstCd <= 0 ? 'DASH READY ✦' : `DASH ${player.burstCd.toFixed(1)}`, 16, 52);
       ctx.font = '600 15px "DM Sans"'; ctx.fillStyle = '#b8d9cf';
       ctx.fillText(pilot ? 'MOUSE PILOT · M TO CHANGE' : 'WASD PILOT · M TO CHANGE', 16, 74);
+      // Armory readout + lance charge meter, bottom-left, clear of the notice line.
+      ctx.fillStyle = WEAPONS[weapon].colour; ctx.font = '600 15px "DM Sans"';
+      ctx.fillText(`${WEAPONS[weapon].key} · ${WEAPONS[weapon].name.toUpperCase()}`, 16, H - 14);
+      if (WEAPONS[weapon].charge && phase === 'combat') {
+        ctx.fillStyle = '#0c130e'; ctx.fillRect(16, H - 32, 150, 7);
+        ctx.fillStyle = WEAPONS[weapon].colour; ctx.fillRect(16, H - 32, 150 * Math.min(1, charge / WEAPONS[weapon].charge), 7);
+        ctx.strokeStyle = '#c4ac7955'; ctx.strokeRect(16, H - 32, 150, 7);
+      }
       if (streak > 1) {
         ctx.fillStyle = '#9decc8'; ctx.font = '700 27px "DM Sans"';
         ctx.fillText(`${streak}× FLOW`, 16, 106);
@@ -874,8 +1092,11 @@ window.AetherSkirmish = (() => {
       ctx.fillStyle = sector.mote; ctx.fillText(`✦ ${dust}`, W - 18, 30);
       ctx.fillStyle = '#c7d9d1'; ctx.font = '600 15px "DM Sans"';
       ctx.fillText(`SCORE ${score.toLocaleString()}`, W - 18, 76);
-      if (!boss) { ctx.fillText(endless ? `WAVE ${Math.max(1, wave)}` : `WAVE ${Math.max(1, wave)} / 3`, W - 18, 53); }
-      if (endless && refit && phase !== 'draft') { ctx.fillStyle = '#efd39c'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"'; ctx.fillText(refit === 'guard' ? 'REFIT: QUICK DASH' : 'REFIT: BOLTS +35%', W - 18, 96); }
+      if (!boss) { ctx.fillText(endless ? `WAVE ${Math.max(1, wave)}` : `ACT ${Math.max(1, wave)} / 3`, W - 18, 53); }
+      if (refit && phase !== 'draft') {
+        const refitLabel = refit === 'guard' ? 'REFIT: PLATING + QUICK DASH' : refit === 'power' ? 'REFIT: DAMAGE +35%' : refit === 'pursuit' ? 'REFIT: PURSUIT SIGNAL' : refit === 'shelter' ? 'REFIT: STORM GROUNDED' : INSTRUMENTS[refit] ? `FIELD: ${INSTRUMENTS[refit].name.toUpperCase()}` : '';
+        if (refitLabel) { ctx.fillStyle = '#efd39c'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"'; ctx.fillText(refitLabel, W - 18, 96); }
+      }
       else if (bossEnt) {
         ctx.fillStyle = '#e8a0a8'; ctx.textAlign = 'center';
         ctx.fillRect(W / 2 - 160, 16, 320 * Math.max(0, bossEnt.hp / bossEnt.maxHp), 10);
@@ -884,14 +1105,16 @@ window.AetherSkirmish = (() => {
       }
       if (phase === 'intro' && !boss) {
         ctx.fillStyle = '#e9dcae'; ctx.textAlign = 'center'; ctx.font = '32px Cormorant, serif';
-        ctx.fillText(wave === 0 ? 'Contacts approaching…' : `Wave ${wave + 1}`, W / 2, H / 2 - 40);
+        ctx.fillText(wave === 0 ? 'Contacts approaching…' : endless ? `Wave ${wave + 1}` : `Act ${wave + 1} · ${ACTS[Math.min(2, wave)].name}`, W / 2, H / 2 - 40);
       }
       if (phase === 'draft') {
-        ctx.fillStyle = '#08151cdd'; ctx.fillRect(W / 2 - 320, H / 2 - 100, 640, 186);
-        ctx.strokeStyle = '#eed09a'; ctx.strokeRect(W / 2 - 320, H / 2 - 100, 640, 186);
-        ctx.fillStyle = '#f2d89c'; ctx.textAlign = 'center'; ctx.font = '32px Georgia, serif'; ctx.fillText('The field is clear. Choose your refit.', W / 2, H / 2 - 48);
-        ctx.fillStyle = '#d3e8dd'; ctx.font = '18px "DM Sans"'; ctx.fillText('1  REINFORCE · +14 PLATING / QUICKER DASH', W / 2, H / 2 - 2);
-        ctx.fillText('2  OVERCLOCK · +35% BOLT DAMAGE', W / 2, H / 2 + 37);
+        const boxH = 118 + draftChoices.length * 30;
+        ctx.fillStyle = '#08151cdd'; ctx.fillRect(W / 2 - 400, H / 2 - boxH / 2, 800, boxH);
+        ctx.strokeStyle = '#eed09a'; ctx.strokeRect(W / 2 - 400, H / 2 - boxH / 2, 800, boxH);
+        ctx.fillStyle = '#f2d89c'; ctx.textAlign = 'center'; ctx.font = '32px Cormorant, serif';
+        ctx.fillText('The field is clear. Choose your refit.', W / 2, H / 2 - boxH / 2 + 46);
+        ctx.fillStyle = '#d3e8dd'; ctx.font = '15px "DM Sans"';
+        draftChoices.forEach((choice, i) => ctx.fillText(`${i + 1}  ${choice.text.toUpperCase()}`, W / 2, H / 2 - boxH / 2 + 88 + i * 30));
       }
       if (notice.ttl > 0) {
         ctx.globalAlpha = Math.min(1, notice.ttl / .5);
@@ -923,6 +1146,14 @@ window.AetherSkirmish = (() => {
         canvas.dataset.boss = bossEnt?.hp ?? 0;
         canvas.dataset.mode = endless ? 'endless' : 'mission';
         canvas.dataset.refit = refit || '';
+        canvas.dataset.weapon = weapon;
+        canvas.dataset.weaponSpeed = WEAPONS[weapon].speed;
+        canvas.dataset.weaponDamage = Math.round(hull.boltDmg * WEAPONS[weapon].damage * (refit === 'power' ? 1.35 : 1) * 100) / 100;
+        canvas.dataset.charge = Math.round(charge * 1000) / 1000;
+        canvas.dataset.pending = pending.length;
+        canvas.dataset.act = endless ? '' : clamp(Math.max(1, wave), 1, 3);
+        canvas.dataset.draft = phase === 'draft' ? draftChoices.map(c => c.id).join(',') : '';
+        canvas.dataset.boltsLive = bolts.length;
       }
     }
     function tick(now) {
@@ -939,7 +1170,7 @@ window.AetherSkirmish = (() => {
     function pause() {
       if (paused || ended || destroyed) return;
       paused = true; firing = false; keys.clear();
-      if (endless) draftBar.querySelectorAll('button').forEach(button => { button.disabled = true; });
+      draftBar.querySelectorAll('button').forEach(button => { button.disabled = true; });
       acc = 0; last = 0; // no catch-up burst on resume
       canvas.dataset.paused = 'true';
       cancelAnimationFrame(raf); raf = 0;
@@ -950,7 +1181,7 @@ window.AetherSkirmish = (() => {
     function resume() {
       if (!paused || ended || destroyed) return;
       paused = false;
-      if (endless) draftBar.querySelectorAll('button').forEach(button => { button.disabled = false; });
+      draftBar.querySelectorAll('button').forEach(button => { button.disabled = false; });
       acc = 0; last = 0;
       canvas.dataset.paused = 'false';
       tone(660, .1, 'triangle', .035);
@@ -962,10 +1193,24 @@ window.AetherSkirmish = (() => {
       const nowMs = performance.now();
       if (!force && nowMs < statusNext) return;
       statusNext = nowMs + 500;
+      const actIndex = clamp(Math.max(1, wave), 1, 3) - 1;
       const text = ended
         ? (player.hp <= 0 ? `The skiff is lost. Final score ${score}.` : `Hunt complete. Score ${score}.`)
-        : `${paused ? 'Paused. ' : ''}Hull ${Math.ceil(Math.max(0, player.hp))} of ${player.maxHp}. ${boss ? 'Boss: the Umbral Maw.' : `Wave ${Math.max(1, wave)}${endless ? '' : ' of 3'}.`} Score ${score}.`;
+        : `${paused ? 'Paused. ' : ''}Hull ${Math.ceil(Math.max(0, player.hp))} of ${player.maxHp}. ${boss ? 'Boss: the Umbral Maw.' : endless ? `Wave ${Math.max(1, wave)}.` : `Act ${actIndex + 1} of 3: ${ACTS[actIndex].name}.`} Score ${score}.`;
       if (text !== statusText) { statusText = text; srStatus.textContent = text; }
+      // Persistent mission line: finite hunts read as authored acts, endless as a vigil.
+      const inbound = pending.length ? ` · ${pending.length} contact${pending.length === 1 ? '' : 's'} inbound` : '';
+      objectiveText = ended
+        ? (player.hp <= 0 ? 'Skiff lost — the field keeps the score.' : 'Hunt complete — the field is yours.')
+        : boss ? 'Objective: silence the Umbral Maw.'
+        : endless ? `Endless vigil · wave ${Math.max(1, wave)}${inbound}${phase === 'draft' ? ' · refit available' : ''}`
+        : phase === 'draft' ? `Act ${actIndex + 1} cleared · next: ${ACTS[Math.min(2, actIndex + 1)].name} — choose a field refit.`
+        : `Act ${actIndex + 1} of 3 · ${ACTS[actIndex].name} — ${ACTS[actIndex].hint}${inbound}`;
+      const line = `${objectiveText} · ${WEAPONS[weapon].name} · Hull ${Math.ceil(Math.max(0, player.hp))}/${player.maxHp}`;
+      if (missionStatus.textContent !== line) {
+        missionStatus.textContent = line;
+        missionStatus.dataset.skirmishObjective = objectiveText;
+      }
     }
     function point(e) {
       const r = canvas.getBoundingClientRect();
@@ -995,7 +1240,16 @@ window.AetherSkirmish = (() => {
     listen(window, 'keydown', e => {
       if (uiOwnsKeys(e)) return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (phase === 'draft' && !e.repeat && document.activeElement === canvas && (k === '1' || k === '2')) { e.preventDefault(); chooseRefit(k === '1' ? 'guard' : 'power'); return; }
+      if (phase === 'draft' && !e.repeat && document.activeElement === canvas && ['1', '2', '3', '4'].includes(k)) {
+        e.preventDefault();
+        const pick = draftChoices[Number(k) - 1];
+        if (pick) chooseRefit(pick.id);
+        return;
+      }
+      if (!e.repeat && !paused && phase !== 'draft' && ['1', '2', '3', '4'].includes(k) && (document.activeElement === canvas || pointerActive)) {
+        e.preventDefault();
+        setWeapon(WEAPON_IDS[Number(k) - 1]);
+      }
       if (['w', 'a', 's', 'd', 'j', 'z', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) && document.activeElement === canvas) e.preventDefault();
       keys.add(k);
       if (k === ' ' && !e.repeat && document.activeElement === canvas && !paused) tryBurst();
@@ -1024,11 +1278,13 @@ window.AetherSkirmish = (() => {
       abort.abort();
       audio?.close().catch(() => {});
       canvas.remove();
+      weaponBar.remove();
+      missionStatus.remove();
       draftBar.remove();
       srStatus.remove();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     }
-    return { destroy, pause, resume, get state() { return { hp: player.hp, wave, dust, kills, phase, paused, score, boltsFired: boltCount }; } };
+    return { destroy, pause, resume, get state() { return { hp: player.hp, wave, dust, kills, phase, paused, score, boltsFired: boltCount, weapon, charge, pending: pending.length, act: endless ? null : clamp(Math.max(1, wave), 1, 3) }; } };
   }
   return { create, INSTRUMENTS, HULLS, SECTORS, ENEMIES };
 })();

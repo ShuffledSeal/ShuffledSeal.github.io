@@ -10,7 +10,7 @@ window.AetherPuzzles = (() => {
     venus: { title:'Cloudworks', genre:'Routing · rotating pipes', time:'4–10 min', lead:'Restore the balloon’s cooling circuit.', rules:'Turn the pipe tiles to connect the pump P to the receiver R. Every tile must belong to the same continuous route. Brass-pinned tiles cannot turn.', detail:'Start at the pinned ends. A pipe must connect on both sides of every shared edge. Corners at the edge of the board are useful clues.', connection:'Vega’s balloons explored Venus’s cloud layers in 1985. The sealed cooling circuit is an imagined engineering puzzle, not a reconstruction of their hardware.', legend:'P pump · R receiver · riveted tiles cannot turn', levels:['Pressure test','Cloud base','Acid clouds','Upper deck','Closed circuit'] },
     earth: { title:'Watershed', genre:'Path puzzle · fill the grid', time:'4–12 min', lead:'Connect the stations. Use every square.', rules:'Join each pair of matching numbered stations with one continuous path. Paths cannot cross or share a square. Fill the entire grid to finish.', detail:'Drag from a station, or select a station and tap adjoining squares. Keyboard: arrows move focus, Space extends the path. Select an endpoint to redraw its route; select an earlier segment to shorten it.', connection:'A map-inspired puzzle about competing routes through a shared landscape. Real rivers branch and follow elevation; these survey links deliberately do neither.', legend:'Matching numbers connect · all squares required', levels:['Headwaters','Estuary','Tributaries','Floodplain','Continental divide'] },
     mars: { title:'Sample return', genre:'Sokoban · crate planning', time:'5–15 min', lead:'Push every sample into a collection bay.', rules:'Move the rover one square at a time. It can push one sample canister, but cannot pull it or push two together. Fill every outlined bay.', detail:'Leave room to get behind each canister. A canister pushed into a corner without a bay is stuck: undo the move and approach from another side.', connection:'Mars rovers collect and cache carefully selected samples. These push-only canisters turn route planning into a puzzle; real rovers use robotic arms.', legend:'The rover pushes brass canisters · dashed rings are collection bays', levels:['First cache','Rock corridor','Delta approach','Jezero depot','Return manifest'] },
-    jupiter: { title:'Orbital lock', genre:'Logic · linked dials', time:'4–10 min', lead:'Bring every moon to its marked position.', rules:'Advance one moon by one division. The linked moon also advances by the amount shown below that dial. Align every pointer with the brass mark at the top.', detail:'Each dial wraps around. Follow the coupling labels: changing the last moon can disturb the first. The links are fixed for the whole level.', connection:'Io, Europa, and Ganymede have a real 4:2:1 orbital resonance. These mechanical dials borrow the idea of coupled motion; their discrete links are puzzle rules, not orbital predictions.', legend:'Brass mark = target · numbered positions wrap', levels:['Three moons','Longer periods','Callisto joins','Eight divisions','Double coupling'] },
+    jupiter: { title:'Orbital lock', genre:'Logic · coupled burn planning', time:'4–10 min', lead:'Plan burns that align every moon at zero.', rules:'Select a moon to queue a burn: it advances by 1 and its next neighbour by 2. Dashed needles preview the combined result. Adjust the burn counts, then launch your plan. Each burn costs one move; planning is free.', detail:'The links form a loop, so fixing moons one at a time can undo your work. Balance all the projected positions together. Burn order does not change the final alignment; a full cycle of burns on one moon cancels itself.', connection:'Io, Europa, and Ganymede have a real 4:2:1 orbital resonance. These mechanical dials borrow the idea of coupled motion; their discrete links are puzzle rules, not orbital predictions.', legend:'Solid needle = now · dashed needle = planned · zero = aligned', levels:['Three moons','Longer periods','Callisto joins','Eight divisions','Double coupling'] },
     saturn: { title:'Cassini passage', genre:'Sliding blocks · clear the exit', time:'5–15 min', lead:'Open a passage for the survey probe.', rules:'Drag a block along its marked axis, or select it and use the arrows. Blocks cannot overlap or turn. Bring the brass probe P to the exit on the right.', detail:'The shortest solution often moves something away from the exit first. Count each one-square slide as one move; the reference par uses the same rule.', connection:'Saturn’s ring gaps and narrow lanes inspire this sliding-block board. The blocks are an abstract map of obstacles, not solid slabs in the real rings.', legend:'P is the probe · each block slides only along its marked axis', levels:['Inner edge','Ring traffic','Shepherd lanes','Encke crossing','Cassini passage'] },
     uranus: { title:'Axis shift', genre:'Tilt maze · simultaneous motion', time:'4–12 min', lead:'Settle every capsule into a socket.', rules:'Tilt in one direction. All capsules slide until a wall or another capsule stops them. Place a capsule on every brass socket at the same time.', detail:'Sockets do not hold capsules in place. Use one capsule as a temporary stopper for another, and plan the final tilt before making the first.', connection:'Uranus’s 98° axial tilt inspired a board where orientation changes everything. This is a laboratory tilt maze, not a model of the planet’s gravity.', legend:'Ice capsules slide together · brass rings are sockets', levels:['Quarter turn','Counterweight','Miranda maze','Three bodies','On its side'] },
     neptune: { title:'Storm runner', genre:'Inertia maze · limited moves', time:'5–12 min', lead:'Reach the weather buoys in order.', rules:'Choose a direction to ride the wind until a storm barrier stops you. You must stop on buoys 1, 2, 3, and then the relay R, in that order. Each leg uses one fuel charge.', detail:'Passing over a buoy does not collect it. Find the wall that lets you stop on it. You have three charges more than the shortest route; undo restores a charge.', connection:'Neptune’s fast winds make drifting cloud features useful tracers. Here the winds and storm edges form a deliberately simplified, turn-based navigation puzzle.', legend:'The probe rides the wind · red buoys in order: 1 → 2 → 3 → relay R', levels:['First front','Crosswind','Dark spot','High latitudes','Last transmission'] }
@@ -18,6 +18,54 @@ window.AetherPuzzles = (() => {
   const clone = value => structuredClone(value);
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
   const mod = (a,n) => (a % n + n) % n;
+  const moonNames = ['Io','Europa','Ganymede','Callisto'];
+  const lessons = {
+    mercury:['Learn the cross-shaped switch.','Use edges to limit side effects.','Combine switches rather than chase individual lights.','Clear upper rows using the row below.','Find a short combination for the whole grid.'],
+    venus:['Follow the fixed pump connection.','Work inward from both pinned ends.','Use board edges to rule out turns.','Reconnect isolated sections without breaking the main route.','Supply every pipe with economical turns.'],
+    earth:['Start at a numbered station and draw to its partner.','Reserve space for the longer routes.','Use corners before they become isolated.','Balance five routes competing for space.','Fill every square without unnecessary redraws.'],
+    mars:['Get behind each canister before pushing.','Leave yourself a way around the samples.','Plan the approach to each collection bay.','Choose the delivery order for three samples.','Deliver all three while keeping access lanes open.'],
+    jupiter:['Balance a three-moon loop using the preview.','Plan around a longer six-position cycle.','Include Callisto in the coupling loop.','Budget burns across eight-position cycles.','Each burn now affects three moons: balance both neighbours.'],
+    saturn:['Select a blocker and clear the probe’s row.','Make room for the vertical blockers.','Move a blocker away before opening the lane.','Untangle the lanes in a useful order.','Clear the exit with a short sequence of one-square slides.'],
+    uranus:['Watch both capsules move on every tilt.','Use one capsule as a temporary stopper.','Approach sockets from a different direction.','Plan a final tilt for three capsules.','Keep seated capsules in place while positioning the last.'],
+    neptune:['Find the barrier that stops you on buoy 1.','Approach the next buoy from a useful stopping point.','Budget detours before leaving a safe stop.','Chain the buoy approaches into one fuel-efficient route.','Reach the relay with a carefully planned sequence of stops.'],
+  };
+  // A scratch plan uses the exact same transitions as committed moves. It does
+  // not mutate the board, consume hints, or add a new saved-action format.
+  function orbitPlan(def,board,counts) {
+    let projected=clone(board);const actions=[];
+    for(let i=0;i<def.count;i++)for(let j=0;j<(counts[i]||0);j++) {
+      const action={type:'moon',value:i};projected=transition('jupiter',def,projected,action);actions.push(action);
+    }
+    return {board:projected,actions};
+  }
+  function coupling(def,i) {
+    return `${moonNames[i]} +1, ${moonNames[(i+1)%def.count]} +2${def.double?`, ${moonNames[mod(i-1,def.count)]} +1`:''}`;
+  }
+  function instruction(id,def,board) {
+    if(won(id,def,board))return 'Survey complete. Replay for a shorter route, or continue your survey.';
+    if(id==='mercury')return 'Tap a crater: it and its orthogonal neighbours toggle. Darken the entire board; fewer lights is not always a better move.';
+    if(id==='venus')return 'Turn an unpinned pipe to join its open sides to its neighbours. Supplied pipes glow; every pipe must connect to P.';
+    if(id==='earth')return board.active<0?'Select a numbered station, then drag or tap adjoining squares toward its matching number.':`Drawing route ${board.active+1}. Extend from its last square; select an earlier segment to shorten it.`;
+    if(id==='mars')return 'Use arrows or tap beside the rover. Push from the opposite side of a bay; samples cannot be pulled.';
+    if(id==='jupiter')return 'Tap a moon to add a planned burn. Read every “Now → Plan” position, adjust counts, then launch. All must end at 0.';
+    if(id==='saturn')return 'Select a numbered block, then drag along its arrow or use the direction buttons. Move probe P to the right edge.';
+    if(id==='uranus')return 'Tilt with arrows or swipe. Both walls and other capsules stop a slide; sockets do not.';
+    const goal=def.goals[board.collected];
+    return `Next: ${board.collected===def.goals.length-1?'relay R':'buoy '+(board.collected+1)} at row ${Math.floor(goal/def.n)+1}, column ${goal%def.n+1}. Stop on it; passing over does not collect it.`;
+  }
+  function explainAction(id,def,before,action,after) {
+    if(id==='jupiter')return `${coupling(def,action.value)}. Positions wrap at ${def.divisions}; linked moons may leave zero so the whole loop can align later.`;
+    if(id==='mercury') {
+      const cells=toggles(action.value,def.n),dark=cells.filter(p=>before.lights[p]).length;
+      return `${dark} crater${dark===1?'':'s'} darkened; ${cells.length-dark} relit. The entire cross toggles, including already-dark craters.`;
+    }
+    if(id==='venus')return `${wetPipes(def,after).size} of ${def.n**2} pipes now supplied. Open sides must meet on both tiles.`;
+    if(id==='earth')return `${completedPaths(def,after)} routes connected; ${def.n**2-after.paths.flat().length} squares still empty. Every square is required.`;
+    if(id==='mars')return same(before.crates,after.crates)?'Rover repositioned. Get behind a sample to push it toward a bay.':'Sample pushed. Keep a route to its other sides; it cannot be pulled back.';
+    if(id==='saturn')return action.value[0]===0?'Probe advanced along its lane. Reach the right edge to finish.':'Block repositioned. Check which crossing lane this opens for the probe.';
+    if(id==='uranus')return 'All capsules slid to their first obstacle. A capsule on a socket can still move on the next tilt.';
+    return after.collected>before.collected?'Stopped on the next beacon: signal recorded.':'Stopped at a storm barrier. Only stopping on the next numbered beacon records it.';
+  }
   function neighbour(p,d,n) {
     const x=p%n+DIRS[d][0], y=Math.floor(p/n)+DIRS[d][1];
     return x>=0 && x<n && y>=0 && y<n ? y*n+x : -1;
@@ -32,7 +80,13 @@ window.AetherPuzzles = (() => {
   }
   function definition(id,index) {
     if(id==='mercury') return { n:[3,4,4,5,5][index], seed:[8,8,79,8,1][index] };
-    if(id==='jupiter') return { count:index<2?3:4, divisions:[4,6,6,8,8][index], double:index===4 };
+    // Authored starts ship with a known burn plan, so the reference par is honest
+    // and every crafted board is solvable by construction (checked in tests).
+    if(id==='jupiter') return {
+      count:index<2?3:4, divisions:[4,6,6,8,8][index], double:index===4,
+      startPhases:[[1,2,3],[2,1,3],[2,1,4,5],[4,3,5,5],[3,3,2,4]][index],
+      solution:[[0,2],[0,0,1,2],[0,0,1,3],[0,0,1,2,3],[0,1,1,2,3]][index],
+    };
     const def=clone(window.AetherPlanetLevels[id][index]);
     if(id==='saturn') {
       def.n=6;
@@ -59,6 +113,7 @@ window.AetherPuzzles = (() => {
     if(id==='saturn')return {positions:def.blocks.map(b=>b.axis==='h'?b.x:b.y)};
     if(id==='uranus')return {balls:def.balls};
     if(id==='neptune')return {player:def.player,collected:0};
+    if(def.startPhases)return {phases:[...def.startPhases]};
     const board={phases:Array(def.count).fill(0)};
     for(let i=0;i<def.count;i++)for(let j=0;j<1+(index+i*3)%def.divisions;j++)advance(board,def,i);
     if(board.phases.every(v=>v===0))advance(board,def,0);
@@ -194,7 +249,7 @@ window.AetherPuzzles = (() => {
       for(let turns=0;turns<4;turns++){if(m===def.target[p])best=Math.min(best,turns,4-turns);m=rotate(m);}
       return sum+best;
     },0);
-    if(id==='jupiter')return null;
+    if(id==='jupiter')return def.solution?.length??null;
     return def.solution.length;
   }
   function actionCost(id,before,after) {
@@ -209,7 +264,7 @@ window.AetherPuzzles = (() => {
     if(id==='jupiter')return `${board.phases.filter(v=>v===0).length} / ${def.count} aligned`;
     if(id==='saturn')return `Probe: ${4-board.positions[0]} squares from exit`;
     if(id==='uranus')return `${board.balls.filter(p=>def.goals.includes(p)).length} / ${def.goals.length} capsules docked`;
-    return `${board.collected} / 4 buoys reached`;
+    return `${board.collected} / ${def.goals.length} beacons reached`;
   }
   function pipeArt(mask,extra='') {
     return `<svg viewBox="0 0 100 100" aria-hidden="true" class="pipe-art ${extra}">${DIRS.map(([x,y],d)=>mask&(1<<d)?`<path class="pipe-channel" d="M50 50L${50+x*50} ${50+y*50}"/>`:'').join('')}${DIRS.map(([x,y],d)=>mask&(1<<d)?`<path class="pipe-core" d="M50 50L${50+x*50} ${50+y*50}"/>`:'').join('')}${DIRS.map(([x,y],d)=>mask&(1<<d)?`<path class="pipe-flow" d="M50 50L${50+x*50} ${50+y*50}"/>`:'').join('')}<circle class="pipe-joint" cx="50" cy="50" r="7"/></svg>`;
@@ -217,10 +272,17 @@ window.AetherPuzzles = (() => {
   // --- Board themes ---
   function boardHTML(id,def,board,ui={}) {
     const deal=ui.deal?p=>`--deal:${Math.min(p,40)};`:()=> '';
-    if(id==='jupiter')return `<div class="orbital-dials ${ui.won?'is-won':''}">${board.phases.map((phase,i)=>{
-      const moon=['Io','Europa','Ganymede','Callisto'][i], next=['Io','Europa','Ganymede','Callisto'][(i+1)%def.count];
-      return `<button class="orbital-dial ${phase===0?'aligned':''} ${ui.hintCell===i?'hinted':''}" style="${ui.deal?`--deal:${i};`:''}" data-puzzle-moon="${i}" aria-label="Advance ${moon}. Position ${phase} of ${def.divisions}; target 0. Also advances ${next} by 2."><span class="dial-title">${moon}</span><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="dial-track" cx="75" cy="75" r="53"/><circle class="dial-track-inner" cx="75" cy="75" r="30"/>${Array.from({length:def.divisions},(_,j)=>{const a=j/def.divisions*Math.PI*2;return `<circle cx="${75+Math.sin(a)*53}" cy="${75-Math.cos(a)*53}" r="${j===0?5:2}" class="${j===0?'dial-target':''}"/>`;}).join('')}<path class="dial-needle" d="M75 75L75 22" transform="rotate(${phase/def.divisions*360} 75 75)"/><circle class="dial-moon" cx="${75+Math.sin(phase/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(phase/def.divisions*Math.PI*2)*53}" r="8"/></svg><span class="dial-position">${phase} / ${def.divisions} <span>${phase===0?'Aligned':'Advance +1'}</span></span><small>${next} +2${def.double?` · ${['Io','Europa','Ganymede','Callisto'][mod(i-1,def.count)]} +1`:''}</small></button>`;
-    }).join('')}</div>`;
+    if(id==='jupiter') {
+      const plan=ui.plan||[], hasPlan=plan.some(c=>c>0);
+      const projected=hasPlan?orbitPlan(def,board,plan).board.phases:null;
+      return `<div class="orbital-dials ${ui.won?'is-won':''}">${board.phases.map((phase,i)=>{
+        const moon=moonNames[i], burns=plan[i]||0, aim=projected?projected[i]:phase;
+        const label=projected
+          ? `${moon}: now at ${phase} of ${def.divisions}; the plan moves it to ${aim}${aim===0?', aligned':''}. Queue another burn (${coupling(def,i)}). ${burns} queued.`
+          : `Queue a burn on ${moon}: ${coupling(def,i)}. Position ${phase} of ${def.divisions}; target 0.`;
+        return `<button class="orbital-dial ${phase===0?'aligned':''} ${projected&&aim===0?'plan-aligned':''} ${burns?'has-burns':''} ${ui.hintCell===i?'hinted':''}" style="${ui.deal?`--deal:${i};`:''}" data-puzzle-moon="${i}" aria-label="${label}"><span class="dial-title">${moon}</span><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="dial-track" cx="75" cy="75" r="53"/><circle class="dial-track-inner" cx="75" cy="75" r="30"/>${Array.from({length:def.divisions},(_,j)=>{const a=j/def.divisions*Math.PI*2;return `<circle cx="${75+Math.sin(a)*53}" cy="${75-Math.cos(a)*53}" r="${j===0?5:2}" class="${j===0?'dial-target':''}"/>`;}).join('')}<path class="dial-needle" d="M75 75L75 22" transform="rotate(${phase/def.divisions*360} 75 75)"/>${projected&&aim!==phase?`<path class="dial-needle dial-needle-plan" d="M75 75L75 32" transform="rotate(${aim/def.divisions*360} 75 75)"/>`:''}${projected?`<circle class="dial-moon-plan" cx="${75+Math.sin(aim/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(aim/def.divisions*Math.PI*2)*53}" r="5"/>`:''}<circle class="dial-moon" cx="${75+Math.sin(phase/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(phase/def.divisions*Math.PI*2)*53}" r="8"/></svg><span class="dial-position">${phase} / ${def.divisions} <span>${phase===0?'Aligned':'Queue +1 burn'}</span></span>${projected?`<span class="dial-position dial-plan-row">Now ${phase} → Plan ${aim} <span>${aim===0?'Will align ✓':'Off target'}</span></span>`:''}<small>${coupling(def,i)}</small>${burns?`<span class="burn-badge" aria-hidden="true">×${burns}</span>`:''}</button>`;
+      }).join('')}</div>`;
+    }
     if(id==='saturn')return `<div class="puzzle-grid ring-board board-saturn ${ui.won?'is-won':''}" style="--grid:6" role="group" aria-label="Sliding ring passage"><span class="ring-exit" aria-hidden="true">EXIT →</span>${Array.from({length:36},(_,p)=>`<span class="ring-square" style="${deal(p)}" aria-hidden="true"></span>`).join('')}</div>`;
     const wet=id==='venus'?wetPipes(def,board):null;
     return `<div class="puzzle-grid board-${id} ${id==='earth'?'flow-board':''} ${['mars','uranus','neptune'].includes(id)?'swipe-board':''} ${ui.won?'is-won':''}" style="--grid:${def.n}" role="group" aria-label="${catalogue[id].title} puzzle board">${Array.from({length:def.n**2},(_,p)=>{
@@ -278,10 +340,10 @@ window.AetherPuzzles = (() => {
     venus:['Start at the pump P and receiver R: their open sides tell you which neighbours must connect.','Every pipe needs a connection on every open side. An end pointing at the board edge is always wrong.'],
     earth:['Outline the board first: routes along the walls have fewer ways to go wrong.','The shortest-looking route often steals squares another pair needs. Fill awkward corners early.'],
     mars:['Never push a canister into a corner without a bay. Plan backwards from each bay.','The canister nearest the walls usually has to be placed first.'],
-    jupiter:['Each dial also advances the next moon by two. Solve from the last moon backwards.','Sometimes pressing one dial several times in a row is the fastest fix.'],
+    jupiter:['The links form a loop: solve the projected positions together, rather than fixing one moon at a time.','A full cycle of burns on one moon cancels itself. Try fewer burns and compare every projected position.'],
     saturn:['Work backwards from the exit: which block must move last to open the lane?','Moving a block away from the exit often unlocks two moves later.'],
     uranus:['Use one capsule as a wall for the other. Decide which capsule stops last.','The final tilt usually seats only one capsule directly — the others must already be in place.'],
-    neptune:['Passing over a buoy does nothing — you must stop exactly on it. Count the walls.','If you cannot stop on a buoy, use an earlier tilt to place a wall behind it first.'],
+    neptune:['Passing over a buoy does nothing — you must stop exactly on it. Find the barrier beyond it.','The barriers never move. Approach each buoy along a row or column with a barrier that stops you on it.'],
   };
   // --- Endless mode: seeded, solver-verified board generation ---
   function rng(seed){let n=seed>>>0;return()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
@@ -321,7 +383,7 @@ window.AetherPuzzles = (() => {
       for(let salt=0;!def;salt++) {
         const cand={count,divisions,double},board=initial('jupiter',cand,round*13+salt);
         const sol=await solve('jupiter',cand,board);
-        if(sol&&sol.length>=Math.min(3+round,8))def={...cand,solution:sol.map(a=>a.value)};
+        if(sol&&sol.length>=Math.min(3+round,8))def={...cand,startPhases:board.phases,solution:sol.map(a=>a.value)};
       }
     } else if(id==='mars') {
       const n=round<2?6:7,count=round<3?2:3,minLen=Math.min(8+round*3,26);
@@ -390,5 +452,5 @@ window.AetherPuzzles = (() => {
     }
     endlessCache.set(key,structuredClone(def));return def;
   }
-  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths};
+  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames};
 })();

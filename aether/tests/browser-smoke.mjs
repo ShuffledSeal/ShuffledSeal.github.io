@@ -41,7 +41,7 @@ try {
   assert.equal(await page.evaluate(() => window.location.hash), '', 'the bare Æther route must open the Observatory overview');
   await page.goto(`${base}/index.html#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-cabinet');
-  assert.equal(await page.locator('.cartridge-daily-link').count(), 3, 'the three endless cartridges must expose a Daily Vigil');
+  assert.equal(await page.locator('.cartridge-daily-link').count(), 4, 'the four roguelite cartridges must expose a Daily Vigil');
   await page.goto(`${base}/index.html?standalone=1&cartridge=labyrinth&challenge=daily#voyage`, { waitUntil: 'networkidle' });
   const dailyLabyrinth = page.locator('.cartridge-stage .trial-frame canvas');
   await dailyLabyrinth.waitFor({ state: 'visible' });

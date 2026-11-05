@@ -186,3 +186,28 @@ button.puzzle-cell:hover{background:#2c3a2b}.puzzle-cell:focus-visible{z-index:4
 @keyframes exit-glow{0%,100%{opacity:.55}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.planet-plate{transition:none}}
 @media (max-width:650px){.puzzle-cell:hover{transform:none}.fitting{font-size:12px}.probe-porthole{width:6px;height:6px;right:5px;top:5px}}
+
+/* ── Contextual instruction line + per-level lesson ────────────────────── */
+.puzzle-instruction{margin:0 auto 16px;max-width:540px;font-size:12px;line-height:1.7;color:#d8cfae;text-align:center}
+.puzzle-instruction::before{content:'› ';color:var(--gold)}
+.puzzle-lesson{display:block;margin-top:4px;font-size:9px;letter-spacing:.08em;color:#b8c0aa;text-transform:uppercase}
+
+/* ── Jupiter burn planning ─────────────────────────────────────────────── */
+.orbital-dial{position:relative}
+.orbital-dial .dial-needle-plan{stroke:#8fb4d8;stroke-width:2;stroke-dasharray:4 4}
+.orbital-dial .dial-moon-plan{fill:#8fb4d8;stroke:#cfe3f5;opacity:.9}
+.orbital-dial .dial-plan-row{color:#9fc0dd}
+.orbital-dial .dial-plan-row>span{color:#8fb4d8}
+.orbital-dial.plan-aligned{border-color:#8fb4d8;box-shadow:0 0 14px #8fb4d833}
+.orbital-dial.has-burns{border-color:#c9bd8a}
+.burn-badge{position:absolute;top:8px;right:8px;padding:2px 7px;border:1px solid #8fb4d8;border-radius:10px;font:10px var(--sans);color:#cfe3f5;background:#172331cc;pointer-events:none}
+.burn-plan{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.burn-plan-title{font:9px var(--sans);letter-spacing:.14em;color:#aab79d;text-transform:uppercase}
+.burn-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--atlas-line);font:11px var(--sans);color:#c6ceb9}
+.burn-chip.empty{opacity:.55}
+.burn-chip b{color:#e6dab6;font-weight:600}
+.burn-chip button{width:26px;min-height:26px;border:1px solid var(--atlas-line);background:none;color:#c6ceb9;cursor:pointer;font-size:14px;line-height:1}
+.burn-chip button:hover:not(:disabled){border-color:var(--gold);color:var(--gold-bright)}
+.burn-chip button:disabled{opacity:.35;cursor:default}
+.burn-plan .button{font-size:11px;min-height:42px;padding:8px 14px}
+@media(max-width:650px){.burn-plan{gap:8px}.burn-chip{font-size:10px}}

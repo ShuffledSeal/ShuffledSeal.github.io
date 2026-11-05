@@ -31,7 +31,7 @@ window.AetherPlanets = (() => {
     const endless=index==='endless',round=endless?def.round:0,key=endless?`${id}:endless:${round}`:`${id}:${index}`;
     if(sessions.has(key))return sessions.get(key);
     const levelDef=def?.def ?? P.definition(id,index),board=P.initial(id,levelDef,endless?round:index);
-    const s={id,index,key,mode:endless?'endless':'crafted',round,def:levelDef,board,initial:structuredClone(board),par:P.par(id,levelDef,board),moves:0,hints:0,actions:[],history:[],future:[],selected:0,hintCell:-1,face:1,justDealt:true};
+    const s={id,index,key,mode:endless?'endless':'crafted',round,def:levelDef,board,initial:structuredClone(board),par:P.par(id,levelDef,board),moves:0,hints:0,actions:[],history:[],future:[],selected:0,hintCell:-1,face:1,justDealt:true,plan:[]};
     if(!endless) {
       const draft=progress.drafts[key];
       if(draft) {
@@ -82,11 +82,19 @@ window.AetherPlanets = (() => {
     const tabs=game.levels.map((name,i)=>{const record=progress.records[`${s.id}:${i}`];return `<button data-puzzle-level="${i}" aria-pressed="${s.mode==='crafted'&&i===s.index}" aria-label="Level ${i+1}: ${name}${record?`, completed, ${record.stars} stars`:''}"><span>0${i+1}</span><span>${name}</span><small aria-hidden="true">${record?'✦'.repeat(record.stars):'—'}</small></button>`;}).join('')
       +`<button class="endless-tab" data-puzzle-level="endless" aria-pressed="${s.mode==='endless'}" aria-label="Endless mode${progress.endless[s.id]?.best?`, furthest: board ${progress.endless[s.id].best}`:''}"><span>∞</span><span>Endless</span><small aria-hidden="true">${progress.endless[s.id]?.best?'×'+progress.endless[s.id].best:'—'}</small></button>`;
     return `<div class="puzzle-levels endless-strip" role="group" aria-label="Choose a puzzle level">${tabs}</div>
-      <div class="puzzle-layout"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${s.mode==='endless'?`Endless · board ${s.round+1}`:game.levels[s.index]}</span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
-      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${game.rules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${game.detail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${['mercury','venus','earth','jupiter'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
+      <div class="puzzle-layout"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${s.mode==='endless'?`Endless · board ${s.round+1}`:game.levels[s.index]} <small class="puzzle-lesson">${s.mode==='endless'?'A fresh solver-checked board.':P.lessons[s.id][s.index]}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p><div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
+      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${game.rules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${game.detail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?'arrows move between moons · Enter or Space queues a burn · L launches the plan':['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
   }
   function controls(s) {
     if(s.id==='venus')return `<button class="button rotation-toggle" data-puzzle="reverse" aria-pressed="${reverse}">${reverse?'↶ Turn anticlockwise':'↷ Turn clockwise'}</button>`;
+    if(s.id==='jupiter') {
+      const total=(s.plan||[]).reduce((a,c)=>a+(c||0),0);
+      const chips=P.moonNames.slice(0,s.def.count).map((moon,i)=>{
+        const c=s.plan[i]||0;
+        return `<span class="burn-chip ${c?'':'empty'}"><b>${moon}</b> ×${c}<button data-puzzle-unburn="${i}" aria-label="Remove one queued ${moon} burn" ${c?'':'disabled'}>−</button></span>`;
+      }).join('');
+      return `<div class="burn-plan" role="group" aria-label="Queued burn plan"><span class="burn-plan-title">Burn plan</span>${chips}<button class="button button-primary" data-puzzle="launch" ${total?'':'disabled'}>Launch plan · ${total} burn${total===1?'':'s'}</button><button class="button" data-puzzle="clear-plan" ${total?'':'disabled'}>Clear plan</button></div>`;
+    }
     if(!['mars','saturn','uranus','neptune'].includes(s.id))return '';
     return `<div class="puzzle-direction-pad" role="group" aria-label="${s.id==='uranus'?'Tilt direction':'Movement controls'}">${[3,0,2,1].map(d=>`<button class="button" data-puzzle-direction="${d}" aria-label="${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[d]}">${['↑','→','↓','←'][d]}</button>`).join('')}<span>${s.id==='saturn'?`Selected: ${s.selected===0?'probe P':`block ${s.selected}`}`:s.id==='uranus'?'All capsules move together':s.id==='neptune'?`${Math.max(0,s.par+3-s.moves)} fuel charges`:'Move the rover'}</span></div>`;
   }
@@ -128,16 +136,17 @@ window.AetherPlanets = (() => {
     const active=document.activeElement;
     let focus=focusSelector;
     if(!focus && active?.closest('#planet-game')) {
-      const key=['puzzleCell','puzzleMoon','puzzleBlock','puzzleDirection','puzzle','puzzleLevel'].find(key=>active.dataset[key]!==undefined);
+      const key=['puzzleCell','puzzleMoon','puzzleBlock','puzzleDirection','puzzleUnburn','puzzle','puzzleLevel'].find(key=>active.dataset[key]!==undefined);
       if(key)focus=`[data-${key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${active.dataset[key]}"]`;
     }
     const won=P.won(s.id,s.def,s.board);
     const wrap=document.querySelector('#puzzle-board');
-    const gridHTML=P.boardHTML(s.id,s.def,s.board,{selected:s.selected,hintCell:s.hintCell,deal:s.justDealt,won,changed:s.changed,face:s.face});
+    const gridHTML=P.boardHTML(s.id,s.def,s.board,{selected:s.selected,hintCell:s.hintCell,deal:s.justDealt,won,changed:s.changed,face:s.face,plan:s.plan});
     const oldGrid=wrap.querySelector('.puzzle-grid, .orbital-dials');
     if(oldGrid)oldGrid.outerHTML=gridHTML;else wrap.innerHTML=gridHTML;
     syncPieces(s,won);
     s.justDealt=false;s.changed=null;
+    const guide=document.querySelector('#puzzle-instruction');if(guide)guide.textContent=P.instruction(s.id,s.def,s.board);
     document.querySelector('#puzzle-controls').innerHTML=controls(s);
     document.querySelector('#puzzle-moves').textContent=s.moves;
     document.querySelector('#puzzle-par').textContent=s.par===null?'':` / par ${s.par}`;
@@ -182,10 +191,38 @@ window.AetherPlanets = (() => {
     const won=P.won(s.id,s.def,next);
     if(won) { recordWin(s); if(s.hosted) hostHooks.onSolve?.({moves:s.moves,hints:s.hints,par:s.par}); }
     stash(s);
-    let message;
+    let message=won?null:P.explainAction(s.id,s.def,before,action,s.board);
     if(s.id==='neptune' && !won && s.moves>=s.par+3)message='Out of fuel. Undo a leg or restart to try a shorter route.';
     if(s.id==='mars' && s.board.crates.some(p=>!s.def.goals.includes(p) && [0,2].some(d=>s.def.walls.includes(P.neighbour(p,d,s.def.n))) && [1,3].some(d=>s.def.walls.includes(P.neighbour(p,d,s.def.n)))))message='A canister is trapped in a corner. Undo to recover it.';
     paint(won?'Puzzle solved. Your record has been saved.':message);
+    if(won){painting=false;document.querySelector('#puzzle-result-title')?.focus({preventScroll:true});}
+  }
+  function queueBurn(i) {
+    const s=current;if(!s||s.id!=='jupiter'||P.won(s.id,s.def,s.board))return;
+    s.plan[i]=(s.plan[i]||0)+1;
+    paint();
+  }
+  function launchPlan() {
+    const s=current;if(!s||s.id!=='jupiter')return;
+    const counts=s.plan||[],total=counts.reduce((a,c)=>a+(c||0),0);
+    if(P.won(s.id,s.def,s.board))return;
+    if(!total) {paint('Queue at least one burn first: tap a moon dial to add one.');return;}
+    if(s.actions.length+total>1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
+    // Each queued burn is committed as its own action, so undo steps back one
+    // burn at a time and saved drafts keep the same plain action format.
+    const {actions}=P.orbitPlan(s.def,s.board,counts);
+    hintController?.abort();s.hintCell=-1;s.future=[];
+    for(const action of actions) {
+      const next=P.transition(s.id,s.def,s.board,action);if(!next)break;
+      s.history.push({board:s.board,moves:s.moves,action});s.actions.push(action);
+      s.moves+=P.actionCost(s.id,s.board,next);s.board=next;
+    }
+    const names=counts.map((c,i)=>c?`${P.moonNames[i]} ×${c}`:null).filter(Boolean).join(', ');
+    s.plan=[];
+    const won=P.won(s.id,s.def,s.board);
+    if(won) { recordWin(s); if(s.hosted) hostHooks.onSolve?.({moves:s.moves,hints:s.hints,par:s.par}); }
+    stash(s);
+    paint(won?'Puzzle solved. Your record has been saved.':`Launched ${total} burn${total===1?'':'s'} (${names}). ${P.progress(s.id,s.def,s.board)}.`);
     if(won){painting=false;document.querySelector('#puzzle-result-title')?.focus({preventScroll:true});}
   }
   function move(d) {
@@ -241,7 +278,7 @@ window.AetherPlanets = (() => {
       if(!path?.length){paint('No route found from here. Undo recent moves, or restart to recover the original solvable board.');return;}
       const action=path[0];
       if(action.type==='cell'){cell=action.value;message=`Switch the highlighted crater: row ${Math.floor(cell/s.def.n)+1}, column ${cell%s.def.n+1}. ${path.length} switches remain on a shortest solution.`;}
-      if(action.type==='moon'){cell=action.value;message=`Advance ${['Io','Europa','Ganymede','Callisto'][cell]} next. ${path.length} advances remain on a shortest solution.`;}
+      if(action.type==='moon'){cell=action.value;message=`Queue a burn on ${P.moonNames[cell]} next. ${path.length} burns remain on a shortest solution.`;}
       if(action.type==='block'){cell=action.value[0];const axis=s.def.blocks[cell].axis;message=`Move ${cell===0?'probe P':`block ${cell}`} one square ${axis==='h'?(action.value[1]>0?'right':'left'):(action.value[1]>0?'down':'up')}. ${path.length} moves remain.`;s.selected=cell;}
       if(action.type==='move')message=`${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[action.value]} next. ${path.length} moves remain on a shortest route.${s.id==='neptune'&&path.length>s.par+3-s.moves?' That exceeds your remaining fuel; undo or restart.':''}`;
     }
@@ -253,13 +290,15 @@ window.AetherPlanets = (() => {
     if(action==='hint'){hint();return;}
     if(action==='next-round'){chooseLevel('endless');return;}
     if(action==='host-done'){hostHooks.onDone?.();return;}
+    if(action==='clear-plan'){s.plan=[];paint('Plan cleared. Tap a moon to queue a fresh burn.');return;}
+    if(action==='launch'){launchPlan();return;}
     hintController?.abort();s.hintCell=-1;
     if(action==='reverse'){reverse=!reverse;paint();return;}
     if(action==='next'){chooseLevel(Math.min(4,s.index+1));return;}
     if(action==='restart'||action==='replay') {
       // Restart is itself undoable, so an accidental tap cannot discard work.
       s.future=[];s.history.push({restart:{board:s.board,moves:s.moves,actions:[...s.actions],hints:s.hints}});
-      s.board=structuredClone(s.initial);s.moves=0;s.actions=[];s.hints=0;s.justDealt=true;
+      s.board=structuredClone(s.initial);s.moves=0;s.actions=[];s.hints=0;s.justDealt=true;s.plan=[];
       document.querySelector('.pieces-layer')?.remove();
       stash(s);paint('Board reset. Undo restores your previous attempt.');return;
     }
@@ -286,7 +325,8 @@ window.AetherPlanets = (() => {
     if(button.dataset.puzzle){tool(button.dataset.puzzle);return;}
     if(button.dataset.puzzleDirection!==undefined){move(Number(button.dataset.puzzleDirection));return;}
     if(button.dataset.puzzleBlock!==undefined){current.selected=Number(button.dataset.puzzleBlock);paint();return;}
-    if(button.dataset.puzzleMoon!==undefined){act({type:'moon',value:Number(button.dataset.puzzleMoon)});return;}
+    if(button.dataset.puzzleUnburn!==undefined){const i=Number(button.dataset.puzzleUnburn);if(current.plan[i]>0)current.plan[i]--;paint();return;}
+    if(button.dataset.puzzleMoon!==undefined){queueBurn(Number(button.dataset.puzzleMoon));return;}
     if(button.dataset.puzzleCell!==undefined) {
       const p=Number(button.dataset.puzzleCell);
       if(current.id==='earth' && event.detail>0)return; // Pointer gestures are handled below; keyboard clicks still work.
@@ -330,6 +370,7 @@ window.AetherPlanets = (() => {
     main.addEventListener('keydown',event=>{
       if(!event.target.closest('#planet-game, .puzzle-host') || modal.open || event.ctrlKey||event.metaKey||event.altKey)return;
       if(['z','y'].includes(event.key.toLowerCase())){event.preventDefault();tool(event.key.toLowerCase()==='z'?'undo':'redo');return;}
+      if(event.key.toLowerCase()==='l' && current.id==='jupiter' && !event.target.closest('input,textarea')){event.preventDefault();launchPlan();return;}
       const d=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].indexOf(event.key);if(d<0)return;
       if(['mars','saturn','uranus','neptune'].includes(current.id)){event.preventDefault();move(d);return;}
       const cell=event.target.closest('[data-puzzle-cell]'),moon=event.target.closest('[data-puzzle-moon]');
