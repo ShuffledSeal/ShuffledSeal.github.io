@@ -1,4 +1,4 @@
-"""Regression: all ten cartridges remain visible and launch their real games."""
+"""Regression: six flagship cards and all ten direct game routes remain playable."""
 import os
 import socket
 import subprocess
@@ -14,7 +14,7 @@ with socket.socket() as sock:
     PORT = sock.getsockname()[1]
 BASE = f'http://127.0.0.1:{PORT}/index.html'
 SERVER = subprocess.Popen([sys.executable, '-m', 'http.server', str(PORT), '--bind', '127.0.0.1'], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-EXPECTED = ['Starfall Skirmish', 'Aether Bastion', 'Glass Labyrinth', 'Starforge', 'Constellation Chain', 'Planet Drop', 'Comet Surf', 'Stardust Dash', 'Orbit Breaker', 'Deep Field']
+EXPECTED = ['Starfall Skirmish', 'Aether Bastion', 'Glass Labyrinth', 'Starforge', 'Constellation Chain', 'Deep Field']
 
 try:
     for _ in range(50):
@@ -37,16 +37,17 @@ try:
             assert page.locator('.cartridge-card').count() == len(EXPECTED)
             for name in EXPECTED:
                 assert page.locator('.cartridge-card', has_text=name).count() == 1, f'{name} is missing at {width}px'
-            assert 'BEST 123' in page.locator('.cartridge-merge').inner_text()
-            assert 'BEST 456' in page.locator('.cartridge-dash').inner_text()
-            assert page.locator('.cartridge-daily-link').count() == 9
-            page.locator('.cartridge-merge').click()
+            assert page.locator('.cartridge-daily-link').count() == 5
+            page.locator('.arcade-cabinet-link').click()
             page.wait_for_load_state('networkidle')
             assert page.url.endswith('#arcade')
             assert page.locator('.arcade-choice.selected .choice-copy strong').inner_text() == 'Planet Drop'
+            assert page.locator('#game-best').inner_text() == '123'
             assert page.locator('a[href="index.html?standalone=1#voyage"]').count() >= 1
             page.goto(f'{BASE}?standalone=1&cartridge=hop#arcade', wait_until='networkidle')
             assert page.locator('.arcade-choice.selected .choice-copy strong').inner_text() == 'Comet Surf'
+            page.goto(f'{BASE}?standalone=1&cartridge=dash&mode=campaign#arcade', wait_until='networkidle')
+            assert page.locator('#game-best').inner_text() == '456'
             page.goto(f'{BASE}?standalone=1&cartridge=dash&challenge=daily#arcade', wait_until='networkidle')
             assert page.locator('.arcade-choice.selected .choice-copy strong').inner_text() == 'Stardust Dash'
             assert 'DAILY' in page.locator('#overlay-kicker').inner_text().upper()
@@ -62,7 +63,7 @@ try:
             assert page.locator('.deepfield-grid').get_attribute('data-grid-signature') == signature
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             assert not errors, errors
-            print(f'{width}px: ten cards, scores, direct launches, Deep Field determinism and Daily Vigil passed')
+            print(f'{width}px: six flagship cards, preserved arcade scores, ten direct routes, Deep Field determinism and Daily Vigil passed')
             page.close()
         browser.close()
 finally:

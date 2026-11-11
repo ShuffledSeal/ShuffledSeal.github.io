@@ -27,6 +27,53 @@ window.AetherVoyage = (() => {
     deepfield: { name: 'Deep Field', eyebrow: '10 · MINESWEEPER', icon: '✹', family: 'strategy', brief: 'Chart a haunted firmament in a lavish, logical game of Minesweeper.', goal: 'Reveal every safe sector. First-click protection, chording, Oracle hints and expedition relics reward careful reading.', controls: 'CLICK REVEAL · RIGHT CLICK / F FLAG · C CHORD · H ORACLE · P PAUSE', features: ['3 board classes', 'Expedition relics', 'Touch + keyboard'], trial: 'deepfield', playbill: { campaign: 'THE THREE OCCULTATIONS · MERCATOR’S INSTRUMENTS AWAIT', endless: 'EVERY CHART DEEPENS · CHOOSE YOUR BOARD CLASS', daily: 'TODAY’S FIXED FIRMAMENT · ONE CHART, ONE LEDGER' } },
   };
 
+  // Engraved catalogue sigils: each instrument has its own recognisable seal,
+  // rather than a generic icon dropped into an otherwise identical card.
+  const SIGILS = {
+    shooter: '<path d="M50 12 57 40 86 50 57 59 50 88 42 59 14 50 42 41Z"/><circle cx="50" cy="50" r="25"/><path d="M50 4v12M50 84v12M4 50h12M84 50h12"/>',
+    bastion: '<path d="M24 82V37h9V24h11v13h12V24h11v13h9v45Z"/><path d="M17 82h66M33 82V60h34v22M50 60v22M24 45h52"/><path d="m50 7 5 8-5 7-5-7Z"/>',
+    labyrinth: '<path d="m50 9 37 41-37 41-37-41Z"/><path d="m50 23 24 27-24 27-24-27Z"/><path d="M50 36v15l12 12M38 50h12M18 50h15M67 50h15"/><circle cx="50" cy="35" r="4"/>',
+    starforge: '<circle cx="50" cy="50" r="17"/><circle cx="50" cy="50" r="29" stroke-dasharray="2 5"/><path d="M50 5v15M50 80v15M5 50h15M80 50h15M18 18l11 11M71 71l11 11M82 18 71 29M29 71 18 82"/><path d="m50 38 4 9 9 3-9 4-4 9-4-9-9-4 9-3Z"/>',
+    chain: '<path d="m20 68 20-40 25 22 18-27M20 68l45-18 18 27M40 28l43 49"/><circle cx="20" cy="68" r="7"/><circle cx="40" cy="28" r="6"/><circle cx="65" cy="50" r="8"/><circle cx="83" cy="23" r="5"/><circle cx="83" cy="77" r="6"/>',
+    deepfield: '<path d="M17 17h66v66H17Z M39 17v66M61 17v66M17 39h66M17 61h66"/><path d="m50 29 4 12 12-3-8 10 8 10-12-3-4 12-4-12-12 3 8-10-8-10 12 3Z"/><circle cx="50" cy="48" r="5"/>',
+  };
+  const CARTRIDGE_ART = {
+    shooter: ['celestial-hydra.webp', 'The Hydra and celestial bestiary, an antique coloured engraving'],
+    bastion: ['birr-telescope.webp', 'The great refracting telescope at Birr Castle, an antique engraving'],
+    labyrinth: ['transit-observatory.webp', 'An astronomer recording the transit of Venus in a shadowed observatory'],
+    starforge: ['antique-orrery-globe.webp', 'A combination orrery and terrestrial globe on a carved tripod'],
+    chain: ['gemini-celestial-chart.webp', 'Gemini with a golden lyre, an antique celestial chart'],
+    deepfield: ['celestial-eagle-chart.webp', 'A double-headed eagle bearing an intricate map of the heavens'],
+  };
+  const VETERAN_RULES = {
+    shooter: 'Eclipse hulls, faster hostile fire, 1.32× rewards',
+    bastion: 'Enemy hulls +18%, same tactical economy',
+    labyrinth: 'Watchers patrol 18% faster',
+    starforge: 'Targets +25%, heat ceiling −10%',
+    chain: 'Threat speed and hazards +18%',
+    deepfield: 'Novae +20%, one fewer Oracle charge',
+  };
+  function hasVeteran(id) {
+    if (cartridgeRecords.clears[id] > 0) return true;
+    if (id === 'starforge') {
+      try { return (JSON.parse(localStorage.getItem('aether-starforge-v1'))?.completed || 0) > 0; } catch { return false; }
+    }
+    return false;
+  }
+  const veteranMode = id => new URLSearchParams(location.search).get('variant') === 'veteran' && hasVeteran(id);
+  const withVariant = (href, veteran) => veteran ? `${href}&variant=veteran` : href;
+  const veteranCardLink = id => hasVeteran(id)
+    ? `<a class="cartridge-veteran-link" href="${withVariant(campaignHref(id), true)}">VETERAN SKY · ${VETERAN_RULES[id]} ↗</a>`
+    : '<span class="cartridge-veteran-link locked">VETERAN SKY · CLEAR THE CAMPAIGN TO UNLOCK</span>';
+  const cartridgeSigil = id => `<svg viewBox="0 0 100 100" aria-hidden="true">${SIGILS[id] || SIGILS.shooter}</svg>`;
+  const HULL_SIGILS = {
+    kite: '<path d="M8 32 51 6l41 26-41 22Z"/><path d="m51 6 7 26-7 22-7-22ZM20 32l24-7M82 32l-24-7M51 25v27M41 46l10 8 10-8"/><circle cx="51" cy="27" r="5"/><path d="M15 29 4 24M87 29l11-5M23 43l-9 7M79 43l9 7"/>',
+    bell: '<path d="M14 17 34 8h34l20 9 5 23-25 12H34L9 40Z"/><path d="M27 18h48l5 20-20 8H42l-20-8ZM50 8v38M34 8l8 38M68 8l-8 38M18 27h66"/><circle cx="51" cy="27" r="8"/><path d="M39 50 34 56M63 50l5 6M9 33 2 36M93 33l7 3"/>',
+    moth: '<path d="M49 19C34 2 13 4 7 15c13 1 16 8 13 20 9 1 20-3 29-9M53 19C68 2 89 4 95 15c-13 1-16 8-13 20-9 1-20-3-29-9"/><path d="M51 12v38M46 24h12l-2 19h-8ZM51 12l-5-7M51 12l6-7M19 18l18 8M83 18l-18 8M24 30l15-4M78 30l-15-4"/><circle cx="51" cy="22" r="4"/>',
+    comet: '<path d="m7 34 63-24 22 5-15 13-18 24-8-19Z"/><path d="m70 10 7 18-18 24M22 32l37-9M59 33l18-5M50 39l9-11M7 34l-5 8M18 42l-7 8M31 46l-5 7"/><circle cx="65" cy="23" r="5"/><path d="M79 5l8-3M87 12l7-1"/>',
+  };
+  const hullSigil = id => `<svg viewBox="0 0 100 60" aria-hidden="true">${HULL_SIGILS[id] || HULL_SIGILS.kite}</svg>`;
+
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
   function shuffle(arr, rand) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -113,7 +160,10 @@ window.AetherVoyage = (() => {
       const match = dailyKey.exec(key);
       if (match && match[2] >= dateKey(earliest) && Number.isFinite(value)) scores[key] = safeInt(Math.round(value));
     }
-    for (const id of Object.keys(CARTRIDGES)) scores[`${id}:campaign`] = safeInt(best[`${id}:campaign`]);
+    for (const id of Object.keys(CARTRIDGES)) {
+      scores[`${id}:campaign`] = safeInt(best[`${id}:campaign`]);
+      scores[`${id}:veteran`] = safeInt(best[`${id}:veteran`]);
+    }
     return { best: scores, clears: Object.fromEntries(Object.keys(CARTRIDGES).map(id => [id, safeInt(clears[id])])) };
   }
   const cartridgeRecords = readCartridgeRecords();
@@ -129,6 +179,7 @@ window.AetherVoyage = (() => {
   const campaignMode = id => id !== 'starforge' && !dailyMode(id) && new URLSearchParams(location.search).get('mode') === 'campaign';
   const dailySeed = (id, day) => { let hash = 2166136261; for (const char of `${id}:${day}`) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return hash >>> 0; };
   const dailyHref = id => `index.html?standalone=1&cartridge=${id}&challenge=daily#${CARTRIDGES[id]?.arcade ? 'arcade' : 'voyage'}`;
+  const arcadeCabinetHref = () => new URLSearchParams(location.search).has('standalone') ? 'index.html?standalone=1#arcade' : 'index.html#arcade';
   function arcadeBest(id) {
     try {
       const data = JSON.parse(localStorage.getItem('aether-wonder-rooms-v1')) || {};
@@ -136,13 +187,13 @@ window.AetherVoyage = (() => {
       return Math.max(Number(best[`${id}:v3`]) || 0, id === 'dash' ? Number(best['dash:v3:exp']) || 0 : 0);
     } catch { return 0; }
   }
-  function recordCartridge(id, score, day = null, campaign = false, won = false) {
-    const key = day ? `${id}:${day}` : campaign ? `${id}:campaign` : id;
+  function recordCartridge(id, score, day = null, campaign = false, won = false, veteran = false) {
+    const key = veteran ? `${id}:veteran` : day ? `${id}:${day}` : campaign ? `${id}:campaign` : id;
     const previous = cartridgeRecords.best[key] || 0;
     const best = Math.max(previous, Math.max(0, Math.round(score || 0)));
     cartridgeRecords.best[key] = best;
     if (day) cartridgeRecords.best[id] = Math.max(cartridgeRecords.best[id] || 0, best);
-    if (campaign && won) cartridgeRecords.clears[id]++;
+    if (campaign && won && !veteran) cartridgeRecords.clears[id]++;
     saveCartridgeRecords();
     return { best, newBest: best > previous };
   }
@@ -234,23 +285,30 @@ window.AetherVoyage = (() => {
 
   function renderCartridge(id) {
     const card = CARTRIDGES[id];
-    const daily = dailyMode(id), campaign = campaignMode(id), day = dailyDate();
-    const key = daily ? `${id}:${day}` : campaign ? `${id}:campaign` : id;
-    const modeLinks = id === 'starforge' ? '' : `<div class="cartridge-modes" aria-label="Challenge mode"><a class="button" href="${campaignHref(id)}" ${campaign ? 'aria-current="page"' : ''}>Campaign</a><a class="button" href="${cartridgeHref(id)}" ${!campaign && !daily ? 'aria-current="page"' : ''}>Endless run</a><a class="button" href="${dailyHref(id)}" ${daily ? 'aria-current="page"' : ''}>Daily Vigil<span class="mode-date"> · ${day}</span></a></div>`;
-    const modeNote = daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : `<p>${card.goal || card.brief}</p>`;
-    const recordLabel = daily ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST';
+    const daily = dailyMode(id), campaign = campaignMode(id), day = dailyDate(), veteran = veteranMode(id);
+    const key = veteran ? `${id}:veteran` : daily ? `${id}:${day}` : campaign ? `${id}:campaign` : id;
+    const baseModeHref = campaign ? campaignHref(id) : daily ? dailyHref(id) : cartridgeHref(id);
+    const veteranLink = id === 'starforge' ? '' : hasVeteran(id)
+      ? `<a class="button" href="${withVariant(baseModeHref, true)}" ${veteran ? 'aria-current="page"' : ''}>Veteran Sky</a>`
+      : '<button class="button" type="button" disabled title="Clear the campaign to unlock Veteran Sky">Veteran locked</button>';
+    const modeLinks = id === 'starforge' ? '' : `<div class="cartridge-modes" aria-label="Challenge mode"><a class="button" href="${campaignHref(id)}" ${campaign && !veteran ? 'aria-current="page"' : ''}>Campaign</a><a class="button" href="${cartridgeHref(id)}" ${!campaign && !daily && !veteran ? 'aria-current="page"' : ''}>Endless run</a><a class="button" href="${dailyHref(id)}" ${daily && !veteran ? 'aria-current="page"' : ''}>Daily Vigil<span class="mode-date"> · ${day}</span></a>${veteranLink}</div>`;
+    const modeNote = veteran ? `<p class="veteran-rule">VETERAN SKY · ${VETERAN_RULES[id]}. Veteran records are kept separately.</p>` : daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : `<p>${card.goal || card.brief}</p>`;
+    const recordLabel = veteran ? 'VETERAN BEST' : daily ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST';
     const clears = campaign && cartridgeRecords.clears[id] ? `<span class="cartridge-clears">${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}</span>` : '';
-    return `<div class="view-enter tour-page cartridge-page"><section class="view-header cartridge-header"><div><p class="eyebrow">ÆTHER CARTRIDGE · ${card.eyebrow}${daily ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h1>${card.name}.</h1><p>${card.brief}</p>${modeLinks}${modeNote}</div><div class="cartridge-record"><span>${recordLabel}</span><strong>${(cartridgeRecords.best[key] || 0).toLocaleString()}</strong>${clears}</div></section><div id="cartridge-stage" class="cartridge-stage" aria-live="polite"></div><div class="cartridge-footer"><a class="button" href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a><span>${card.controls}</span></div></div>`;
+    return `<div class="view-enter tour-page cartridge-page"><section class="view-header cartridge-header"><div><p class="eyebrow">ÆTHER CARTRIDGE · ${card.eyebrow}${veteran ? ' · VETERAN SKY' : daily ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h1>${card.name}.</h1><p>${card.brief}</p>${modeLinks}${modeNote}</div><div class="cartridge-record"><span>${recordLabel}</span><strong>${(cartridgeRecords.best[key] || 0).toLocaleString()}</strong>${clears}</div></section><div id="cartridge-stage" class="cartridge-stage" aria-live="polite"></div><div class="cartridge-footer"><a class="button" href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a><span>${card.controls}</span></div></div>`;
   }
 
   function renderLanding() {
-    const filters = [['all', 'Complete cabinet'], ['action', 'Action & infiltration'], ['strategy', 'Strategy & logic'], ['arcade', 'Relic arcade']];
-    return `<div class="view-enter tour-page"><section class="view-header cabinet-intro"><div><p class="eyebrow">ÆTHER · THE CARTOGRAPHER’S CABINET</p><h1>Ten heavens.<em> Choose your instrument.</em></h1><p>Immediate play, authored campaigns, endless expeditions and a fixed Daily Vigil. Every cartridge teaches its controls before you begin.</p></div><div class="cabinet-edition" aria-hidden="true"><span>✧</span><b>X</b><small>GAMES<br>IN ORBIT</small></div></section><nav class="cabinet-filters" aria-label="Filter the game cabinet">${filters.map(([id, label]) => `<button type="button" data-cabinet-filter="${id}" aria-pressed="${id === 'all'}" aria-controls="cartridge-cabinet">${label}<span>${id === 'all' ? Object.keys(CARTRIDGES).length : Object.values(CARTRIDGES).filter(card => card.family === id).length}</span></button>`).join('')}</nav><section class="cartridge-cabinet" id="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<div class="cartridge-choice" data-cabinet-family="${card.family}"><a class="cartridge-card cartridge-${id}" href="${campaignHref(id)}" aria-label="Play ${card.name}${id === 'starforge' || card.arcade ? '' : ' campaign'}"><span class="cartridge-emblem" aria-hidden="true"><i>${card.icon}</i></span><div class="cartridge-copy"><p>${card.eyebrow}</p><h2>${card.name}</h2><span class="cartridge-brief">${card.brief}</span><span class="cartridge-features">${card.features.map(feature => `<b>${feature}</b>`).join('')}</span></div><footer><b>${id === 'starforge' || card.arcade ? 'PLAY NOW' : 'PLAY CAMPAIGN'}</b><small>BEST ${(card.arcade ? arcadeBest(id) : cartridgeRecords.best[id === 'starforge' ? id : `${id}:campaign`] || 0).toLocaleString()}</small></footer></a>${id === 'starforge' ? '<span class="cartridge-contract-note">SIX AUTHORED CONTRACTS · ONE CONNECTED CAMPAIGN</span>' : `<a class="cartridge-daily-link" href="${dailyHref(id)}">DAILY VIGIL · TODAY’S FIXED SKY ↗</a>`}</div>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
+    // Relic games live in their own four-game arcade. Keep their direct URLs and
+    // records, but do not advertise the same games twice in this cabinet.
+    const cabinetEntries = Object.entries(CARTRIDGES).filter(([, card]) => !card.arcade);
+    const filters = [['all', 'Complete cabinet'], ['action', 'Action & infiltration'], ['strategy', 'Strategy & logic']];
+    return `<div class="view-enter tour-page"><section class="view-header cabinet-intro"><div><p class="eyebrow">ÆTHER · THE CARTOGRAPHER’S CABINET</p><h1>Six instruments.<em> Infinite heavens.</em></h1><p>Authored campaigns, endless expeditions and a fixed Daily Vigil. Each instrument offers a different way to read—and survive—the sky.</p></div><div class="cabinet-edition" aria-hidden="true"><span>✧</span><b>VI</b><small>GAMES<br>IN ORBIT</small></div></section><nav class="cabinet-filters" aria-label="Filter the game cabinet">${filters.map(([id, label]) => `<button type="button" data-cabinet-filter="${id}" aria-pressed="${id === 'all'}" aria-controls="cartridge-cabinet">${label}<span>${id === 'all' ? cabinetEntries.length : cabinetEntries.filter(([, card]) => card.family === id).length}</span></button>`).join('')}</nav><section class="cartridge-cabinet" id="cartridge-cabinet" aria-label="Playable Æther cartridges">${cabinetEntries.map(([id, card]) => `<div class="cartridge-choice" data-cabinet-family="${card.family}"><a class="cartridge-card cartridge-${id}" href="${campaignHref(id)}" aria-label="Play ${card.name}${id === 'starforge' || card.arcade ? '' : ' campaign'}"><span class="cartridge-engraving"><img src="assets/${CARTRIDGE_ART[id][0]}" alt="${CARTRIDGE_ART[id][1]}" loading="lazy" /></span><span class="cartridge-emblem" aria-hidden="true"><i>${cartridgeSigil(id)}</i></span><div class="cartridge-copy"><p>${card.eyebrow}</p><h2>${card.name}</h2><span class="cartridge-brief">${card.brief}</span><span class="cartridge-features">${card.features.map(feature => `<b>${feature}</b>`).join('')}</span></div><footer><b>${id === 'starforge' || card.arcade ? 'PLAY NOW' : 'PLAY CAMPAIGN'}</b><small>BEST ${(card.arcade ? arcadeBest(id) : cartridgeRecords.best[id === 'starforge' ? id : `${id}:campaign`] || 0).toLocaleString()}</small></footer></a>${id === 'starforge' ? `<span class="cartridge-contract-note">SIX AUTHORED CONTRACTS · ONE CONNECTED CAMPAIGN</span>${veteranCardLink(id)}` : `<a class="cartridge-daily-link" href="${dailyHref(id)}">DAILY VIGIL · TODAY’S FIXED SKY ↗</a>${veteranCardLink(id)}`}</div>`).join('')}</section><a class="arcade-cabinet-link" href="${arcadeCabinetHref()}"><span aria-hidden="true">✦</span><div><strong>The Relic Arcade · four smaller universes</strong><small>Planet Drop, Comet Surf, Stardust Dash and Orbit Breaker now live together in the Cosmic Arcade.</small></div><span class="button">OPEN THE ARCADE →</span></a><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
     <div class="tour-landing"><div>
       <p class="section-label">THE HANGAR · CHOOSE YOUR SKIFF</p><p class="tour-feature-lead">A twelve-leg odyssey across living starfields. Every instrument bends the rules. Every death writes another story.</p>
       <div class="hangar">${Object.entries(HULLS).map(([id, h]) => {
         const open = unlockedHull(id);
-        return `<button class="hangar-card ${open ? '' : 'locked'}" data-hull="${id}" ${open ? '' : 'disabled'} aria-pressed="${pendingHull === id}"><span class="hangar-ship hull-${id}" aria-hidden="true"><i></i></span><h3>${h.name}</h3><p>${h.desc}</p><dl><div><dt>PLATING</dt><dd>${h.hp}</dd></div><div><dt>SPEED</dt><dd>${Math.round(h.speed * 100)}%</dd></div><div><dt>BOLT</dt><dd>${h.boltDmg} / ${h.boltCd}s</dd></div></dl><span class="hangar-status">${open ? (pendingHull === id ? 'SELECTED ✦' : 'IN SERVICE') : `SEALED · ${h.unlock}`}</span></button>`;
+        return `<button class="hangar-card ${open ? '' : 'locked'}" data-hull="${id}" ${open ? '' : 'disabled'} aria-pressed="${pendingHull === id}"><span class="hangar-ship hull-${id}" aria-hidden="true">${hullSigil(id)}</span><h3>${h.name}</h3><p>${h.desc}</p><dl><div><dt>PLATING</dt><dd>${h.hp}</dd></div><div><dt>SPEED</dt><dd>${Math.round(h.speed * 100)}%</dd></div><div><dt>BOLT</dt><dd>${h.boltDmg} / ${h.boltCd}s</dd></div></dl><span class="hangar-status">${open ? (pendingHull === id ? 'SELECTED ✦' : 'IN SERVICE') : `SEALED · ${h.unlock}`}</span></button>`;
       }).join('')}</div>
       <div class="tour-rules">
         <article><span class="chapter-number">Ⅰ</span><div><h3>Fight the sky</h3><p>Pilot with the mouse, burn down dangerous formations, chain kills for FLOW, and dash through forecast solar eruptions.</p></div></article>
@@ -383,28 +441,35 @@ window.AetherVoyage = (() => {
   function mountCartridge(id) {
     const card = CARTRIDGES[id], stage = $('#cartridge-stage');
     if (!card || !stage) return;
+    if (new URLSearchParams(location.search).get('variant') === 'veteran' && !hasVeteran(id)) {
+      stage.innerHTML = '<div class="cartridge-recap veteran-locked"><p class="eyebrow">VETERAN SKY · SEALED</p><h2 tabindex="-1">Prove the standard instrument first.</h2><p>Clear this cartridge’s campaign to open its veteran rules and separate record book.</p><a class="button button-primary" href="index.html?standalone=1#voyage">RETURN TO THE CABINET</a></div>';
+      $('.cartridge-recap h2', stage)?.focus({ preventScroll: true });
+      return;
+    }
+    const veteran = veteranMode(id);
+    stage.dataset.veteran = String(veteran);
     const day = dailyMode(id) ? dailyDate() : null;
     const campaign = campaignMode(id);
     const seed = day ? dailySeed(id, day) : (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     const end = ({ won, score = 0, detail = '' }) => {
-      const record = recordCartridge(id, score, day, campaign, won);
+      const record = recordCartridge(id, score, day, campaign, won, veteran);
       const recordValue = $('.cartridge-record strong'); if (recordValue) recordValue.textContent = record.best.toLocaleString();
       if (campaign && won) { const clears = $('.cartridge-clears'); if (clears) clears.textContent = `${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}`; else $('.cartridge-record')?.insertAdjacentHTML('beforeend', `<span class="cartridge-clears">${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}</span>`); }
       const heading = won ? (campaign ? 'Campaign cleared.' : 'A new mark in the ledger.') : 'The sky keeps score.';
-      stage.innerHTML = `<div class="cartridge-recap"><p class="eyebrow">${won ? 'RUN COMPLETE' : 'RUN ENDED'}${day ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h2 tabindex="-1">${heading}</h2><dl><div><dt>RUN SCORE</dt><dd>${Math.round(score).toLocaleString()}</dd></div><div><dt>${day ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST'}</dt><dd>${record.best.toLocaleString()}</dd></div></dl><p>${record.newBest ? day ? 'NEW DAILY BEST' : campaign ? 'NEW CAMPAIGN BEST' : 'NEW PERSONAL BEST' : 'One more run is waiting.'}</p>${detail ? `<p class="cartridge-detail">${esc(detail)}</p>` : ''}<div class="tour-recap-actions"><button class="button button-primary" data-tour="cartridge-replay">PLAY AGAIN</button><a class="button" href="index.html?standalone=1#voyage">CARTRIDGE CABINET</a></div></div>`;
+      stage.innerHTML = `<div class="cartridge-recap"><p class="eyebrow">${won ? 'RUN COMPLETE' : 'RUN ENDED'}${veteran ? ' · VETERAN SKY' : ''}${day ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h2 tabindex="-1">${heading}</h2><dl><div><dt>RUN SCORE</dt><dd>${Math.round(score).toLocaleString()}</dd></div><div><dt>${day ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST'}</dt><dd>${record.best.toLocaleString()}</dd></div></dl><p>${record.newBest ? day ? 'NEW DAILY BEST' : campaign ? 'NEW CAMPAIGN BEST' : 'NEW PERSONAL BEST' : 'One more run is waiting.'}</p>${detail ? `<p class="cartridge-detail">${esc(detail)}</p>` : ''}<div class="tour-recap-actions"><button class="button button-primary" data-tour="cartridge-replay">PLAY AGAIN</button><a class="button" href="index.html?standalone=1#voyage">CARTRIDGE CABINET</a></div></div>`;
       $('.cartridge-recap h2', stage)?.focus({ preventScroll: true });
     };
     if (id === 'shooter') {
       // Controls live in the persistent cartridge footer; the brief stays a brief.
-      stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> ${campaign ? 'THREE-ACT CAMPAIGN' : 'ENDLESS VIGIL'}</span><strong>STARFALL SKIRMISH</strong></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Build FLOW</span></div>`;
-      gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: !campaign, hull: 'kite', instruments: [], seed, difficulty: 'standard', onEnd({ won, score }) { end({ won, score }); } });
+      stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> ${veteran ? 'VETERAN SKY' : campaign ? 'THREE-ACT CAMPAIGN' : 'ENDLESS VIGIL'}</span><strong>STARFALL SKIRMISH</strong></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Build FLOW</span></div>`;
+      gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: !campaign, hull: 'kite', instruments: [], seed, difficulty: veteran ? 'eclipse' : 'standard', onEnd({ won, score }) { end({ won, score }); } });
     } else if (id === 'starforge') {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ORBITAL FACTORY</span><strong>THE LAST CELESTIAL FOUNDRY</strong></div><div class="starforge-frame"></div>`;
-      gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { onEnd: end });
+      gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { veteran, onEnd: end });
     } else {
-      const playbill = day ? card.playbill?.daily || card.playbill?.endless : card.playbill?.[campaign ? 'campaign' : 'endless'] || `${card.name.toUpperCase()} · THE INSTRUMENTS ARE READY`;
+      const playbill = (veteran ? 'VETERAN SKY · ' : '') + (day ? card.playbill?.daily || card.playbill?.endless : card.playbill?.[campaign ? 'campaign' : 'endless'] || `${card.name.toUpperCase()} · THE INSTRUMENTS ARE READY`);
       stage.innerHTML = `<div class="cartridge-playbill"><span>${day ? 'DAILY VIGIL' : campaign ? 'CAMPAIGN CARTRIDGE' : 'ENDLESS CARTRIDGE'}</span><strong>${playbill}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
-      trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: !campaign, campaign, daily: Boolean(day), seed, verbs: new Set(), onEnd: end });
+      trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: !campaign, campaign, daily: Boolean(day), seed, veteran, speedScale: veteran ? 1.18 : 1, verbs: new Set(), onEnd: end });
       // Focus the trial's own surface (a div for Deep Field), not canvas-only.
       (trialHandle?.canvas ?? $('.trial-frame canvas', stage))?.focus?.({ preventScroll: true });
     }
@@ -600,6 +665,6 @@ window.AetherVoyage = (() => {
 
   viewNames.voyage = 'Game cartridges';
   renderers.voyage = renderVoyage;
-  searchItems.push({ id: 'voyage', name: 'Game cartridges', kind: 'page', subtitle: `${Object.keys(CARTRIDGES).length} playable Æther games`, icon: 'meteor' });
+  searchItems.push({ id: 'voyage', name: 'Game cartridges', kind: 'page', subtitle: 'Six flagship instruments · four more in the Cosmic Arcade', icon: 'meteor' });
   return { mount, unmount, pause, resume };
 })();

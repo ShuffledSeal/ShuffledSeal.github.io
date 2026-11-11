@@ -232,9 +232,9 @@
     }
     function draw(ctx, dt, clock) {
       const sch = schematics[level];
-      ctx.fillStyle = '#0e1410'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#0b1624'; ctx.fillRect(0, 0, W, H);
       // Engraved plates
-      ctx.fillStyle = '#101812';
+      ctx.fillStyle = '#0b1725';
       ctx.beginPath(); ctx.roundRect(GX - 28, GY - 36, COLS * CELL + 56, ROWS * CELL + 76, 8); ctx.fill();
       ctx.strokeStyle = '#c4ac7933'; ctx.stroke();
       ctx.beginPath(); ctx.roundRect(24, GY - 36, 172, ROWS * CELL + 76, 8); ctx.fill(); ctx.stroke();
@@ -328,7 +328,7 @@
       ctx.beginPath(); ctx.roundRect(engageRect.x, engageRect.y, engageRect.w, engageRect.h, 6); ctx.fill();
       ctx.strokeStyle = ready ? '#e9dcae' : '#c4ac7944'; ctx.stroke();
       ctx.fillStyle = ready ? '#e9dcae' : '#c4ac7977';
-      ctx.font = '18px Cormorant, serif'; ctx.textAlign = 'center';
+      ctx.font = '18px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
       ctx.fillText('E N G A G E', engageRect.x + engageRect.w / 2, engageRect.y + 27);
       // HUD
       ctx.fillStyle = '#e9dcae'; ctx.font = '600 15px "DM Sans"'; ctx.textAlign = 'left';
@@ -339,7 +339,7 @@
       ctx.fillStyle = reserve < 60 ? '#f58e9b' : '#c4ac79';
       const bw = 150 * clamp(reserve / 300, 0, 1);
       ctx.fillRect(W - 24 - bw, 42, bw, 3);
-      ctx.fillStyle = '#e9dcae'; ctx.font = '24px Cormorant, serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#e9dcae'; ctx.font = '24px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
       ctx.fillText('The Umbra Terminal', 450, 34);
       ctx.fillStyle = '#b7bda4'; ctx.font = '12px "DM Sans"';
       ctx.fillText(`schematic ${ROMAN[level]} · ${sch.name} · ${lit.size}/${sch.receivers.length} receivers`, 450, 54);
@@ -347,10 +347,10 @@
       if (banner && clock < banner.until) {
         const a = clamp(Math.min(clock - banner.from, banner.until - clock) * 2.4, 0, 1);
         ctx.globalAlpha = a;
-        ctx.fillStyle = '#0e1410dd';
+        ctx.fillStyle = '#0b1624dd';
         ctx.beginPath(); ctx.roundRect(270, 226, 380, 64, 6); ctx.fill();
         ctx.strokeStyle = '#c4ac7955'; ctx.stroke();
-        ctx.fillStyle = '#e9dcae'; ctx.font = '28px Cormorant, serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#e9dcae'; ctx.font = '28px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
         ctx.fillText(banner.text, 460, 266);
         ctx.globalAlpha = 1;
       }
@@ -576,7 +576,7 @@
       ctx.fillStyle = low ? '#f58e9b' : '#c4ac79';
       const bw = 150 * clamp(timeLeft / bell, 0, 1);
       ctx.fillRect(W - 24 - bw, 42, bw, 3);
-      ctx.fillStyle = '#e9dcae'; ctx.font = '24px Cormorant, serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#e9dcae'; ctx.font = '24px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
       ctx.fillText('Occultation', 450, 32);
       ctx.fillStyle = '#b7bda4'; ctx.font = '12px "DM Sans"';
       ctx.fillText(`${ROMAN[round]} · ${r.name} · found ${found} · missed ${missed}`, 450, 52);
@@ -586,7 +586,7 @@
         ctx.fillStyle = '#0e1420dd';
         ctx.beginPath(); ctx.roundRect(330, 236, 240, 58, 6); ctx.fill();
         ctx.strokeStyle = '#c4ac7955'; ctx.stroke();
-        ctx.fillStyle = '#e9dcae'; ctx.font = '26px Cormorant, serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#e9dcae'; ctx.font = '26px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
         ctx.fillText(banner.text, 450, 272);
         ctx.globalAlpha = 1;
       }

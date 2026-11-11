@@ -6,6 +6,27 @@ window.AetherPlanets = (() => {
   let controller, hintController, genController, current, reverse=false, painting=false, lastPaint=-1, gesture=null, ignoreClickUntil=0, observer;
   let hostHooks = {};
   const progress={records:{},drafts:{},levels:{},endless:{}};
+  const REPLAY_KEY='aether-planet-replays-v1', REPLAY_VERSION=1;
+  const replayProgress={daily:{},circuits:{},last:{}};
+  try {
+    const raw=JSON.parse(localStorage.getItem(REPLAY_KEY));
+    if(raw?.version===REPLAY_VERSION) {
+      const validActions=d=>d&&Array.isArray(d.actions)&&d.actions.length<=1500;
+      const result=r=>r&&Number.isInteger(r.stars)&&r.stars>=1&&r.stars<=3&&Number.isInteger(r.moves)&&r.moves>=0&&r.moves<=10000?{stars:r.stars,moves:r.moves,hints:Number.isInteger(r.hints)?Math.max(0,Math.min(999,r.hints)):0}:null;
+      for(const id of ids) {
+        const daily=raw.daily?.[id];
+        if(daily&&/^\d{4}-\d{2}-\d{2}$/.test(daily.date)&&Number.isInteger(daily.seed)&&validActions(daily))replayProgress.daily[id]={date:daily.date,seed:daily.seed>>>0,actions:daily.actions,hints:Number.isInteger(daily.hints)?Math.max(0,Math.min(999,daily.hints)):0,result:result(daily.result)};
+        const circuit=raw.circuits?.[id];
+        if(circuit&&Number.isInteger(circuit.seed)&&Number.isInteger(circuit.stage)&&circuit.stage>=0&&circuit.stage<3&&validActions(circuit))replayProgress.circuits[id]={seed:circuit.seed>>>0,stage:circuit.stage,boards:Array.isArray(circuit.boards)?circuit.boards.slice(0,3).map(result).filter(Boolean):[],actions:circuit.actions,hints:Number.isInteger(circuit.hints)?Math.max(0,Math.min(999,circuit.hints)):0,result:result(circuit.result)};
+        if(['daily','circuit','crafted','endless'].includes(raw.last?.[id]))replayProgress.last[id]=raw.last[id];
+      }
+    }
+  } catch { /* Replay data is isolated from all crafted/endless progress. */ }
+  function saveReplay() {
+    try { localStorage.setItem(REPLAY_KEY,JSON.stringify({version:REPLAY_VERSION,...replayProgress}));storageOK=true; }
+    catch { storageOK=false; }
+    const note=document.querySelector('#puzzle-save-note');if(note)note.textContent=storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.';
+  }
   let storageOK=true;
   try {
     const raw=JSON.parse(localStorage.getItem(KEY));
@@ -28,6 +49,7 @@ window.AetherPlanets = (() => {
     if(note)note.textContent=storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.';
   }
   function session(id,index,def) {
+    if(index&&typeof index==='object')return replaySession(id,index);
     const endless=index==='endless',round=endless?def.round:0,key=endless?`${id}:endless:${round}`:`${id}:${index}`;
     if(sessions.has(key))return sessions.get(key);
     const levelDef=def?.def ?? P.definition(id,index),board=P.initial(id,levelDef,endless?round:index);
@@ -46,10 +68,46 @@ window.AetherPlanets = (() => {
     }
     sessions.set(key,s);return s;
   }
+  function replaySession(id,spec) {
+    const mode=spec.mode,stage=spec.stage||0,seed=spec.seed>>>0,key=`${id}:${mode}:${seed}:${stage}`;
+    if(sessions.has(key))return sessions.get(key);
+    const levelDef=spec.def,difficulty=spec.difficulty??(mode==='daily'?2:[1,3,5][stage]),board=P.initial(id,levelDef,difficulty);
+    const s={id,index:0,key,mode,round:difficulty,def:levelDef,board,initial:structuredClone(board),par:P.par(id,levelDef,board),moves:0,hints:0,actions:[],history:[],future:[],selected:0,hintCell:-1,face:1,justDealt:true,plan:[],replay:{seed,stage,date:spec.date||null,difficulty}};
+    const draft=mode==='daily'?replayProgress.daily[id]:replayProgress.circuits[id];
+    if(draft) {
+      s.hints=draft.hints||0;
+      for(const action of draft.actions||[]) {
+        if(P.won(id,levelDef,s.board))break;
+        const next=P.transition(id,levelDef,s.board,action);if(!next)break;
+        s.history.push({board:s.board,moves:s.moves,action});s.actions.push(action);
+        s.moves+=P.actionCost(id,s.board,next);s.board=next;
+      }
+    }
+    sessions.set(key,s);return s;
+  }
+  function sessionTitle(s) {
+    if(s.mode==='daily')return `Daily chart · ${s.replay.date}`;
+    if(s.mode==='circuit')return `Circuit ${s.replay.stage+1} / 3 · difficulty ${s.replay.difficulty}`;
+    if(s.mode==='endless')return `Endless · board ${s.round+1}`;
+    return P.catalogue[s.id].levels[s.index];
+  }
+  function sessionLesson(s) {
+    if(s.mode==='daily')return 'A fixed, solution-backed chart for this UTC date.';
+    if(s.mode==='circuit')return `Seed ${s.replay.seed} · solution-backed generated board.`;
+    if(s.mode==='endless')return 'A fresh solver-checked board.';
+    return P.lessons[s.id][s.index];
+  }
   function stash(s) {
-    if(s.mode==='endless')return;
+    replayProgress.last[s.id]=s.mode;
+    if(s.mode==='endless'){saveReplay();return;}
+    if(s.mode==='daily'||s.mode==='circuit') {
+      const target=s.mode==='daily'?replayProgress.daily[s.id]:replayProgress.circuits[s.id];
+      if(!target)return;
+      target.actions=s.actions.slice(0,1500);target.hints=s.hints;
+      saveReplay();return;
+    }
     progress.drafts[s.key]={actions:s.actions.slice(0,1500),hints:s.hints};
-    progress.levels[s.id]=s.index;save();
+    progress.levels[s.id]=s.index;save();saveReplay();
   }
   function solvedCount(id) {return Object.keys(progress.records).filter(key=>key.startsWith(id+':')).length;}
   function courseLabel(id) {
@@ -75,15 +133,16 @@ window.AetherPlanets = (() => {
     </article>`;
   }
   function renderIndex() {
-    return `<section class="planet-atlas-index" aria-labelledby="atlas-index-title"><header class="atlas-section-heading"><p class="eyebrow">EIGHT PLANETS / EIGHT PUZZLE ROOMS</p><h2 id="atlas-index-title">Choose a world.</h2><p>Read its field notes, then try a puzzle built around something that makes it different.</p></header><div class="atlas-card-grid">${planets.map((p,i)=>`<a class="atlas-card" href="#planet/${p.id}" style="--planet-accent:${p.color}"><span class="atlas-card-number">0${i+1} <span>${p.distance}</span></span><span class="planet-sphere ${p.id}" aria-hidden="true"></span><h3>${p.name}</h3><p>${notes[p.id].heading}</p><span class="atlas-card-game">${P.catalogue[p.id].title} <span>↗</span></span><small>${P.catalogue[p.id].genre} · ${solvedCount(p.id)}/5 solved${progress.endless[p.id]?.best?` · endless ×${progress.endless[p.id].best}`:''}</small></a>`).join('')}</div></section>`;
+    return `<section class="planet-atlas-index" aria-labelledby="atlas-index-title"><header class="atlas-section-heading"><p class="eyebrow">EIGHT PLANETS / EIGHT PUZZLE ROOMS</p><h2 id="atlas-index-title">Choose a world.</h2><p>Read its field notes, then try a puzzle built around something that makes it different.</p></header><div class="atlas-card-grid">${planets.map((p,i)=>`<a class="atlas-card" href="#planet/${p.id}" style="--planet-accent:${p.color}"><span class="atlas-card-number">0${i+1} <span>${p.distance}</span></span><span class="atlas-sphere planet-sphere ${p.id}" aria-hidden="true"></span><h3>${p.name}</h3><p>${notes[p.id].heading}</p><span class="atlas-card-game">${P.catalogue[p.id].title} <span>↗</span></span><small>${P.catalogue[p.id].genre} · ${solvedCount(p.id)}/5 solved${progress.endless[p.id]?.best?` · endless ×${progress.endless[p.id].best}`:''}</small></a>`).join('')}</div></section>`;
   }
   function gameShell(s) {
     const game=P.catalogue[s.id];
     const tabs=game.levels.map((name,i)=>{const record=progress.records[`${s.id}:${i}`];return `<button data-puzzle-level="${i}" aria-pressed="${s.mode==='crafted'&&i===s.index}" aria-label="Level ${i+1}: ${name}${record?`, completed, ${record.stars} stars`:''}"><span>0${i+1}</span><span>${name}</span><small aria-hidden="true">${record?'✦'.repeat(record.stars):'—'}</small></button>`;}).join('')
       +`<button class="endless-tab" data-puzzle-level="endless" aria-pressed="${s.mode==='endless'}" aria-label="Endless mode${progress.endless[s.id]?.best?`, furthest: board ${progress.endless[s.id].best}`:''}"><span>∞</span><span>Endless</span><small aria-hidden="true">${progress.endless[s.id]?.best?'×'+progress.endless[s.id].best:'—'}</small></button>`;
-    return `<div class="puzzle-levels endless-strip" role="group" aria-label="Choose a puzzle level">${tabs}</div>
-      <div class="puzzle-layout"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${s.mode==='endless'?`Endless · board ${s.round+1}`:game.levels[s.index]} <small class="puzzle-lesson">${s.mode==='endless'?'A fresh solver-checked board.':P.lessons[s.id][s.index]}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p><div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
-      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${game.rules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${game.detail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?'arrows move between moons · Enter or Space queues a burn · L launches the plan':['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
+    const replayBar=`<nav class="puzzle-replay-modes" aria-label="Puzzle replay charts"><button data-replay="crafted" aria-pressed="${s.mode==='crafted'||s.mode==='endless'}">Crafted course</button><button data-replay="daily" aria-pressed="${s.mode==='daily'}">Daily chart</button><button data-replay="circuit" aria-pressed="${s.mode==='circuit'}">Three-board circuit</button>${s.mode==='circuit'?`<label class="replay-seed">Seed <input id="replay-seed" type="text" inputmode="numeric" pattern="[0-9]*" value="${s.replay.seed}" aria-label="Circuit seed" /></label><button data-replay-action="apply-seed">Deal seed</button>`:''}</nav>`;
+    return `${replayBar}<div class="puzzle-levels endless-strip" role="group" aria-label="Choose a puzzle level">${tabs}</div>
+      <div class="puzzle-layout"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${sessionTitle(s)} <small class="puzzle-lesson">${sessionLesson(s)}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p><div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
+      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${game.rules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${game.detail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Daily charts & circuits</summary><p>Daily charts use one fixed UTC date and one solution-backed board. A circuit deals three boards at difficulties 1, 3 and 5 from a shareable seed. Replays save separately from the five handcrafted levels and endless records.</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?'arrows move between moons · Enter or Space queues a burn · L launches the plan':['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
   }
   function controls(s) {
     if(s.id==='venus')return `<button class="button rotation-toggle" data-puzzle="reverse" aria-pressed="${reverse}">${reverse?'↶ Turn anticlockwise':'↷ Turn clockwise'}</button>`;
@@ -170,17 +229,30 @@ window.AetherPlanets = (() => {
     document.querySelector('[data-puzzle="undo"]').disabled=!s.history.length;
     document.querySelector('[data-puzzle="redo"]').disabled=!s.future.length;
     document.querySelector('[data-puzzle="hint"]').disabled=won;
-    const record=s.mode==='endless'?null:progress.records[s.key];
+    const replayRecord=s.mode==='daily'?replayProgress.daily[s.id]?.result:s.mode==='circuit'?replayProgress.circuits[s.id]?.result:null;
+    const record=s.mode==='endless'||s.mode==='daily'||s.mode==='circuit'?replayRecord:progress.records[s.key];
     document.querySelector('#puzzle-best').textContent=s.mode==='endless'
       ? `Endless: ${progress.endless[s.id]?.best||0} boards cleared`
+      : s.mode==='circuit'?`Circuit: ${replayProgress.circuits[s.id]?.boards.length||0} / 3 charts sealed${record?` · this chart ${record.moves} moves`:''}`
       : record?`${'✦'.repeat(record.stars)} · Best: ${record.moves} moves`:'Not solved yet.';
     document.querySelector('#puzzle-status').textContent=message||P.progress(s.id,s.def,s.board);
     const result=document.querySelector('#puzzle-result');
     result.hidden=!won;
-    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${s.hosted?'<div><button class="button button-primary" data-puzzle="host-done">Continue the tour →</button></div>':`<div><button class="button button-primary" data-puzzle="${s.mode==='endless'?'next-round':s.index<4?'next':'replay'}">${s.mode==='endless'?'Next board →':s.index<4?'Next level →':'Replay this level'}</button><a class="button" href="#planet/${ids[(ids.indexOf(s.id)+1)%8]}">Try ${planets[(ids.indexOf(s.id)+1)%8].name}’s puzzle ↗</a></div>`}`;
+    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='daily'||s.mode==='circuit'?'Chart sealed.':s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${resultHTML(s)}`;
     if(focus)document.querySelector(focus)?.focus({preventScroll:true});
   }
   function recordWin(s) {
+    if(s.mode==='daily'||s.mode==='circuit') {
+      const stars=s.hints?1:s.moves<=(s.par??Infinity)?3:s.moves<=(s.par??Infinity)*2?2:1;
+      const target=s.mode==='daily'?replayProgress.daily[s.id]:replayProgress.circuits[s.id];if(!target)return;
+      const result={stars,moves:s.moves,hints:s.hints},previous=target.result;
+      target.result={stars:Math.max(stars,previous?.stars||0),moves:Math.min(s.moves,previous?.moves??Infinity),hints:s.hints};
+      if(s.mode==='circuit') {
+        const old=target.boards[s.replay.stage];
+        if(!old||s.moves<old.moves||stars>old.stars)target.boards[s.replay.stage]=result;
+      }
+      saveReplay();return;
+    }
     if(s.mode==='endless') {
       const best=Math.max(progress.endless[s.id]?.best||0,s.round+1);
       progress.endless[s.id]={best};save();
@@ -191,6 +263,20 @@ window.AetherPlanets = (() => {
       if(chip){chip.querySelector('small').textContent='✦'.repeat(progress.records[s.key].stars);chip.setAttribute('aria-label',`Level ${s.index+1}: ${P.catalogue[s.id].levels[s.index]}, completed, ${progress.records[s.key].stars} stars`);}
     }
     const course=document.querySelector('#puzzle-course');if(course)course.textContent=courseLabel(s.id);
+  }
+  function resultHTML(s) {
+    if(s.hosted)return '<div><button class="button button-primary" data-puzzle="host-done">Continue the tour →</button></div>';
+    if(s.mode==='daily')return '<div><button class="button button-primary" data-puzzle="replay-this">Replay this chart</button><button class="button" data-replay="crafted">Return to the course</button></div>';
+    if(s.mode==='circuit') {
+      const circuit=replayProgress.circuits[s.id],complete=circuit.boards.filter(Boolean).length===3;
+      if(complete) {
+        const moves=circuit.boards.reduce((sum,board)=>sum+board.moves,0),stars=circuit.boards.reduce((sum,board)=>sum+board.stars,0);
+        return `<p class="circuit-complete">Circuit sealed · ${moves} moves · ${stars} / 9 stars</p><div><button class="button button-primary" data-puzzle="new-circuit">Deal another circuit</button><button class="button" data-replay="crafted">Return to the course</button></div>`;
+      }
+      return `<div><button class="button button-primary" data-puzzle="next-replay">Next circuit chart →</button><button class="button" data-puzzle="replay-this">Replay this chart</button></div>`;
+    }
+    if(s.mode==='endless')return '<div><button class="button button-primary" data-puzzle="next-round">Next board →</button><a class="button" href="#planet/'+ids[(ids.indexOf(s.id)+1)%8]+'">Try '+planets[(ids.indexOf(s.id)+1)%8].name+'’s puzzle ↗</a></div>';
+    return `<div><button class="button button-primary" data-puzzle="${s.index<4?'next':'replay'}">${s.index<4?'Next level →':'Replay this level'}</button><a class="button" href="#planet/${ids[(ids.indexOf(s.id)+1)%8]}">Try ${planets[(ids.indexOf(s.id)+1)%8].name}’s puzzle ↗</a></div>`;
   }
   function act(action) {
     const s=current;if(!s||P.won(s.id,s.def,s.board))return;
@@ -250,14 +336,14 @@ window.AetherPlanets = (() => {
     } else act({type:'move',value:d});
   }
   async function chooseLevel(index,focus=true) {
-    hintController?.abort();painting=false;gesture=null;reverse=false;
+    genController?.abort();hintController?.abort();painting=false;gesture=null;reverse=false;
     if(index==='endless') {
       genController?.abort();genController=new AbortController();const signal=genController.signal;
       const id=current.id,round=progress.endless[id]?.best||0;
       document.querySelector('#puzzle-status')?.replaceChildren();
       const board=document.querySelector('#puzzle-board');if(board)board.innerHTML='<p class="puzzle-loading" role="status">Charting a fresh board…</p>';
       const def=await P.endless(id,round);
-      if(signal.aborted||current.id!==id)return;
+      if(signal.aborted||!current||current.id!==id)return;
       current=session(id,'endless',{round,def});
     } else {
       current=session(current.id,index);
@@ -269,6 +355,36 @@ window.AetherPlanets = (() => {
       const s=current,signal=controller.signal;
       P.solve(s.id,s.def,s.initial,signal).then(path=>{if(!path||signal.aborted)return;s.par=path.length;if(current===s)paint();});
     }
+  }
+  function replaySeed(text) {let hash=2166136261;for(const char of text)hash=Math.imul(hash^char.charCodeAt(0),16777619);return hash>>>0;}
+  async function chooseReplay(mode,seed=null,advance=false) {
+    genController?.abort();hintController?.abort();genController=new AbortController();const signal=genController.signal,id=current.id;
+    let spec;
+    if(mode==='daily') {
+      const date=new Date().toISOString().slice(0,10),old=replayProgress.daily[id];
+      spec={mode,date,seed:old?.date===date?old.seed:replaySeed(`${id}:${date}`),stage:0,difficulty:2};
+      replayProgress.daily[id]=old?.date===date?old:{date,seed:spec.seed,actions:[],hints:0,result:null};
+    } else {
+      const old=replayProgress.circuits[id];
+      if(seed!==null)spec={mode,seed:seed>>>0,stage:0,difficulty:1};
+      else spec={mode,seed:old?.seed??crypto.getRandomValues(new Uint32Array(1))[0],stage:old?(advance?old.stage+1:old.stage):0,difficulty:old?[1,3,5][Math.min(2,old.stage+(advance?1:0))]:1};
+      if(seed!==null||!old)replayProgress.circuits[id]={seed:spec.seed,stage:0,boards:[],actions:[],hints:0,result:null};
+      else if(advance){old.stage=Math.min(2,old.stage+1);old.actions=[];old.hints=0;old.result=null;}
+      spec.difficulty=[1,3,5][replayProgress.circuits[id].stage];
+    }
+    replayProgress.last[id]=mode;saveReplay();
+    const host=document.querySelector('#planet-game');if(host)host.inert=true;
+    const board=document.querySelector('#puzzle-board');if(board)board.innerHTML=`<p class="puzzle-loading" role="status">Charting ${mode==='daily'?'today’s firmament':`circuit seed ${spec.seed}`}…</p>`;
+    const def=await P.replay(id,spec.seed,spec.difficulty,signal);
+    if(signal.aborted||!current||current.id!==id)return;
+    if(host)host.inert=false;
+    if(!def) {
+      if(board)board.innerHTML='<div class="puzzle-generation-error"><h3>The chart resisted resolution.</h3><p>No verified board arrived within the work limit. Your crafted progress is untouched.</p><button class="button" data-replay-action="retry">Try the chart again</button></div>';
+      return;
+    }
+    current=session(id,{...spec,def});stash(current);
+    if(host)host.innerHTML=gameShell(current);paint();
+    document.querySelector(`[data-replay="${mode}"]`)?.focus({preventScroll:true});
   }
   async function hint() {
     const s=current;hintController?.abort();hintController=new AbortController();const signal=hintController.signal;
@@ -306,6 +422,8 @@ window.AetherPlanets = (() => {
     const s=current;if(!s)return;
     if(action==='hint'){hint();return;}
     if(action==='next-round'){chooseLevel('endless');return;}
+    if(action==='next-replay'){chooseReplay('circuit',null,true);return;}
+    if(action==='new-circuit'){chooseReplay('circuit',crypto.getRandomValues(new Uint32Array(1))[0]);return;}
     if(action==='host-done'){hostHooks.onDone?.();return;}
     if(action==='clear-plan'){s.plan=[];paint('Plan cleared. Tap a moon to queue a fresh burn.');return;}
     if(action==='launch'){launchPlan();return;}
@@ -338,6 +456,18 @@ window.AetherPlanets = (() => {
       target.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
       const heading=target.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});return;
     }
+    if(button.dataset.replay) {
+      const mode=button.dataset.replay;
+      if(mode==='crafted')chooseLevel(progress.levels[current.id]??0);
+      else chooseReplay(mode);
+      return;
+    }
+    if(button.dataset.replayAction==='apply-seed') {
+      const value=document.querySelector('#replay-seed')?.value.trim();
+      if(!value||!Number.isSafeInteger(Number(value))||Number(value)<0){toast('Enter a whole-number circuit seed.');return;}
+      chooseReplay('circuit',Number(value)>>>0);return;
+    }
+    if(button.dataset.replayAction==='retry'){chooseReplay(current.mode);return;}
     if(button.dataset.puzzleLevel!==undefined){chooseLevel(button.dataset.puzzleLevel==='endless'?'endless':Number(button.dataset.puzzleLevel));return;}
     if(button.dataset.puzzle){tool(button.dataset.puzzle);return;}
     if(button.dataset.puzzleDirection!==undefined){move(Number(button.dataset.puzzleDirection));return;}
@@ -356,7 +486,10 @@ window.AetherPlanets = (() => {
     const id=view.split('/')[1];if(!ids.includes(id))return;
     controller=new AbortController();const signal=controller.signal;
     const savedMode=progress.levels[id]===undefined?0:progress.levels[id];
-    current=session(id,savedMode);chooseLevel(savedMode,false);
+    current=session(id,savedMode);
+    const last=replayProgress.last[id];
+    if((last==='daily'&&replayProgress.daily[id])||(last==='circuit'&&replayProgress.circuits[id]))chooseReplay(last,null,false);
+    else chooseLevel(savedMode,false);
     attachInput(signal);
   // Gentle plate parallax on fine pointers only.
     const plate=main.querySelector('.planet-plate');

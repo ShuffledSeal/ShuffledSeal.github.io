@@ -92,7 +92,7 @@ let modalTrigger;
 let modalTriggerSelector;
 
 function icon(name, className = '') {
-  return `<svg class="${className}" aria-hidden="true"><use href="assets/icons.svg#${name}"/></svg>`;
+  return `<svg class="${className}" aria-hidden="true"><use href="assets/victorian-icons.svg#${name}"/></svg>`;
 }
 
 function escapeHTML(value) {
@@ -180,19 +180,37 @@ function eventRow(event) {
   </button>`;
 }
 
+function observerPath() {
+  let puzzle = {}, cartridges = {}, research = {};
+  try { puzzle = JSON.parse(localStorage.getItem('aether-planet-puzzles-v1')) || {}; } catch {}
+  try { cartridges = JSON.parse(localStorage.getItem('aether-cartridge-records-v1')) || {}; } catch {}
+  try { research = JSON.parse(localStorage.getItem('aether-research-collection-v1')) || {}; } catch {}
+  const records = puzzle.records && typeof puzzle.records === 'object' ? puzzle.records : {};
+  const completed = Object.keys(records).length;
+  const played = Object.values(cartridges.best && typeof cartridges.best === 'object' ? cartridges.best : {}).some(value => Number(value) > 0);
+  const journaled = state.journal.some(entry => entry.date === dateKey(new Date()));
+  const curated = state.saved.length >= 3 || (Array.isArray(research.studied) && research.studied.length > 0);
+  const nextPlanet = planets.find(planet => Array.from({ length: 5 }, (_, index) => `${planet.id}:${index}`).some(key => !records[key])) || planets[0];
+  const steps = [
+    { done: completed > 0, title: completed > 0 ? 'Continue the planetary atlas' : 'Begin with a small mystery', copy: completed > 0 ? `${completed} crafted puzzle${completed === 1 ? '' : 's'} solved. ${nextPlanet.name} is next.` : `Start ${nextPlanet.name}’s first puzzle and learn its instrument.`, href: `#planet/${nextPlanet.id}`, action: completed > 0 ? 'Continue the atlas' : 'Solve a first puzzle' },
+    { done: played, title: played ? 'Return to the instruments' : 'Choose a cartridge', copy: played ? 'Your record book is open. Try a different mode or Veteran Sky after a clear.' : 'Play one of the six flagship instruments. Campaign, endless and Daily Vigil are yours.', href: '#voyage', action: played ? 'Open the cabinet' : 'Play a cartridge' },
+    { done: journaled, title: journaled ? 'Today’s observation is kept' : 'Write down what surprised you', copy: journaled ? 'A new page from today is in your field journal.' : 'A single sentence is enough to turn a game into an observation.', action: journaled ? 'Open the journal' : 'Write an observation', href: journaled ? '#journal' : null },
+    { done: curated, title: curated ? 'Your research has a path' : 'Give the collection a purpose', copy: curated ? 'Reorder the shelf, finish a guided study, or export your field guide.' : 'Build a first-night shelf with Saturn, Orion and the next celestial event.', href: '#collection', action: curated ? 'Continue research' : 'Build a research shelf' },
+  ];
+  return `<section class="observer-path" aria-labelledby="observer-path-title"><header><div><p class="eyebrow">YOUR OBSERVER’S PATH</p><h2 id="observer-path-title">A reason to look up tonight.</h2></div><p>No streaks. No chores. Just a useful next chapter.</p></header><ol>${steps.map((step, index) => `<li class="${step.done ? 'done' : ''}"><span class="path-number">${step.done ? '✓' : ['Ⅰ','Ⅱ','Ⅲ','Ⅳ'][index]}</span><div><h3>${step.title}</h3><p>${step.copy}</p></div>${step.href ? `<a class="text-link" href="${step.href}">${step.action} ${icon('arrow-right')}</a>` : `<button class="text-link" data-action="new-entry">${step.action} ${icon('arrow-right')}</button>`}</li>`).join('')}</ol></section>`;
+}
+
 function renderOverview() {
-  const art = window.AetherArt?.planet || (() => '');
   const moon = lunarPhase(state.selectedDate);
   const next = upcomingEvents();
-  const hour = new Date().getHours();
   return `<div class="playground-home view-enter">
-    <section class="welcome"><div><h1>${hour >= 5 && hour < 12 ? 'Good morning.' : hour >= 12 && hour < 18 ? 'Good afternoon.' : 'Good evening.'}</h1><p>The planetary atlas is open. Choose a world and take a closer look.</p></div><button class="date-button" data-action="date" aria-label="Change observatory date, currently ${formatDate(state.selectedDate)}">${icon('calendar')}${formatDate(state.selectedDate)}${icon('chevron-down', 'chevron')}</button></section>
+    <section class="welcome"><div><p class="welcome-kicker">Your private observatory · Est. MMXXVI</p><h1>The celestial cabinet.</h1><p>Field notes, planetary puzzles, and instruments for a curious mind.</p></div><button class="date-button" data-action="date" aria-label="Change observatory date, currently ${formatDate(state.selectedDate)}">${icon('calendar')}${formatDate(state.selectedDate)}${icon('chevron-down', 'chevron')}</button></section>
     <section class="playground-hero hero" aria-labelledby="hero-title">
       <img class="hero-painting" src="assets/celestial-landscape.webp" alt="" fetchpriority="high" />
       <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span><span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
-      <div class="hero-copy playground-copy"><p class="eyebrow"><span class="hero-kicker-star" aria-hidden="true">✦</span> THE PLANETARY ATLAS</p><h2 id="hero-title">Eight worlds.<br><em>A closer look<br>at each.</em></h2><p class="hero-description">Trace a watershed. Plan a rover’s route.<br>Work your way through forty planetary puzzles.</p><div class="hero-cta"><a href="#voyage" class="button button-primary">Play the game cartridges ${icon('arrow-right')}</a><a href="#planetarium" class="text-link">Open the planetary atlas ${icon('arrow-up-right')}</a></div></div>
-      <div class="cosmic-scene" role="group" aria-label="Floating worlds and strange companions"><div class="scene-grid" aria-hidden="true"></div><img class="scene-astrolabe" src="assets/celestial-dial.svg" width="600" height="600" alt="" /><div class="scene-orbit orbit-a" aria-hidden="true"></div><span class="scene-coordinate">FIG. 01 <span>THE PLAYFUL SKY</span></span><a class="scene-saturn" href="#worlds" aria-label="Make a world">${art('saturn')}<span class="scene-tag"><span aria-hidden="true">✧</span> MAKE A WORLD ${icon('arrow-up-right')}</span></a><a class="scene-jelly" href="#telescope" aria-label="Something’s out there">${art('orion')}<span class="scene-tag">SOMETHING’S OUT THERE ↗</span></a><button class="scene-sun" data-exp="poke-sun" aria-label="Wake the sun — the sun says hello">☀<span>the sun says hello.</span></button><a class="scene-music" href="#orchestra" aria-label="The Orrery Orchestra"><span>♪</span><small>THE ORRERY<br>ORCHESTRA ↗</small></a><span class="scene-spark spark-one" aria-hidden="true">✦</span><span class="scene-spark spark-two" aria-hidden="true">✧</span><span class="scene-handnote" aria-hidden="true">a perfectly ordinary<br>place for extraordinary things.</span><div id="sun-reaction" role="status"></div></div>
-      <div class="hero-colophon"><span><i aria-hidden="true"></i> FIELD NOTES, PUZZLES & OBSERVATIONS</span><span>THE PLANETARY ATLAS <span aria-hidden="true">✧</span> VOL. MMXXVI</span></div>
+      <div class="hero-copy playground-copy"><p class="eyebrow"><span class="hero-kicker-star" aria-hidden="true">✦</span> THE PLANETARY ATLAS · VOLUME I</p><h2 id="hero-title">Atlas of the<br><em>Wandering Heavens.</em></h2><p class="hero-description">Eight worlds, faithfully observed. Trace a watershed, plot a rover’s passage, and unlock forty puzzles shaped by the character of each planet.</p><div class="hero-cta"><a href="#planetarium" class="button button-primary">Open the atlas ${icon('arrow-right')}</a><a href="#voyage" class="text-link">Enter the Grand Tour ${icon('arrow-up-right')}</a></div></div>
+      <figure class="hero-engraving"><span class="instrument-figure">PLATE I <span>THE CELESTIAL MECHANISM</span></span><div class="engraving-mat"><img src="assets/antique-orrery-globe.webp" width="1200" height="2013" alt="A coloured antique engraving of an ornate orrery and terrestrial globe on a carved tripod" fetchpriority="high" /></div><figcaption>THE ORRERY & TERRESTRIAL GLOBE <span>·</span> OBSERVER’S COLLECTION</figcaption></figure>
+      <div class="hero-colophon"><span><i aria-hidden="true"></i> ILLUSTRATED FIELD GUIDES · FORTY PUZZLES</span><span>THE OBSERVER’S ATLAS <span aria-hidden="true">✧</span> VOL. MMXXVI</span></div>
     </section>
     <section class="stats-grid" aria-label="Your observatory at a glance">
       <button class="stat" data-action="moon"><span class="stat-icon"><span class="stat-moon" style="${moonShadow(moon)}" aria-hidden="true"></span></span><span><span class="stat-label">Tonight’s moon</span><span class="stat-value">${moon.name}</span><span class="stat-detail">${moon.illumination}% illuminated <span aria-hidden="true">·</span> ${moon.phase < .5 ? 'A little more light' : 'A little less light'} each night</span></span></button>
@@ -201,8 +219,9 @@ function renderOverview() {
       <a class="stat" href="#journal"><span class="stat-icon">${icon('journal')}</span><span><span class="stat-label">Your field journal</span><span class="stat-value">${state.journal.length} observations</span><span class="stat-detail">Read, edit, or add a field note</span></span></a>
       ${(() => { try { const t = JSON.parse(localStorage.getItem('aether-grand-tour-v2'))?.active; return t ? `<a class="stat" href="#voyage"><span class="stat-icon">${icon('meteor')}</span><span><span class="stat-label">The Grand Tour</span><span class="stat-value">Leg ${t.step + 1} of 12</span><span class="stat-detail"><i class="tiny-dot"></i> ${'♥'.repeat(t.hull)} · ${t.dust} stardust · resume ↗</span></span></a>` : ''; } catch { return ''; } })()}
     </section>
+    ${observerPath()}
     ${window.AetherPlanets?.renderIndex() || ''}
-    <section class="home-destinations" aria-labelledby="destinations-title"><header class="home-section-heading"><div><p class="section-label">ELSEWHERE IN THE OBSERVATORY</p><h2 id="destinations-title">At the <em>workbench.</em></h2></div><a class="text-link" href="#discover">All six rooms ${icon('arrow-up-right')}</a></header><div class="destination-grid"><a class="destination-card destination-play" href="#arcade"><div class="destination-top"><span>THE ARCADE</span><span class="round-arrow">↗</span></div><h3>A game<br><em>between observations.</em></h3><p>Stack planets, catch falling stars, or steer a comet. Four games with different controls and challenges.</p><div class="destination-drawing drop-drawing" aria-hidden="true"><i class="draw-orb orb-one">·ᴗ·</i><i class="draw-orb orb-two">•ᴗ•</i><i class="draw-orb orb-three">◡</i><span>↘</span></div><span class="destination-label">CHOOSE A GAME ↗</span></a><a class="destination-card destination-make" href="#discover"><div class="destination-top"><span>THE WORK ROOMS</span><span class="round-arrow">↗</span></div><h3>Observe,<br><em>then make something.</em></h3><p>Compose a telescope photograph, develop a print, or build a world at the drawing table.</p><div class="destination-drawing">${art('orion')}</div><span class="destination-label">EXPLORE THE ROOMS ↗</span></a><a class="destination-card destination-music" href="#orchestra"><div class="destination-top"><span>THE ORCHESTRA</span><span class="round-arrow">↗</span></div><h3>A score<br><em>for four planets.</em></h3><p>Arrange an eight-beat sequence, adjust the tempo, and listen to the parts together.</p><div class="destination-drawing music-drawing" aria-hidden="true">${[0,1,2,3,4,5,6,7,8,9].map(i => `<i style="--i:${i}"></i>`).join('')}</div><span class="destination-label">OPEN THE SEQUENCER ↗</span></a></div></section>
+    <section class="home-destinations" aria-labelledby="destinations-title"><header class="home-section-heading"><div><p class="section-label">ELSEWHERE IN THE OBSERVATORY</p><h2 id="destinations-title">At the <em>workbench.</em></h2></div><a class="text-link" href="#discover">All six rooms ${icon('arrow-up-right')}</a></header><div class="destination-grid"><a class="destination-card destination-play" href="#arcade"><div class="destination-top"><span>THE ARCADE</span><span class="round-arrow">↗</span></div><h3>A game<br><em>between observations.</em></h3><p>Stack planets, catch falling stars, or steer a comet. Four games with different controls and challenges.</p><div class="destination-drawing destination-engraving" aria-hidden="true"><img src="assets/celestial-hydra.webp" width="1201" height="845" alt="" loading="lazy" /></div><span class="destination-label">CHOOSE A GAME ↗</span></a><a class="destination-card destination-make" href="#discover"><div class="destination-top"><span>THE WORK ROOMS</span><span class="round-arrow">↗</span></div><h3>Observe,<br><em>then make something.</em></h3><p>Compose a telescope photograph, develop a print, or build a world at the drawing table.</p><div class="destination-drawing destination-engraving"><img src="assets/globe-projections-1807.webp" width="1200" height="1488" alt="" loading="lazy" /></div><span class="destination-label">EXPLORE THE ROOMS ↗</span></a><a class="destination-card destination-music" href="#orchestra"><div class="destination-top"><span>THE ORCHESTRA</span><span class="round-arrow">↗</span></div><h3>A score<br><em>for four planets.</em></h3><p>Arrange an eight-beat sequence, adjust the tempo, and listen to the parts together.</p><div class="destination-drawing destination-engraving" aria-hidden="true"><img src="assets/gemini-celestial-chart.webp" width="1200" height="849" alt="" loading="lazy" /></div><span class="destination-label">OPEN THE SEQUENCER ↗</span></a></div></section>
     <section class="home-almanac" aria-labelledby="almanac-title"><header class="home-section-heading"><div><p class="section-label">THE OBSERVER’S DESK</p><h2 id="almanac-title">Charts & <em>dates.</em></h2></div><span class="almanac-edition">THE OBSERVER’S ALMANAC / 2026</span></header><div class="dashboard-grid">
       ${renderChart(false)}
       <section class="panel horizon-panel"><div class="panel-heading"><div class="panel-title">${icon('calendar')}<h2>On the horizon</h2></div><a class="text-link" href="#calendar">The full almanac ${icon('arrow-up-right')}</a></div><p class="panel-subtitle">${isNewVisitor ? 'New here? Start with Saturn — few first sights compare.' : 'Good things come to those who look up.'}</p><div class="events-list">${next.length ? next.map(eventRow).join('') : '<p class="day-description">The year’s almanac is complete. There is always something to discover in the planetarium.</p>'}</div><p class="events-footnote">Some nights are worth staying up for.</p></section>
@@ -293,7 +312,7 @@ function findItem(id) {
 }
 
 function collectionVisual(item) {
-  if (item.kind === 'planet') return `<span class="planet-sphere ${item.id}" aria-hidden="true"></span>`;
+  if (item.kind === 'planet') return `<span class="atlas-sphere planet-sphere ${item.id}" aria-hidden="true"></span>`;
   if (item.kind === 'event') return icon(item.icon);
   const xs = item.points.map(point => point[0]);
   const ys = item.points.map(point => point[1]);
@@ -315,6 +334,7 @@ function render() {
   window.AetherPlanets?.unmount();
   window.AetherExperiences?.unmount();
   window.AetherVoyage?.unmount();
+  window.AetherCollection?.unmount();
   document.body.dataset.view = state.view;
   main.innerHTML = renderers[state.view]();
   if (state.suppressEnter) main.querySelector('.view-enter')?.classList.add('instant');
@@ -337,6 +357,7 @@ function render() {
   window.AetherExperiences?.mount(state.view);
   window.AetherPlanets?.mount(state.view);
   window.AetherVoyage?.mount(state.view);
+  window.AetherCollection?.mount(state.view);
 }
 
 function navigate(view) {
@@ -351,6 +372,7 @@ function navigate(view) {
 let routeBooted = false;
 function handleRoute() {
   const route = location.hash.slice(1);
+  const previousView = state.view;
   const initial = !routeBooted;
   routeBooted = true;
   stopPlayback();
@@ -363,6 +385,7 @@ function handleRoute() {
   const fallback = new URLSearchParams(location.search).has('standalone') ? 'voyage' : 'overview';
   if (route && !Object.hasOwn(renderers, route)) history.replaceState(null, '', `#${fallback}`);
   state.view = Object.hasOwn(renderers, route) ? route : fallback;
+  if (!initial && previousView !== state.view) window.AetherMotion?.travel(state.view);
   render();
   window.scrollTo({ top: 0, behavior: 'instant' });
   // User-initiated route changes move focus into the new view so keyboard users
@@ -497,7 +520,7 @@ function openNotifications() {
 }
 
 function openAbout() {
-  showModal(`<div class="about-mark">æther</div><p class="eyebrow">THE PLANETARY ATLAS & OBSERVATORY</p><h2 id="modal-title">A field guide to eight worlds.</h2><p class="modal-description">The planetary atlas pairs illustrated field notes with forty hand-crafted puzzle boards — one game per planet, five levels each. Elsewhere: a canvas arcade, telescope photographs, and a darkroom.</p><p class="modal-description">Astronomical figures are rounded reference values; each field guide links to NASA’s planet pages. The orbital chart is illustrative, and the almanac covers 2026. Artwork is custom SVG and Canvas. Type: Cormorant Garamond and DM Sans, under the SIL Open Font License.</p><div class="about-footnote">Puzzle progress, notes and creations live in this browser. No account or tracking.</div>`);
+  showModal(`<div class="about-mark">æther</div><p class="eyebrow">THE PLANETARY ATLAS & OBSERVATORY</p><h2 id="modal-title">A field guide to eight worlds.</h2><p class="modal-description">The planetary atlas pairs illustrated field notes with forty hand-crafted puzzle boards — one game per planet, five levels each. Elsewhere: a canvas arcade, telescope photographs, and a darkroom.</p><p class="modal-description">Astronomical figures are rounded reference values; each field guide links to NASA’s planet pages. The orbital chart is illustrative, and the almanac covers 2026. Artwork combines custom SVG/Canvas with public-domain Wellcome Collection engravings. Type: IM Fell English, Cormorant Garamond, and DM Sans, under the SIL Open Font License.</p><div class="about-footnote">Puzzle progress, notes and creations live in this browser. No account or tracking.</div>`);
 }
 
 const searchItems = [
@@ -653,7 +676,7 @@ function setMenuButton(open) {
   const button = document.querySelector('.mobile-menu');
   button.setAttribute('aria-expanded', String(open));
   button.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-  button.querySelector('use').setAttribute('href', `assets/icons.svg#${open ? 'close' : 'menu'}`);
+  button.querySelector('use').setAttribute('href', `assets/victorian-icons.svg#${open ? 'close' : 'menu'}`);
 }
 
 function closeMenu() {

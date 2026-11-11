@@ -54,7 +54,7 @@ window.AetherStarforge = (() => {
     const guideTitle = container.querySelector('#starforge-guide-title'), guideDetail = container.querySelector('#starforge-guide-detail');
     canvas.style.touchAction = 'none';
 
-    function scenario() { return scenarios[scenarioIndex]; }
+    function scenario() { const base = scenarios[scenarioIndex]; return options.veteran ? { ...base, target: Math.ceil(base.target * 1.25), cap: Math.round(base.cap * .9) } : base; }
     function position(slot, radius = 182) {
       const angle = phase + slot * TAU / 8 - Math.PI / 2;
       return { x: W * .5 + Math.cos(angle) * radius, y: H * .5 + Math.sin(angle) * radius, angle };
@@ -140,7 +140,7 @@ window.AetherStarforge = (() => {
       if (ended) return;
       ended = true; running = false;
       if (won) {
-        stored.completed = Math.max(stored.completed, Math.min(scenarios.length, scenarioIndex + 1));
+        if (!options.veteran) stored.completed = Math.max(stored.completed, Math.min(scenarios.length, scenarioIndex + 1));
         stored.best = Math.max(stored.best, energy);
         save(stored);
       }
@@ -178,10 +178,10 @@ window.AetherStarforge = (() => {
        const caught = active('mirror');
        if (caught) { const p = position(caught.slot); ctx.save(); ctx.strokeStyle = '#f6d695'; ctx.lineWidth = 3; ctx.shadowColor = '#f6d695'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.restore(); }
       for (let slot = 0; slot < 8; slot++) { const p = position(slot); ctx.strokeStyle = 'rgba(229,204,151,.65)'; ctx.lineWidth = 2; circle(p.x, p.y, 23); ctx.stroke(); ctx.fillStyle = '#d8caa7'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(slot + 1), p.x, p.y + 39); }
-       modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < .24; ctx.fillStyle = '#101820'; circle(p.x, p.y, 19); ctx.fill(); ctx.strokeStyle = device.tone; ctx.lineWidth = aligned ? 3 : 2; circle(p.x, p.y, 19); ctx.stroke(); ctx.fillStyle = device.tone; ctx.font = 'bold 21px Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(device.glyph, p.x, p.y + 7); if (aligned) { ctx.font = 'bold 13px "DM Sans", sans-serif'; ctx.fillText('✓', p.x + 23, p.y - 16); } });
+       modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < .24; ctx.fillStyle = '#101820'; circle(p.x, p.y, 19); ctx.fill(); ctx.strokeStyle = device.tone; ctx.lineWidth = aligned ? 3 : 2; circle(p.x, p.y, 19); ctx.stroke(); ctx.fillStyle = device.tone; ctx.font = 'bold 21px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(device.glyph, p.x, p.y + 7); if (aligned) { ctx.font = 'bold 13px "DM Sans", sans-serif'; ctx.fillText('✓', p.x + 23, p.y - 16); } });
       motes.forEach(mote => { const progress = 1 - mote.life / mote.max, x = mote.x + (mote.tx - mote.x) * progress, y = mote.y + (mote.ty - mote.y) * progress; ctx.fillStyle = mote.tone; circle(x, y, 5); ctx.fill(); });
       ctx.fillStyle = 'rgba(8,14,18,.72)'; ctx.fillRect(24, H - 96, 360, 70); ctx.fillStyle = '#f0d9a1'; ctx.font = '600 13px "DM Sans", sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SELECTED: ${devices[selected].name.toUpperCase()}`, 40, H - 67); ctx.fillStyle = '#b5c9bf'; ctx.font = '12px "DM Sans", sans-serif'; ctx.fillText('Align each device with its named gate as the rail turns.', 40, H - 43); ctx.fillText(frozenDevice() ? `THE DYING CLOCK HAS SEALED ${devices[frozenDevice()].name.toUpperCase()}.` : 'A complete path flashes only when all gates coincide.', 40, H - 25);
-      if (ended) { ctx.fillStyle = 'rgba(4,8,12,.72)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = energy >= scenario().target ? '#f7d68f' : '#ef9a82'; ctx.font = '46px Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(energy >= scenario().target ? 'CONTRACT SEALED' : 'THE FOUNDRY FALLS SILENT', cx, cy - 12); ctx.fillStyle = '#d9d1bc'; ctx.font = '16px "DM Sans", sans-serif'; ctx.fillText(energy >= scenario().target ? 'A new star blueprint enters the observatory ledger.' : 'Rebuild the schematic and try another rhythm.', cx, cy + 24); }
+      if (ended) { ctx.fillStyle = 'rgba(4,8,12,.72)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = energy >= scenario().target ? '#f7d68f' : '#ef9a82'; ctx.font = '46px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(energy >= scenario().target ? 'CONTRACT SEALED' : 'THE FOUNDRY FALLS SILENT', cx, cy - 12); ctx.fillStyle = '#d9d1bc'; ctx.font = '16px "DM Sans", sans-serif'; ctx.fillText(energy >= scenario().target ? 'A new star blueprint enters the observatory ledger.' : 'Rebuild the schematic and try another rhythm.', cx, cy + 24); }
     }
     function renderNow() { draw(); refreshUi(); }
     // The rAF loop only runs while the cycle is live or motes are still fading;

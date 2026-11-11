@@ -68,7 +68,7 @@ window.AetherDeepField = (() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const abort = new AbortController(), timers = new Set(), holds = new Set();
     const settings = readSettings(), reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const mode = options.campaign ? 'campaign' : options.daily ? 'daily' : options.endless ? 'endless' : 'trial';
+    const mode = options.campaign ? 'campaign' : options.daily ? 'daily' : options.endless ? 'endless' : 'trial', veteran = options.veteran === true;
     const verbs = options.verbs || new Set(), onEnd = typeof options.onEnd === 'function' ? options.onEnd : () => {};
     let soundOn = options.sound === false ? false : settings.sound;
     let audio = null, audioGain = null, destroyed = false, callbackFired = false;
@@ -90,10 +90,11 @@ window.AetherDeepField = (() => {
     const seconds = () => Math.floor(elapsed() / 1000);
     const roundConfig = () => {
       const base = PRESETS[mode === 'campaign' ? CAMPAIGN[Math.min(stage, CAMPAIGN.length - 1)] : presetId];
+      const tune = config => ({ ...config, mines: veteran ? Math.min(Math.floor(config.cols * config.rows * .28), Math.ceil(config.mines * 1.2)) : config.mines, hints: Math.max(0, config.hints + hintBonus - (veteran ? 1 : 0)) });
       if (mode === 'trial') return { ...PRESETS.apprentice, name: 'Deep Field', mines: 12, hints: 2 };
-      if (mode !== 'endless') return { ...base, hints: base.hints + hintBonus };
+      if (mode !== 'endless') return tune(base);
       const extra = Math.floor(stage / 2) * 2;
-      return { ...base, mines: Math.min(Math.floor(base.cols * base.rows * .24), base.mines + extra), hints: base.hints + hintBonus };
+      return tune({ ...base, mines: Math.min(Math.floor(base.cols * base.rows * .24), base.mines + extra) });
     };
     const signature = () => {
       if (!grid) return 'pending';

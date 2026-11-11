@@ -15,7 +15,7 @@
   function bastion(container, options={}) {
     const W=900,H=560, rowY=i=>151+i*68, colX=i=>180+i*92;
     const verb=options.verbs||new Set();
-    const rand=rng(Number.isInteger(options.seed)?options.seed:6024), N=5, C=7, endless=options.endless===true;
+    const rand=rng(Number.isInteger(options.seed)?options.seed:6024), N=5, C=7, endless=options.endless===true, veteran=options.veteran===true;
     // Authored packets: time, lane (one-based), hull, count, interval. The
     // planning manifest and live gates consume this same immutable itinerary.
     const CAMPAIGN=[
@@ -108,7 +108,7 @@
     let titanStage=0;
     function campaignEnemy(entry){
       const stats={scout:[42,60,14],runner:[34,108,16],iron:[150,38,26],titan:[1600,23,150]}[entry.kind];
-      const hp=stats[0]*(verb.has('lure')?1.24:1);
+      const hp=stats[0]*(verb.has('lure')?1.24:1)*(veteran?1.18:1);
       return {...entry,hp,maxHp:hp,v:stats[1],gold:stats[2],armored:entry.kind==='iron',boss:entry.kind==='titan',slow:0,hit:0,tick:0,wait:entry.kind==='titan'?2:1};
     }
     function enemySpec(){
@@ -116,7 +116,7 @@
       const armored=stage>1&&rand()<Math.min(.48,.14+stage*.05);
       const boss=stage>=4&&stage%4===0&&titanStage!==stage&&!enemies.some(e=>e.boss);
       if(boss)titanStage=stage;
-      const hp=(boss?170+stage*18:armored?77+stage*10:23+stage*9)*(verb.has('lure')?1.24:1);
+      const hp=(boss?170+stage*18:armored?77+stage*10:23+stage*9)*(verb.has('lure')?1.24:1)*(veteran?1.18:1);
        return {row:boss&&endless?focusRow:row,v:boss?28+stage*2:armored?37+stage*2:54+stage*8,hp,maxHp:hp,armored,boss,slow:0,hit:0,tick:rand()*TAU,gold:boss?70:armored?26:17};
     }
      function telegraphEnemy(){
@@ -337,7 +337,7 @@
        setDiag('selectedPath',selectedTower?.path||'');
        setDiag('targetPriority',selectedTower?.priority||'');
       setDiag('selectedSite',selectedTower?.site||'');
-       setDiag('mode',endless?'endless':'mission');
+       setDiag('mode',endless?'endless':'mission');setDiag('veteran',veteran);
        setDiag('wave',wave);
        setDiag('core',core);
        setDiag('kills',kills);
@@ -653,7 +653,7 @@
          }
          const dir=varied?(pick()<.5?-1:1):chamber%2?-1:1;
          return {...tile(x,y),a,b,axis,dir,stunned:0,alert:0,facing:axis==='v'?(dir>0?Math.PI/2:-Math.PI/2):(dir>0?0:Math.PI),
-           speed:(38+(cycles*3+chamber)*6+i*3)*(varied?.9+pick()*.2:1)*encounter.speed,phase:i*2.1};
+           speed:(38+(cycles*3+chamber)*6+i*3)*(varied?.9+pick()*.2:1)*encounter.speed*(options.speedScale||1),phase:i*2.1};
        });
        canvas.dataset.course=guards.map(guard=>`${Math.round(guard.x)},${Math.round(guard.y)},${guard.dir}`).join('|');
        player={...tile(1,5),vx:0,vy:0};cursor=null;pointerActive=false;
@@ -859,6 +859,7 @@
       const decoyLabel=decoyCd>0?`Decoy recharging · ${Math.ceil(decoyCd)}s`:'Throw prism decoy · F';
       if(decoyButton.textContent!==decoyLabel)decoyButton.textContent=decoyLabel;
       canvas.dataset.mode=endless?'endless':'mission';
+      canvas.dataset.speedScale=String(options.speedScale||1);
       canvas.dataset.chamber=String(chamber+1);
       canvas.dataset.chamberCount=String(layouts.length);
       canvas.dataset.keysAvailable=String(collectibles.length);

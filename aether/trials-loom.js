@@ -346,7 +346,7 @@
       }
       if (clock < msgUntil) {
         ctx.globalAlpha = clamp((msgUntil - clock) / .5, 0, 1);
-        ctx.fillStyle = '#e9dcae'; ctx.font = '24px Cormorant, serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#e9dcae'; ctx.font = '24px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
         ctx.fillText(msg, 450, 74);
         ctx.globalAlpha = 1;
       }
@@ -519,7 +519,7 @@
       }
     }
     function draw(ctx, dt, clock) {
-      ctx.fillStyle = '#0e1410'; ctx.fillRect(0, 0, W, H); stars();
+      ctx.fillStyle = '#0b1624'; ctx.fillRect(0, 0, W, H); stars();
       // the hall's glow
       const glow = ctx.createRadialGradient(CX, CY, 20, CX, CY, 320);
       glow.addColorStop(0, '#c4ac7914'); glow.addColorStop(1, '#c4ac7900');
@@ -559,7 +559,7 @@
         ctx.lineWidth = h.frozen ? 2.4 : 1.6;
         ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(tip.x, tip.y); ctx.stroke();
         ctx.lineWidth = 1;
-        ctx.fillStyle = h.frozen ? TINT[i] : '#0e1410';
+        ctx.fillStyle = h.frozen ? TINT[i] : '#0b1624';
         ctx.strokeStyle = TINT[i];
         ctx.beginPath(); ctx.arc(tip.x, tip.y, h.frozen ? 6.5 : 5, 0, TAU); ctx.fill(); ctx.stroke();
         if (h.frozen) { ctx.beginPath(); ctx.arc(tip.x, tip.y, 10.5, 0, TAU); ctx.stroke(); }
@@ -580,7 +580,7 @@
       // round summary
       if (state === 'summary' && results.length) {
         const accs = results[results.length - 1], avgR = accs.reduce((a, b) => a + b, 0) / accs.length;
-        ctx.fillStyle = '#e9dcae'; ctx.font = '24px Cormorant, serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#e9dcae'; ctx.font = '24px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center';
         ctx.fillText(`Round ${ROMAN[round]} — ${Math.round(avgR * 100)}% in tune`, CX, CY - 138);
         ctx.font = '600 12px "DM Sans"'; ctx.fillStyle = '#c4ac79';
         ctx.fillText(accs.map((a, i) => `${ROMAN[i]} ${Math.round(a * 100)}`).join(' · '), CX, CY - 116);

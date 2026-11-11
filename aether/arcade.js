@@ -1203,7 +1203,7 @@ window.AetherArcade = (() => {
     function background() {
       if (!hueCache) {
         hueCache = { base: ctx.createLinearGradient(0, 0, 0, H), glow: ctx.createRadialGradient(W * .65, H * .28, 20, W * .65, H * .28, W * .7) };
-        hueCache.base.addColorStop(0, '#101b24'); hueCache.base.addColorStop(.55, '#192335'); hueCache.base.addColorStop(1, '#302938');
+        hueCache.base.addColorStop(0, '#0d1b2c'); hueCache.base.addColorStop(.55, '#14243a'); hueCache.base.addColorStop(1, '#1b2a3d');
         const glowStops = { merge: '#6d4a2f46', hop: '#67426c46', dash: '#3963684a', breaker: '#3d4a7a46' };
         hueCache.glow.addColorStop(0, glowStops[options.game]); hueCache.glow.addColorStop(1, '#211b3500');
         const nebulae = { merge: ['#dfac7f', '#b0a0df'], hop: ['#b0a0df', '#e29eb7'], dash: ['#7ac7b5', '#8eaade'], breaker: ['#8eaade', '#b0a0df'] };
@@ -1442,7 +1442,7 @@ window.AetherArcade = (() => {
             ctx.closePath(); ctx.fill();
             ctx.strokeStyle = '#f4ecd2'; ctx.lineWidth = 2; ctx.stroke();
             ctx.rotate(reduced ? 0 : -f.spin * .8);
-            ctx.fillStyle = '#152029'; ctx.font = '19px "Cormorant Garamond", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#152029'; ctx.font = '19px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(def.glyph, 0, 1); ctx.textBaseline = 'alphabetic';
             ctx.restore();
           }
@@ -1460,7 +1460,7 @@ window.AetherArcade = (() => {
         const px = 22, py = 14, pw = 136;
         ctx.globalAlpha = .92; ctx.fillStyle = '#101c22e6'; ctx.fillRect(px, py, pw, 30); ctx.globalAlpha = 1;
         ctx.strokeStyle = activePower.colour + '88'; ctx.lineWidth = 1; ctx.strokeRect(px + .5, py + .5, pw - 1, 29);
-        ctx.fillStyle = activePower.colour; ctx.font = '15px "Cormorant Garamond", serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = activePower.colour; ctx.font = '15px "IM Fell English", Georgia, serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillText(activePower.glyph, px + 9, py + 16); ctx.textBaseline = 'alphabetic';
         text(activePower.name.toUpperCase(), px + 30, py + 12, 9, '#e8dfc8', 'left');
         text(activePower.charges ? `${activePower.charges}×` : `${Math.ceil(activePower.remaining)}s`, px + pw - 8, py + 12, 10, activePower.colour, 'right');

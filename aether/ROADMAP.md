@@ -11,6 +11,10 @@ This roadmap distinguishes what is playable **today** from proposed work. It del
 - Mouse-following ship controls in the Grand Tour hunt, plus keyboard movement and improved combat feedback; new arena visual treatment, enemies, progression, difficulty choices, bosses and ship/instrument variation.
 - Expanded trial roster, including **Aether Bastion** (lane-based defence with construction decisions), **Glass Labyrinth** (guard stealth and key collection), **Constellation Chain** (survival with orbiting/following weapons), and **Perihelion Run** (momentum/racing challenge). Older Grand Tour trials remain.
 - Custom gameplay artwork, dedicated trial art and polished UI/CSS overlays.
+- Cabinet of Wonders art direction with local historical engravings, bespoke icons, matching game frames, reduced-motion-aware book transitions and mechanical UI feedback.
+- A working research cabinet with ordered/searchable saved works, marginalia, guided study, linked journal observations and Markdown export.
+- Solution-backed Daily Charts and three-board seeded Circuits in all eight planetary puzzle rooms, with isolated resumable saves.
+- Veteran Sky unlocks for all six flagship cartridges, with separate records and engine-specific challenge rules.
 - Existing Observatory, puzzles, arcade games, orchestra with sequencer, journal, progress and local-save model remain in place.
 
 The features above indicate *implementation*, not that every game has yet met a professional content or balancing standard. In particular, the new trials are initial playable versions, not fully featured multi-hour standalone releases.

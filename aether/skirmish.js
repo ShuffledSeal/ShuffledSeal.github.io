@@ -12,8 +12,8 @@ window.AetherSkirmish = (() => {
   // Movement feel: near-immediate steering, then the visuals overshoot.
   const SWIM = { maxSpeed: 270, accel: 1900, damping: 8, burstSpeed: 720, burstTime: .16, burstCd: .8, burstInvuln: .32, hurtInvuln: .7 };
   const SECTORS = [
-    { name: 'The Inner Worlds', bg: '#161209', accent: '#e2b078', mote: '#f2d38a', fog: '#c9a45c' },
-    { name: 'The Giants', bg: '#171011', accent: '#d98d80', mote: '#f2b9a0', fog: '#c9846a' },
+    { name: 'The Inner Worlds', bg: '#111d2c', accent: '#e2b078', mote: '#f2d38a', fog: '#c9a45c' },
+    { name: 'The Giants', bg: '#171a29', accent: '#d98d80', mote: '#f2b9a0', fog: '#c9846a' },
     { name: 'The Long Dark', bg: '#0d1018', accent: '#8fa8d8', mote: '#b9c9ea', fog: '#6f91ab' },
   ];
 
@@ -91,9 +91,9 @@ window.AetherSkirmish = (() => {
     // NB: deliberately NOT .skirmish-draft — tests assert that selector is a single
     // (hideable) breather bar. Layout is inlined; voyage.css owns the pressed state.
     weaponBar.className = 'skirmish-armory';
-    weaponBar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border:1px solid #d8c49466;background:#122527;color:#f3d9a4;font:600 12px "DM Sans",sans-serif';
+    weaponBar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border:1px solid #d8c49466;background:#0f2034;color:#f3d9a4;font:600 12px "DM Sans",sans-serif';
     weaponBar.setAttribute('role', 'group'); weaponBar.setAttribute('aria-label', 'Hunt weapons');
-    const armoryButtonStyle = "min-height:44px;padding:10px 16px;border:1px solid #d8c494;background:#263b3b;color:#e5efdf;font:600 12px 'DM Sans',sans-serif;cursor:pointer";
+    const armoryButtonStyle = "min-height:44px;padding:10px 16px;border:1px solid #d8c494;background:#1a2d3d;color:#e5efdf;font:600 12px 'DM Sans',sans-serif;cursor:pointer";
     weaponBar.innerHTML = `<strong style="flex:1 0 100%;text-align:center">ARMORY · 1–4 SELECT · HOLD FIRE · SWITCHING PRESERVES RECOVERY</strong>` + WEAPON_IDS.map(id => `<button type="button" data-skirmish-weapon="${id}" aria-pressed="false" style="${armoryButtonStyle}">${WEAPONS[id].key} · ${WEAPONS[id].name}</button>`).join('');
     const weaponHelp = document.createElement('span');
     weaponHelp.style.cssText = 'flex:1 0 100%;text-align:center;line-height:1.6';
@@ -101,7 +101,7 @@ window.AetherSkirmish = (() => {
     container.appendChild(weaponBar);
     const missionStatus = document.createElement('p');
     missionStatus.dataset.skirmishObjective = '';
-    missionStatus.style.cssText = 'margin:0;padding:12px 16px;background:#102024;color:#e5efdf;font:600 13px/1.6 sans-serif';
+    missionStatus.style.cssText = 'margin:0;padding:12px 16px;background:#0e1d30;color:#e5efdf;font:600 13px/1.6 sans-serif';
     container.appendChild(missionStatus);
     const draftBar = document.createElement('div');
     draftBar.className = 'skirmish-draft'; draftBar.hidden = true;
@@ -114,6 +114,7 @@ window.AetherSkirmish = (() => {
     container.appendChild(srStatus);
     canvas.dataset.paused = 'false';
     canvas.dataset.boltsFired = '0';
+    canvas.dataset.difficulty = options.difficulty || 'standard';
     const ctx = canvas.getContext('2d');
     const abort = new AbortController();
     const listen = (el, type, fn, o) => el.addEventListener(type, fn, { ...o, signal: abort.signal });
@@ -1063,7 +1064,7 @@ window.AetherSkirmish = (() => {
       ctx.restore();
       // HUD frame — sized for the canvas as actually displayed (≈348px on phones).
       const hpW = 220;
-      ctx.fillStyle = '#0c130e'; ctx.fillRect(16, 14, hpW, 14);
+      ctx.fillStyle = '#0b1726'; ctx.fillRect(16, 14, hpW, 14);
       ctx.fillStyle = player.hp / player.maxHp > .3 ? '#9ed7c6' : '#f58e9b';
       ctx.fillRect(16, 14, hpW * Math.max(0, player.hp / player.maxHp), 14);
       ctx.strokeStyle = '#c4ac7955'; ctx.strokeRect(16, 14, hpW, 14);
@@ -1078,7 +1079,7 @@ window.AetherSkirmish = (() => {
       ctx.fillStyle = WEAPONS[weapon].colour; ctx.font = '600 15px "DM Sans"';
       ctx.fillText(`${WEAPONS[weapon].key} · ${WEAPONS[weapon].name.toUpperCase()}`, 16, H - 14);
       if (WEAPONS[weapon].charge && phase === 'combat') {
-        ctx.fillStyle = '#0c130e'; ctx.fillRect(16, H - 32, 150, 7);
+        ctx.fillStyle = '#0b1726'; ctx.fillRect(16, H - 32, 150, 7);
         ctx.fillStyle = WEAPONS[weapon].colour; ctx.fillRect(16, H - 32, 150 * Math.min(1, charge / WEAPONS[weapon].charge), 7);
         ctx.strokeStyle = '#c4ac7955'; ctx.strokeRect(16, H - 32, 150, 7);
       }
@@ -1104,14 +1105,14 @@ window.AetherSkirmish = (() => {
         ctx.fillStyle = '#e9dcae'; ctx.fillText('THE UMBRAL MAW', W / 2, 44);
       }
       if (phase === 'intro' && !boss) {
-        ctx.fillStyle = '#e9dcae'; ctx.textAlign = 'center'; ctx.font = '32px Cormorant, serif';
+        ctx.fillStyle = '#e9dcae'; ctx.textAlign = 'center'; ctx.font = '32px "IM Fell English", Georgia, serif';
         ctx.fillText(wave === 0 ? 'Contacts approaching…' : endless ? `Wave ${wave + 1}` : `Act ${wave + 1} · ${ACTS[Math.min(2, wave)].name}`, W / 2, H / 2 - 40);
       }
       if (phase === 'draft') {
         const boxH = 118 + draftChoices.length * 30;
         ctx.fillStyle = '#08151cdd'; ctx.fillRect(W / 2 - 400, H / 2 - boxH / 2, 800, boxH);
         ctx.strokeStyle = '#eed09a'; ctx.strokeRect(W / 2 - 400, H / 2 - boxH / 2, 800, boxH);
-        ctx.fillStyle = '#f2d89c'; ctx.textAlign = 'center'; ctx.font = '32px Cormorant, serif';
+        ctx.fillStyle = '#f2d89c'; ctx.textAlign = 'center'; ctx.font = '32px "IM Fell English", Georgia, serif';
         ctx.fillText('The field is clear. Choose your refit.', W / 2, H / 2 - boxH / 2 + 46);
         ctx.fillStyle = '#d3e8dd'; ctx.font = '15px "DM Sans"';
         draftChoices.forEach((choice, i) => ctx.fillText(`${i + 1}  ${choice.text.toUpperCase()}`, W / 2, H / 2 - boxH / 2 + 88 + i * 30));
@@ -1125,7 +1126,7 @@ window.AetherSkirmish = (() => {
       if (paused) {
         ctx.fillStyle='#05111ee1';ctx.fillRect(0,0,W,H);
         ctx.strokeStyle='#dbc38e77';ctx.strokeRect(W/2-280,H/2-168,560,336);
-        ctx.fillStyle='#f7e5c0';ctx.font='46px Cormorant,serif';ctx.textAlign='center';
+        ctx.fillStyle='#f7e5c0';ctx.font='46px "IM Fell English",Georgia,serif';ctx.textAlign='center';
         ctx.fillText('The stars can wait.',W/2,H/2-88);
         ctx.font='600 18px "DM Sans"';ctx.fillStyle='#b7dbd1';
         ctx.fillText('P / CLICK  ·  RESUME EXPEDITION',W/2,H/2-32);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#080f1b" />
+  <meta name="theme-color" content="#070e15" />
   <meta name="description" content="Æther: The Grand Tour. Twelve legs through the cosmic dark. Mouse-piloted hunts, tactical defence, stealth expeditions and run-changing instruments in a growing, offline-first browser arcade." />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Æther — The Grand Tour" />
@@ -65,6 +65,9 @@
     @media(max-width:650px){.nav-links{gap:12px;font-size:9px}.nav-links a:first-child{display:none}.mark{font-size:20px;gap:10px}.mark-suffix{display:none}.hero{padding:50px 0}.seal{width:88px;right:-6px;top:-16px}.seal strong{font-size:25px}.statbar{grid-template-columns:1fr 1fr}.stat:nth-child(2){border:0}.stat strong{font-size:38px}.experiences{grid-template-columns:1fr}.section{padding-top:80px}.manifesto{margin:60px 0}.footer{flex-direction:column}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
   </style>
+  <link rel="stylesheet" href="grand-tour.css?v=6" />
+  <link rel="stylesheet" href="motion.css?v=2" />
+  <script src="motion.js?v=3" defer></script>
 </head>
 <body>
   <header class="site-nav"><a class="mark" href="grand-tour.html"><span class="mark-star">✧</span> ÆTHER <span class="mark-suffix" aria-hidden="true">/</span> <span class="mark-suffix">GRAND TOUR</span></a><nav class="nav-links" aria-label="Primary"><a href="#cartridges">THE CARTRIDGES</a><a href="#manifesto">FIELD NOTES</a><a href="index.html#overview">THE OBSERVATORY</a></nav></header>
@@ -72,17 +75,17 @@
     <main>
       <section class="hero"><div>
         <p class="eyebrow">THE GRAND TOUR · THE CARTOGRAPHER'S EDITION</p>
-        <h1>The sky<br />is <em>not</em><br />empty.</h1>
+        <h1>The heavens<br />are <em>not</em><br />silent.</h1>
         <p class="intro">A twelve-leg voyage through impossible skies, strange machinery, and the distant edge of everything.</p>
         <p class="support">Pilot a hand-built starship. Fight creatures made of light. Outsmart watchers in the ruins of old observatories. Forge strange machines to hold the last star. Every decision bends the next journey.</p>
         <div class="button-row"><a class="button" href="index.html?standalone=1&tour=1#voyage">BEGIN YOUR EXPEDITION <span aria-hidden="true">✦</span></a><a class="button button-ghost" href="#cartridges">DISCOVER THE GAMES</a></div>
         <p class="fineprint">PLAY IN YOUR BROWSER · NO INSTALLER · LOCAL SAVE · KEYBOARD AND MOUSE</p>
-      </div><div class="hero-visual"><div class="art-frame"><img src="assets/combat-preview.webp" alt="An actual Grand Tour encounter: a painted starfield, planetary rings, enemy ships and the player skiff." /><div class="art-footer"><span>FLIGHT RECORDER · 01 / 12</span><span>THE INNER WORLDS · EXPEDITION ARCHIVE</span></div></div><div class="seal"><strong>Æ</strong><small>THE STAR<br />KEEPERS' GUILD</small></div></div></section>
+      </div><div class="hero-visual"><figure class="landing-engraving"><span class="landing-figure">PLATE I · THE FIRST ASTRONOMICAL LECTURE</span><div class="landing-engraving-mat"><img src="assets/astronomy-lecture-1748.webp" width="1201" height="969" alt="The first lecture in the science of geography and astronomy: an 1748 engraving of a savant demonstrating an armillary sphere" fetchpriority="high" /></div><figcaption>THE FIRST LECTURE IN THE SCIENCE OF GEOGRAPHY & ASTRONOMY · 1748</figcaption></figure><div class="seal"><strong>Æ</strong><small>THE STAR<br />KEEPERS' GUILD</small></div></div></section>
         <div class="statbar" aria-label="Game content"><div class="stat"><strong>12</strong><small>Legs of the voyage</small></div><div class="stat"><strong>16</strong><small>Different trials</small></div><div class="stat"><strong>16</strong><small>Run-changing instruments</small></div><div class="stat"><strong>4</strong><small>Distinct ship hulls</small></div></div>
       <section id="cartridges" class="section"><div class="section-head"><div><p class="eyebrow">NOT ONE KIND OF GAME</p><h2>Three ways to<br /><em>lose yourself.</em></h2></div><p>Each encounter is a game in its own right, with its own mastery curve. These images are captured from the playable build, not concept illustrations.</p></div>
       <div class="experiences">
         <article class="experience"><img src="assets/combat-preview.webp" alt="Starship battling crystalline enemies beneath a giant planet" loading="lazy"/><div class="content"><span class="number">01 · ACTION</span><h3>Dance between stars.</h3><p>Mouse-piloted combat. Read hostile telegraphs, chain kills into FLOW, and dodge sector hazards in a clean score-attack cartridge.</p><p><a href="index.html?standalone=1&cartridge=shooter#voyage">PLAY STARFALL SKIRMISH →</a></p></div></article>
-        <article class="experience"><img src="assets/bastion-preview.webp" alt="Five-lane tactical defence board with installed needles and frost towers" loading="lazy"/><div class="content"><span class="number">02 · STRATEGY</span><h3>Build the last defence.</h3><p>Aether Bastion is a three-wave siege. Build, specialize, sell, and hold the core against the crystal titan.</p><p><a href="index.html?standalone=1&cartridge=bastion#voyage">PLAY AETHER BASTION →</a></p></div></article>
+        <article class="experience"><img src="assets/bastion-preview.webp" alt="Five-lane tactical defence board with installed needles and frost towers" loading="lazy"/><div class="content"><span class="number">02 · STRATEGY</span><h3>Build the last defence.</h3><p>Aether Bastion is a six-siege campaign. Build, specialize, sell, and hold the core against the Crown Engine.</p><p><a href="index.html?standalone=1&cartridge=bastion#voyage">PLAY AETHER BASTION →</a></p></div></article>
         <article class="experience"><img src="assets/labyrinth-preview.webp" alt="An overhead stealth labyrinth with guards casting search cones" loading="lazy"/><div class="content"><span class="number">03 · ADVENTURE</span><h3>Steal the light back.</h3><p>Four chambers of shifting patrols. Read visible sentry cones, cloak through fields, collect starkeys, then choose two of three routes through the Triune Archive.</p><p><a href="index.html?standalone=1&cartridge=labyrinth#voyage">PLAY GLASS LABYRINTH →</a></p></div></article>
       </div></section>
         <section id="manifesto" class="manifesto"><div><p class="eyebrow">THE SHAPE OF A JOURNEY</p><h2>No two skies<br /><em>quite alike.</em></h2></div><p>One run takes you from Mercury's warm light to Neptune's dead-cold relay. Between hunts you'll find puzzles, instruments, a chandlery, strange bargains and sanctuaries. A dead ship resets the expedition; your records, unlocked hulls and the stories you've gathered carry forward.</p><ul><li>Three selectable difficulties, from Wanderer to Eclipse.</li><li>Rule-altering instruments: gravity wells, piercing beams, aurora healing and more.</li><li>Sixteen playable trials, including stealth, strategy, puzzle and timing expeditions.</li><li>Permanent records, discoverable builds, and four ship profiles.</li><li>Hand-drawn procedural atmosphere and synthesised sound, entirely offline.</li></ul><p>Designed as an exploratory browser game, with no account or telemetry. Your progress stays on your device.</p></section>

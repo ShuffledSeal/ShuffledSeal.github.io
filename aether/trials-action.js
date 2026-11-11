@@ -10,7 +10,7 @@
   if (!AT) return;
   const { frame, TAU, clamp, reduced } = AT;
   const HUD = '600 13px "DM Sans"';
-  const SERIF = '24px Cormorant, serif';
+  const SERIF = '24px "IM Fell English", Georgia, serif';
   const SMALL = '12px "DM Sans"';
 
   // ── The wandering stars · Constellation Chain ─────────────────────────
@@ -113,6 +113,7 @@
       canvas.dataset.chainPhase = phase;
       canvas.dataset.chainEncounter = String(encounter + 1);
       canvas.dataset.chainCircuit = String(circuit);
+      canvas.dataset.chainSpeedScale = String(scale);
       canvas.dataset.chainFormation = formation;
       canvas.dataset.chainRange = String(FORMATIONS[formation].range);
       canvas.dataset.chainLinks = String(links.length);
@@ -513,7 +514,7 @@
     function draw(ctx, dt, clock) {
       ctx.save();
       if (shake > 0 && !reduced()) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
-      ctx.fillStyle = '#0e1410'; ctx.fillRect(-14, -14, W + 28, H + 28);
+      ctx.fillStyle = '#0b1624'; ctx.fillRect(-14, -14, W + 28, H + 28);
       stars();
       // Scissor lanes: rose dashes while they lock, a bright blade once live.
       for (const h of hazards) {
@@ -782,10 +783,10 @@
     function draw(ctx, dt, clock) {
       ctx.save();
       if (shake > 0 && !reduced()) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
-      ctx.fillStyle = '#101812'; ctx.fillRect(-14, -14, W + 28, H + 28);
+      ctx.fillStyle = '#0b1725'; ctx.fillRect(-14, -14, W + 28, H + 28);
       stars();
       // The comet's tail: dark beyond the rails, a gilt haze within.
-      ctx.fillStyle = '#070a08'; ctx.fillRect(0, 0, W, TOP - 40); ctx.fillRect(0, BOT + 40, W, H - BOT - 40);
+      ctx.fillStyle = '#07111e'; ctx.fillRect(0, 0, W, TOP - 40); ctx.fillRect(0, BOT + 40, W, H - BOT - 40);
       const hazeT = ctx.createLinearGradient(0, TOP - 40, 0, TOP);
       hazeT.addColorStop(0, '#c4ac7900'); hazeT.addColorStop(1, '#c4ac7914');
       ctx.fillStyle = hazeT; ctx.fillRect(0, TOP - 40, W, 40);

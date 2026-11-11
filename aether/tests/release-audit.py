@@ -57,10 +57,11 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             print(f'PASS: Chromium parsed all {len(scripts)} shipped JavaScript files')
 
             # Cabinet filters are functional, not decorative.
-            for family, count in (('strategy', 3), ('action', 3), ('arcade', 4), ('all', 10)):
+            for family, count in (('strategy', 3), ('action', 3), ('all', 6)):
                 page.locator(f'[data-cabinet-filter="{family}"]').click()
                 assert page.locator('[data-cabinet-family]:visible').count() == count
-            print('PASS: cabinet filters expose 3 strategy, 3 action, 4 arcade and 10 total games')
+            assert page.locator('.arcade-cabinet-link').count() == 1
+            print('PASS: cabinet filters expose 3 strategy, 3 action and 6 flagship games; the four relic games retain a separate arcade route')
 
             # Every Grand Tour trial mounts, paints, pauses, resumes and destroys.
             trial_ids = page.evaluate('AetherTrials.list.map(trial => trial.id)')
@@ -156,7 +157,7 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             routes = {
                 '#overview': '.playground-home', '#arcade': '#arcade-canvas', '#discover': '.room-grid',
                 '#telescope': '#scope-canvas', '#planetarium': '.atlas-card-grid', '#calendar': '.calendar-layout',
-                '#journal': '.journal-grid', '#collection': '.collection-grid',
+                '#journal': '.journal-grid', '#collection': '.research-grid',
             }
             for route, selector in routes.items():
                 goto(page, base, route)

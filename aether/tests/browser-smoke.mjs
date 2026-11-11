@@ -41,8 +41,9 @@ try {
   assert.equal(await page.evaluate(() => window.location.hash), '', 'the bare Æther route must open the Observatory overview');
   await page.goto(`${base}/index.html#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-cabinet');
-  assert.equal(await page.locator('.cartridge-card').count(), 10, 'all ten cartridges must remain visible in the cabinet');
-  assert.equal(await page.locator('.cartridge-daily-link').count(), 9, 'all nine seeded cartridges must expose a Daily Vigil');
+  assert.equal(await page.locator('.cartridge-card').count(), 6, 'six flagship cartridges appear once; relic games live in the arcade');
+  assert.equal(await page.locator('.cartridge-daily-link').count(), 5, 'all five seeded flagship cartridges expose a Daily Vigil');
+  await assertVisible(page, '.arcade-cabinet-link');
   await page.goto(`${base}/index.html?standalone=1&cartridge=deepfield&challenge=daily#voyage`, { waitUntil: 'networkidle' });
   const dailyField = page.locator('.deepfield-grid');
   assert.equal(await page.locator('.deepfield-cell').count(), 120, 'Daily Deep Field uses the Navigator chart');

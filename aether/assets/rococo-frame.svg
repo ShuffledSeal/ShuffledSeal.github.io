@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" preserveAspectRatio="none" fill="none" stroke="#a47e3f" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <g id="corner">
+      <path d="M8 188V8h180M18 178V18h160" stroke-width="1.2"/>
+      <path d="M12 92c34-3 54-20 59-50 2-13-6-25-18-24-15 1-21 19-12 28 8 8 23 1 21-8-2-7-12-8-15-3M92 12c-3 34-20 54-50 59-13 2-25-6-24-18 1-15 19-21 28-12 8 8 1 23-8 21-7-2-8-12-3-15" stroke-width="1.5"/>
+      <path d="M20 134c28-10 42-28 45-54M134 20c-10 28-28 42-54 45M29 110c17-7 26-20 27-37M110 29c-7 17-20 26-37 27" stroke-width=".8"/>
+      <path d="M23 151c17-4 29-14 34-29-14 2-24 10-34 29ZM151 23c-4 17-14 29-29 34 2-14 10-24 29-34ZM41 88c15-3 25-11 30-24-12 1-22 9-30 24ZM88 41c-3 15-11 25-24 30 1-12 9-22 24-30Z" stroke-width=".85"/>
+      <path d="M23 62c12-3 19-10 21-21-10 2-17 9-21 21ZM62 23c-3 12-10 19-21 21 2-10 9-17 21-21Z" stroke-width=".8"/>
+      <path d="m29 29 8-8 8 8-8 8ZM7 204v-16M204 7h-16" stroke-width="1"/>
+      <circle cx="37" cy="37" r="3" fill="#a47e3f" stroke="none"/>
+    </g>
+    <g id="shell">
+      <path d="M-42 0c10-17 25-20 42-5 17-15 32-12 42 5-14-5-28-2-42 10-14-12-28-15-42-10Z"/>
+      <path d="M-30-2c8-13 18-14 30-3 12-11 22-10 30 3M-20 0c5-8 12-9 20-2 8-7 15-6 20 2M0-5V10M-42 0c-8 0-13-3-16-9M42 0c8 0 13-3 16-9" stroke-width=".9"/>
+    </g>
+  </g>
+  <rect x="4" y="4" width="992" height="692" stroke-width=".7" opacity=".6"/>
+  <rect x="15" y="15" width="970" height="670" stroke-width=".45" opacity=".45"/>
+  <use href="#corner"/><use href="#corner" transform="translate(1000 0) scale(-1 1)"/><use href="#corner" transform="translate(0 700) scale(1 -1)"/><use href="#corner" transform="translate(1000 700) scale(-1 -1)"/>
+  <use href="#shell" transform="translate(500 8)"/><use href="#shell" transform="translate(500 692) scale(1 -1)"/>
+  <path d="M240 8h180M580 8h180M240 692h180M580 692h180" stroke-width=".7" opacity=".7"/>
+</svg>

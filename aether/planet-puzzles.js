@@ -360,15 +360,18 @@ window.AetherPuzzles = (() => {
   }
   function sample(random,arr,count){const pool=[...arr],out=[];while(out.length<count&&pool.length)out.push(pool.splice(Math.floor(random()*pool.length),1)[0]);return out;}
   const endlessCache=new Map();
-  async function endless(id,round) {
-    const key=`${id}:${round}`;if(endlessCache.has(key))return clone(endlessCache.get(key));
-    const base=idSeed(id)*100003+round*7919;let def=null;
+  async function endless(id,round,options={}) {
+    const replay=Number.isInteger(options.seed),signal=options.signal;
+    if(replay)round=Math.max(0,Math.min(6,Number.isInteger(options.difficulty)?options.difficulty:round));
+    const seed=replay?options.seed>>>0:null;
+    const key=replay?`${id}:replay:${seed}:${round}`:`${id}:${round}`;if(endlessCache.has(key))return clone(endlessCache.get(key));
+    const base=replay?seed:idSeed(id)*100003+round*7919;let def=null;
     if(id==='mercury') {
       const n=round<2?4:round<6?5:6,target=Math.min(3+round,n===6?14:n===5?9:6);
-      for(let salt=0;!def;salt++){const cand={n,seed:base+salt};const p=lightSolution(cand,initial('mercury',cand,0)).length;if(p>=target&&p<=target+3)def=cand;}
+      for(let salt=0;!def&&salt<80;salt++){if(signal?.aborted)return null;const cand={n,seed:base+salt};const p=lightSolution(cand,initial('mercury',cand,0)).length;if(p>=target&&p<=target+3)def=cand;}
     } else if(id==='venus'||id==='earth') {
       const n=Math.min(7,4+Math.floor(round/3));
-      for(let salt=0;!def;salt++) {
+      for(let salt=0;!def&&salt<80;salt++) {if(signal?.aborted)return null;
         const path=hamilton(n,base+salt);if(!path)continue;
         if(id==='venus'){def={n,path};def.target=pipeTargets(def);def.fixed=[path[0],path.at(-1)];}
         else {
@@ -380,14 +383,15 @@ window.AetherPuzzles = (() => {
       }
     } else if(id==='jupiter') {
       const count=round<3?3:4,divisions=[4,5,6,6,7,8,9][Math.min(round,6)],double=round>=5;
-      for(let salt=0;!def;salt++) {
+      for(let salt=0;!def&&salt<80;salt++) {if(signal?.aborted)return null;
         const cand={count,divisions,double},board=initial('jupiter',cand,round*13+salt);
-        const sol=await solve('jupiter',cand,board);
+        if(replay){const random=rng(base+salt);for(let j=0;j<11+round;j++)advance(board,cand,Math.floor(random()*count));if(board.phases.every(v=>v===0))advance(board,cand,0);}
+        const sol=await solve('jupiter',cand,board,signal);
         if(sol&&sol.length>=Math.min(3+round,8))def={...cand,startPhases:board.phases,solution:sol.map(a=>a.value)};
       }
     } else if(id==='mars') {
       const n=round<2?6:7,count=round<3?2:3,minLen=Math.min(8+round*3,26);
-      for(let salt=0;!def;salt++) {
+      for(let salt=0;!def&&salt<80;salt++) {if(signal?.aborted)return null;
         const random=rng(base+salt);
         for(let attempt=0;attempt<60&&!def;attempt++) {
           const walls=new Set();for(let p=0;p<n*n;p++)if(p%n===0||p%n===n-1||Math.floor(p/n)===0||Math.floor(p/n)===n-1)walls.add(p);
@@ -396,13 +400,13 @@ window.AetherPuzzles = (() => {
           const goals=sample(random,free,count).sort((a,b)=>a-b),crates=new Set(goals);let p=sample(random,free.filter(v=>!crates.has(v)),1)[0];
           for(let i=0;i<160;i++){const d=Math.floor(random()*4),to=neighbour(p,d,n),behind=neighbour(p,(d+2)%4,n);if(to<0||walls.has(to)||crates.has(to))continue;if(crates.has(behind)&&random()<.8){crates.delete(behind);crates.add(p);}p=to;}
           const cand={n,walls:[...walls].sort((a,b)=>a-b),goals,player:p,crates:[...crates].sort((a,b)=>a-b)};
-          const sol=await solve('mars',cand,initial('mars',cand,0));
+          const sol=await solve('mars',cand,initial('mars',cand,0),signal);
           if(sol&&sol.length>=minLen)def={...cand,solution:sol.map(a=>a.value)};
         }
       }
     } else if(id==='saturn') {
       const minLen=Math.min(5+round*2,18);
-      for(let salt=0;!def;salt++) {
+      for(let salt=0;!def&&salt<80;salt++) {if(signal?.aborted)return null;
         const random=rng(base+salt);
         for(let attempt=0;attempt<80&&!def;attempt++) {
           const blocks=[{x:4,y:2,len:2,axis:'h'}],used=new Set([16,17]);
@@ -415,13 +419,13 @@ window.AetherPuzzles = (() => {
           const positions=blocks.map(b=>b.axis==='h'?b.x:b.y),state={blocks,positions};
           for(let i=0;i<600;i++){const opts=steps(state);if(!opts.length)break;const {i:bi,sign}=opts[Math.floor(random()*opts.length)];positions[bi]+=sign;}
           const cand={n:6,blocks:blocks.map((b,i)=>({...b,[b.axis==='h'?'x':'y']:positions[i]}))};
-          const sol=await solve('saturn',cand,{positions:[...positions]});
+          const sol=await solve('saturn',cand,{positions:[...positions]},signal);
           if(sol&&sol.length>=minLen)def={...cand,solution:sol.map(a=>a.value)};
         }
       }
     } else if(id==='uranus') {
       const n=round<3?6:7,ballCount=round<3?2:3,minLen=Math.min(3+round,8);
-      for(let salt=0;!def;salt++) {
+      for(let salt=0;!def&&salt<80;salt++) {if(signal?.aborted)return null;
         const random=rng(base+salt);
         for(let attempt=0;attempt<80&&!def;attempt++) {
           const walls=new Set();for(let p=0;p<n*n;p++)if(p%n===0||p%n===n-1||Math.floor(p/n)===0||Math.floor(p/n)===n-1)walls.add(p);
@@ -429,13 +433,13 @@ window.AetherPuzzles = (() => {
           let balls=sample(random,free,ballCount).sort((a,b)=>a-b);const start=[...balls];const wallArr=[...walls].sort((a,b)=>a-b);const cand={n,walls:wallArr};
           for(let i=0;i<25;i++)balls=slide(balls,Math.floor(random()*4),cand);
           const goals=[...balls].sort((a,b)=>a-b);
-          const sol=await solve('uranus',{...cand,goals},{balls:start});
+          const sol=await solve('uranus',{...cand,goals},{balls:start},signal);
           if(sol&&sol.length>=minLen)def={...cand,goals,balls:start,solution:sol.map(a=>a.value)};
         }
       }
     } else { // neptune
       const n=[6,7,7,8][Math.min(round,3)],minLen=Math.min(7+round*2,16);
-      for(let salt=0;!def;salt++) {
+      for(let salt=0;!def&&salt<80;salt++) {if(signal?.aborted)return null;
         const random=rng(base+salt);
         for(let attempt=0;attempt<80&&!def;attempt++) {
           const walls=new Set();for(let p=0;p<n*n;p++)if(p%n===0||p%n===n-1||Math.floor(p/n)===0||Math.floor(p/n)===n-1)walls.add(p);
@@ -445,12 +449,13 @@ window.AetherPuzzles = (() => {
           for(let i=0;i<40;i++){p=slide([p],Math.floor(random()*4),cand)[0];if(p!==start&&!stops.includes(p))stops.push(p);}
           if(stops.length<4)continue;
           const goals=sample(random,stops,4);
-          const sol=await solve('neptune',{...cand,goals},{player:start,collected:0});
+          const sol=await solve('neptune',{...cand,goals},{player:start,collected:0},signal);
           if(sol&&sol.length>=minLen)def={...cand,goals,player:start,solution:sol.map(a=>a.value)};
         }
       }
     }
-    endlessCache.set(key,structuredClone(def));return def;
+    if(def){if(endlessCache.size>=120)endlessCache.delete(endlessCache.keys().next().value);endlessCache.set(key,structuredClone(def));}return def;
   }
-  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames};
+  async function replay(id,seed,difficulty=2,signal){return endless(id,difficulty,{seed:seed>>>0,difficulty,signal});}
+  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames};
 })();

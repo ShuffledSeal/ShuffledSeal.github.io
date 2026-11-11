@@ -1029,7 +1029,7 @@
   async function downloadPrint(kind, title, subtitle, extra = {}) {
     const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 1000;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#14201e'; ctx.fillRect(0, 0, 1200, 1000);
+    ctx.fillStyle = '#0d1b2c'; ctx.fillRect(0, 0, 1200, 1000);
     ctx.strokeStyle = '#bfa674'; ctx.lineWidth = 2; ctx.strokeRect(35, 35, 1130, 930); ctx.strokeRect(45, 45, 1110, 910);
     if (extra.target || kind === 'world' && extra.size) {
       const scene = document.createElement('canvas'); scene.width = 760; scene.height = 500;
@@ -1044,7 +1044,7 @@
       try { await image.decode(); } catch { toast('The print could not be prepared. Please try again.'); return; }
       ctx.drawImage(image, 60, 60, 1080, 684);
     }
-    ctx.fillStyle = '#eadfc7'; ctx.textAlign = 'center'; ctx.font = '44px Georgia'; ctx.fillText(title.slice(0, 60), 600, 808, 1030);
+    ctx.fillStyle = '#eadfc7'; ctx.textAlign = 'center'; ctx.font = '44px "IM Fell English", Georgia, serif'; ctx.fillText(title.slice(0, 60), 600, 808, 1030);
     ctx.font = '17px sans-serif'; ctx.fillStyle = '#c0b89f';
     // Hard-split any token wider than the frame so long words can't escape the border.
     const words = [];

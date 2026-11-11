@@ -181,7 +181,7 @@ window.AetherTrials = (() => {
       }
     }
     function draw(ctx, dt, clock) {
-      ctx.fillStyle = '#101812'; ctx.fillRect(0, 0, W, H); stars();
+      ctx.fillStyle = '#0b1725'; ctx.fillRect(0, 0, W, H); stars();
       // The sun
       const sunG = ctx.createRadialGradient(450, 280, 8, 450, 280, 120);
       sunG.addColorStop(0, '#f4dfae'); sunG.addColorStop(.5, '#c9a45c'); sunG.addColorStop(1, '#c9a45c00');
@@ -365,7 +365,7 @@ window.AetherTrials = (() => {
       ctx.closePath();
     }
     function draw(ctx) {
-      ctx.fillStyle = '#131a12'; ctx.fillRect(0, 0, W, H); stars();
+      ctx.fillStyle = '#111b2a'; ctx.fillRect(0, 0, W, H); stars();
       for (const r of rocks) { rockPath(ctx, r); ctx.fillStyle = '#3a3126'; ctx.fill(); ctx.strokeStyle = '#8d7f5c'; ctx.stroke(); }
       ctx.fillStyle = '#f2d38a'; for (const s of shots) { ctx.beginPath(); ctx.arc(s.x, s.y, 2.4, 0, TAU); ctx.fill(); }
       // Ship
@@ -518,7 +518,7 @@ window.AetherTrials = (() => {
       tone(220, .2, 'sine', .04);
     }
     function draw(ctx, dt, clock) {
-      ctx.fillStyle = '#101a16'; ctx.fillRect(0, 0, W, H); stars();
+      ctx.fillStyle = '#0e1b2a'; ctx.fillRect(0, 0, W, H); stars();
       // Target beacon
       ctx.setLineDash([4, 7]); ctx.strokeStyle = '#f2d38a'; ctx.beginPath(); ctx.arc(target.x, target.y, target.r + Math.sin(clock * 2.4) * 4, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = '#f2d38a'; ctx.beginPath(); ctx.arc(target.x, target.y, 7, 0, TAU); ctx.fill();
@@ -684,7 +684,7 @@ window.AetherTrials = (() => {
       }
     }
     function draw(ctx, dt, clock) {
-      ctx.fillStyle = '#12180f'; ctx.fillRect(0, 0, W, H); stars();
+      ctx.fillStyle = '#101a29'; ctx.fillRect(0, 0, W, H); stars();
       // Ring band
       ctx.fillStyle = '#c6b18708'; ctx.fillRect(0, 120, W, 310);
       ctx.strokeStyle = '#c6b18733'; ctx.setLineDash([2, 8]);
