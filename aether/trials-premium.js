@@ -61,8 +61,12 @@
     const controls=document.createElement('div');controls.className='bastion-controls';controls.setAttribute('role','group');controls.setAttribute('aria-label','Bastion controls');
     controls.innerHTML='<span data-bastion-selection></span>'+[['left','Q · Refine left'],['right','E · Refine right'],['priority','R · Front / heavy'],['sell','Delete · Sell'],['pulse','Space · Pulse'],['speed','F · Speed 1×']].map(([id,label])=>`<button type="button" data-bastion-action="${id}">${label}</button>`).join('');
     container.append(controls);
+    const loadout=document.createElement('div');loadout.className='bastion-loadout';loadout.setAttribute('role','group');loadout.setAttribute('aria-label','Tower construction');
+    loadout.innerHTML=TOWERS.map((def,i)=>`<button type="button" data-bastion-loadout="${i}" aria-pressed="${i===selected}"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(['needle','frostbell','prism','sunmine'][i])}</span><span class="upgrade-copy"><strong>${def.name}</strong><small>${def.cost} alloy · ${def.detail}</small></span></button>`).join('');
+    container.insertBefore(loadout,controls);
+    listen(loadout,'click',event=>{const button=event.target.closest('[data-bastion-loadout]');if(!button||button.disabled||over||g.paused)return;selected=Number(button.dataset.bastionLoadout);canvas.focus({preventScroll:true});});
     const destroyFrame=g.destroy;
-    g.destroy=()=>{orders.remove();controls.remove();destroyFrame();};
+    g.destroy=()=>{orders.remove();controls.remove();loadout.remove();destroyFrame();};
     function updateOrders(){if(!orders)return;
       if(orders.hidden===planning)orders.hidden=!planning;
       if(!planning)return;
@@ -261,6 +265,10 @@
         if(button.disabled!==disabled)button.disabled=disabled;
         const text=id==='speed'?`F · Speed ${fast?'2':'1'}×`:['left','right'].includes(id)&&def?`${id==='left'?'Q':'E'} · ${def.paths[id][0]} · ${cost}`:null;
         if(text&&button.textContent!==text)button.textContent=text;
+      }
+      for(const button of loadout.querySelectorAll('[data-bastion-loadout]')){
+        const index=Number(button.dataset.bastionLoadout),def=TOWERS[index];
+        button.setAttribute('aria-pressed',String(index===selected));button.disabled=Boolean(over||g.paused||credits<def.cost);
       }
     }
     listen(controls,'click',e=>{
@@ -670,7 +678,7 @@
       for(let i=pool.length-1;i>0;i--){const j=Math.floor(pick()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
       draft=pool.slice(0,Math.min(3,pool.length));
       if(!draft.length){buildRoom();return;}
-      draftBar.innerHTML=`<strong>RELIC DRAFT · CHAMBER ${chamber+1} AWAITS · CHOOSE ONE · KEYS 1–${draft.length}</strong>`+draft.map((relic,i)=>`<button type="button" data-labyrinth-relic="${relic.id}">${i+1} · ${relic.name} — ${relic.detail}</button>`).join('');
+      draftBar.innerHTML=`<strong>RELIC DRAFT · CHAMBER ${chamber+1} AWAITS · CHOOSE ONE · KEYS 1–${draft.length}</strong>`+draft.map((relic,i)=>`<button type="button" data-labyrinth-relic="${relic.id}"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(relic.id)}</span><span class="upgrade-copy">${i+1} · ${relic.name} — ${relic.detail}</span></button>`).join('');
       draftBar.hidden=false;updateDraft();
       message={text:'RELIC DRAFT · THE LABYRINTH HOLDS ITS BREATH',t:4};tone(560,.16,'triangle',.04);
     }

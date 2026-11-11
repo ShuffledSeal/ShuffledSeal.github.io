@@ -63,7 +63,7 @@
 .deepfield-cell,.orbital-dial,.puzzle-cell{transition:transform .16s,border-color .2s,background .2s,box-shadow .2s}.deepfield-cell:active:not(.revealed),.orbital-dial:active,.puzzle-cell:active{transform:scale(.94)}
 .dialog-enter,.modal[open]{animation:modal-arrive .34s cubic-bezier(.18,.75,.25,1) both}.modal::backdrop{animation:backdrop-arrive .28s ease both}
 .toast.visible{animation:toast-arrive .3s cubic-bezier(.2,.75,.25,1) both}
-.motion-score{animation:score-tick .22s ease-out,record-glow .42s ease-out}
+.motion-score{animation:none}
 
 .motion-hidden *,.motion-hidden *::before,.motion-hidden *::after{animation-play-state:paused!important}
 @media(max-width:720px){.aether-route-seal{width:72px;height:72px;font-size:38px}.aether-ambience{opacity:.1}.motion-tilt{transform:none}}

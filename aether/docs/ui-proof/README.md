@@ -10,6 +10,8 @@ These PNGs are **real Chromium captures of the playable static site**, not mocku
 - `research-cabinet-desktop.png` — the ordered research shelf, marginalia and guided-study tools.
 - `daily-chart-desktop.png` — a live solution-backed Daily Chart.
 - `route-book-desktop.png` — a real mid-transition two-page book opening and page turn.
+- `bastion-loadout.png` — the illustrated tower construction bar with readable costs and effects.
+- `deepfield-relics.png` — the illustrated relic intermission with larger instructional text.
 
 Regenerate from the repository root:
 

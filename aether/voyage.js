@@ -209,6 +209,24 @@ window.AetherVoyage = (() => {
   }
   const unlockedHull = id => !HULLS[id].unlock || (id === 'bell' && store.records.wins > 0) || (id === 'moth' && store.records.bossWins > 0) || (id === 'comet' && store.records.kills >= 100);
 
+  function leaveTour() {
+    // A safe exit is always available, including the relay. Only the current
+    // encounter restarts on return; completed legs and the dealt chart persist.
+    teardown();
+    if (run) { run.node = null; run.nodeKey = null; run.over = false; run.won = false; }
+    saveRun();
+    if (new URLSearchParams(location.search).has('standalone')) location.href = 'grand-tour.html';
+    else navigate('overview');
+  }
+  function confirmAbandon() {
+    teardown(); run = null; store.active = null; save(); closeModal();
+    if (new URLSearchParams(location.search).has('standalone')) location.href = 'grand-tour.html';
+    else navigate('overview');
+  }
+  function abandonPrompt() {
+    showModal(`<p class="eyebrow">LEAVE THE GRAND TOUR</p><h2 id="modal-title">Abandon this expedition?</h2><p class="modal-description">The current run and its route will be discarded. Your campaign records, unlocked hulls, cartridge scores, journal, and research collection are safe.</p><div class="modal-actions"><button class="button" data-action="close-modal">Stay on the chart</button><button class="button button-primary" data-tour="save-exit">Save & leave instead</button><button class="button tour-retreat" data-tour="confirm-abandon">Abandon expedition</button></div>`);
+  }
+
   // The route. Fixed skeleton, seeded content — the chart is part of strategy.
   function buildMap(seed) {
     const rand = rng(seed);
@@ -334,6 +352,7 @@ window.AetherVoyage = (() => {
       const reachable = s === run.step && !run.node;
       return `<button class="tour-node ${state || ''} ${reachable ? 'reachable' : ''}" data-tour-node="${key}" ${reachable ? '' : 'disabled'} aria-label="${esc(label.name)}: ${esc(label.detail)}"><span class="tour-node-icon">${label.icon}</span><span class="tour-node-copy"><strong>${state === 'won' ? '✓ ' : state === 'failed' ? '✕ ' : ''}${label.name}</strong><small>${esc(label.detail)}</small></span></button>`;
     }).join('')}</div>`).join('')}</div>
+    <nav class="tour-run-actions" aria-label="Expedition navigation"><button class="button" data-tour="save-exit">SAVE & LEAVE</button><button class="text-link" data-tour="abandon-run">Abandon expedition</button></nav>
     ${run.path.length ? `<details class="tour-log"><summary>The logbook (${run.path.length})</summary>${run.path.slice(-6).reverse().map(line => `<p>${esc(line)}</p>`).join('')}</details>` : ''}</div>`;
   }
 
@@ -344,7 +363,7 @@ window.AetherVoyage = (() => {
       ? '<button class="button tour-retreat" data-tour="retreat">ABORT ENCOUNTER · LOSE 1 HULL</button>'
       : '<button class="button" data-tour="leave">LEAVE WITHOUT TAKING ANYTHING</button>';
     return `<div class="view-enter tour-page"><section class="view-header tour-header"><div><p class="eyebrow">${label.name.toUpperCase()}</p><h1>${label.detail}.</h1><p class="tour-node-brief">${nodeBrief(node)}</p></div><div class="tour-vitals"><span class="tour-hull">${'♥'.repeat(run.hull)}</span><span class="tour-dust">✦ ${run.dust}</span></div></section>
-    <div class="tour-node-actions tour-node-actions-top">${exit}</div><div id="tour-stage" class="tour-stage"></div></div>`;
+    <div class="tour-node-actions tour-node-actions-top"><nav class="tour-run-actions" aria-label="Expedition navigation"><button class="button" data-tour="save-exit">SAVE & LEAVE</button><button class="text-link" data-tour="abandon-run">Abandon expedition</button></nav>${exit}</div><div id="tour-stage" class="tour-stage"></div></div>`;
   }
   function nodeBrief(node) {
     switch (node.kind) {
@@ -603,7 +622,7 @@ window.AetherVoyage = (() => {
       tourLandingScrolled = true;
       requestAnimationFrame(() => ($('.tour-expedition-divider') || $('.tour-landing'))?.scrollIntoView({ behavior: 'instant', block: 'start' }));
     }
-    main.addEventListener('click', event => {
+    document.addEventListener('click', event => {
       const filterButton = event.target.closest('[data-cabinet-filter]');
       if (filterButton) {
         const filter = filterButton.dataset.cabinetFilter;
@@ -640,6 +659,9 @@ window.AetherVoyage = (() => {
       else if (action === 'cartridge-replay' && direct) { teardown(); mountCartridge(direct); }
       else if (action === 'resume') { if (store.active) { run = hydrate(store.active); render(); } }
       else if (action === 'abandon') { store.active = null; run = null; save(); render(); }
+      else if (action === 'save-exit') leaveTour();
+      else if (action === 'abandon-run') abandonPrompt();
+      else if (action === 'confirm-abandon') confirmAbandon();
       else if (action === 'retreat' && run?.node) {
         const label = nodeLabel(run.node).name;
         teardown();

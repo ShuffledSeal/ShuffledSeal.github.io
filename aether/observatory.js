@@ -578,7 +578,7 @@
         // Pairings stay mysterious until you have actually met the partner relic
         // in a previous expedition — the draft shouldn't narrate its own secrets.
         const hint = ready ? `Completes ${pair.name}` : partner ? (voyage.relics.includes(partner.id) ? `Pairs with ${partner.name}` : 'Pairs with a relic you have not met yet') : 'A new possibility for this expedition';
-        return `<button class="relic-choice" data-exp="relic-pick" data-id="${esc(relic.id)}"><span class="relic-choice-number" aria-hidden="true">${i + 1}</span><span class="relic-choice-art" aria-hidden="true">${esc(relic.glyph)}</span><span class="relic-choice-tag">${esc(relic.tag)}</span><strong>${esc(relic.name)}</strong><span class="relic-choice-effect">${esc(relic.description)}</span><span class="relic-choice-pair ${ready ? 'ready' : ''}">${esc(hint)}</span></button>`;
+        return `<button class="relic-choice" data-exp="relic-pick" data-id="${esc(relic.id)}"><span class="relic-choice-number" aria-hidden="true">${i + 1}</span><span class="relic-choice-art" aria-hidden="true">${window.AetherIcons.upgrade(relic.id)}</span><span class="relic-choice-tag">${esc(relic.tag)}</span><strong>${esc(relic.name)}</strong><span class="relic-choice-effect">${esc(relic.description)}</span><span class="relic-choice-pair ${ready ? 'ready' : ''}">${esc(hint)}</span></button>`;
       }).join('');
       if (!dialog.open) dialog.showModal();
       // Drafts are chaptered: Discovery I of IV, not a recurring popup.

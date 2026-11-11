@@ -92,7 +92,7 @@ let modalTrigger;
 let modalTriggerSelector;
 
 function icon(name, className = '') {
-  return `<svg class="${className}" aria-hidden="true"><use href="assets/victorian-icons.svg#${name}"/></svg>`;
+  return `<svg class="${className}" aria-hidden="true"><use href="assets/victorian-icons.svg?v=2#${name}"/></svg>`;
 }
 
 function escapeHTML(value) {
@@ -676,7 +676,7 @@ function setMenuButton(open) {
   const button = document.querySelector('.mobile-menu');
   button.setAttribute('aria-expanded', String(open));
   button.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-  button.querySelector('use').setAttribute('href', `assets/victorian-icons.svg#${open ? 'close' : 'menu'}`);
+  button.querySelector('use').setAttribute('href', `assets/victorian-icons.svg?v=2#${open ? 'close' : 'menu'}`);
 }
 
 function closeMenu() {

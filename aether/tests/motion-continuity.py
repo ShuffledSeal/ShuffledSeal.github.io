@@ -93,15 +93,18 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), f'{route}: overflow'
             print('PASS: Wonder Rooms, calendar, journal, collection, discovery cabinet and planetary puzzles retain the shared style')
 
-            # A record update ticks like a mechanical readout, then settles.
+            # High-frequency readouts remain stable and never flash.
             page.goto(f'{base}/index.html#arcade', wait_until='networkidle')
             page.evaluate('document.querySelector("#game-score").textContent = "12"')
-            page.wait_for_selector('#game-score.motion-score', timeout=1000)
+            page.wait_for_timeout(180)
+            assert page.locator('#game-score.motion-score').count() == 0, 'score update triggered a flash class'
+            assert page.locator('#game-score').evaluate('(element) => getComputedStyle(element).animationName') == 'none'
+            assert page.locator('#game-score').inner_text() == '12'
             page.locator('[data-action="profile"]').click()
             assert page.locator('#modal[open]').count() == 1
             assert page.locator('#modal').evaluate('(element) => getComputedStyle(element).animationName') == 'modal-arrive'
             page.locator('[data-action="close-modal"]').click()
-            print('PASS: animated record updates and folio dialogs')
+            print('PASS: stable non-flashing record updates and folio dialogs')
 
             quiet = browser.new_page(viewport={'width': 390, 'height': 844}, reduced_motion='reduce')
             quiet.on('pageerror', lambda error: errors.append(str(error)))

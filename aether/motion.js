@@ -48,13 +48,9 @@ window.AetherMotion = (() => {
   }
 
   function score(element) {
-    if (reduced()) return;
-    const now = performance.now(), previous = scoreTimes.get(element) || 0;
-    if (now - previous < 140) return;
-    scoreTimes.set(element, now);
+    // High-frequency game readouts update silently. Blinking numbers makes
+    // scores harder to read and turns every shot into visual noise.
     element.classList.remove('motion-score');
-    void element.offsetWidth;
-    element.classList.add('motion-score');
   }
 
   function decorate(root = document) {

@@ -503,7 +503,7 @@ window.AetherSkirmish = (() => {
         const id = pool.splice(Math.floor(rand() * pool.length), 1)[0];
         draftChoices.push({ id, text: `${INSTRUMENTS[id].name} · ${INSTRUMENTS[id].text} Lasts this hunt.` });
       }
-      draftBar.innerHTML = `<strong>FIELD REFIT · CHOOSE ONE · ${endless ? `WAVE ${wave + 1}` : ACTS[wave].name.toUpperCase()}</strong>` + draftChoices.map((choice, i) => `<button type="button" data-skirmish-refit="${choice.id}">${i + 1} · ${choice.text}</button>`).join('');
+      draftBar.innerHTML = `<strong>FIELD REFIT · CHOOSE ONE · ${endless ? `WAVE ${wave + 1}` : ACTS[wave].name.toUpperCase()}</strong>` + draftChoices.map((choice, i) => `<button type="button" data-skirmish-refit="${choice.id}"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(choice.id)}</span><span class="upgrade-copy">${i + 1} · ${choice.text}</span></button>`).join('');
       draftBar.hidden = false;
       notice = { text: 'FIELD REFIT · 1–4 CHOOSE · WEAPONS ALSO AVAILABLE BELOW', ttl: 4 };
       updateStatus(true);

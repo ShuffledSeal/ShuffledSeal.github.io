@@ -15,6 +15,8 @@ This roadmap distinguishes what is playable **today** from proposed work. It del
 - A working research cabinet with ordered/searchable saved works, marginalia, guided study, linked journal observations and Markdown export.
 - Solution-backed Daily Charts and three-board seeded Circuits in all eight planetary puzzle rooms, with isolated resumable saves.
 - Veteran Sky unlocks for all six flagship cartridges, with separate records and engine-specific challenge rules.
+- Illustrated upgrade controls with readable refinement text, and silent non-flashing score updates.
+- Save & Leave on every Grand Tour screen, resumable encounters, and confirmed abandonment with complete game teardown.
 - Existing Observatory, puzzles, arcade games, orchestra with sequencer, journal, progress and local-save model remain in place.
 
 The features above indicate *implementation*, not that every game has yet met a professional content or balancing standard. In particular, the new trials are initial playable versions, not fully featured multi-hour standalone releases.

@@ -80,7 +80,7 @@
     controls.append(status, formations, build, pulseButton, draft); container.append(controls);
     for (const [id, info] of Object.entries(FORMATIONS)) {
       const button = document.createElement('button'); button.type = 'button';
-      button.dataset.chainFormation = id; button.textContent = `${info.name} — ${info.hint}`;
+      button.dataset.chainFormation = id; button.innerHTML = `<span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(id)}</span><span class="upgrade-copy">${info.name} — ${info.hint}</span>`;
       button.setAttribute('aria-pressed', String(id === formation)); formations.append(button);
       listen(button, 'click', () => setFormation(id));
     }
@@ -173,7 +173,8 @@
         choices.forEach((id, i) => {
           const button = document.createElement('button'); button.type = 'button'; button.dataset.chainChoice = id;
           const info = RELICS[id] || supplies[id];
-          button.textContent = `${i + 1}. ${info[0]}${RELICS[id] ? ` · rank ${level(id) + 1}/3` : ''} — ${info[1]}`;
+          const iconId=RELICS[id]?id:({mend:'bloom',guard:'aegis',surge:'energy'})[id];
+          button.innerHTML = `<span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(iconId)}</span><span class="upgrade-copy">${i + 1}. ${info[0]}${RELICS[id] ? ` · rank ${level(id) + 1}/3` : ''} — ${info[1]}</span>`;
           draft.append(button);
         });
       }
