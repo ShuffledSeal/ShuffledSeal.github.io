@@ -1,9 +1,9 @@
 # Æther · A private observatory
 
-> **Cartographer’s Edition (4 November 2026):** An expanded playable Grand Tour build, not a finished £90 commercial release. See [PREMIUM-EDITION.md](PREMIUM-EDITION.md) for current changes and [ROADMAP.md](ROADMAP.md) for a prioritised plan, testing gates, and deployment instructions. To preview the new product landing page, open `grand-tour.html`.
+> **Cartographer’s Edition (11 November 2026):** The feature-complete static anthology release. This is not a claim of commercial pricing, external playtesting, or cross-browser certification. See [PREMIUM-EDITION.md](PREMIUM-EDITION.md) for earlier changes and [ROADMAP.md](ROADMAP.md) for future ideas, testing gates, and deployment instructions. Open `grand-tour.html` for the title screen.
 
 
-A handcrafted, responsive celestial playground inspired by Victorian astronomical plates and Romantic oil paintings — with a slightly mischievous streak. Built with HTML, CSS, and vanilla JavaScript. No dependencies or build step.
+A handcrafted, responsive celestial playground inspired by 1500s astronomical manuscripts, armillary diagrams, engraved brass, and Romantic oil paintings — with a slightly mischievous streak. Built with HTML, CSS, and vanilla JavaScript. No runtime dependencies or build step.
 
 ## Continue development with OpenCode
 
@@ -32,12 +32,17 @@ The browser game has no runtime dependencies. Playwright is used only for develo
 
 ```sh
 npm install
-npm run test:trials
-npm run test:browser
-npm run test:cartridges
+npm test                 # Complete Python/Chromium release regression
+npm run test:deepfield  # Focused Minesweeper rules, modes, input and lifecycle
+npm run test:trials     # Node registry check
+npm run test:browser    # Full Node browser smoke
+npm run test:cartridges # Node cartridge depth
+npm run test:cabinet    # Desktop/mobile cabinet smoke
 ```
 
-If Node is unavailable but Python Playwright and its Chromium browser are installed, run `python3 tests/browser-integration.py` for a smaller independent browser smoke test. This does not replace the full Node suites or manual balance testing.
+If Node is unavailable but Python Playwright and its Chromium browser are installed, run `python3 tests/deepfield-release.py`, `python3 tests/release-audit.py`, `python3 tests/browser-integration.py`, and `python3 tests/cartridge_cabinet.py`. The same four suites run through `npm run test:release`. They cover the ten-cartridge cabinet, Deep Field’s complete campaign and input/lifecycle contracts, all sixteen trial lifecycles, puzzle motion, major routes, responsive layouts, reduced motion, and old/malformed saves. They do not replace the full Node depth suites or human balance testing.
+
+Release verification (11 November 2026): all four Python/Chromium suites passed. Evidence includes 240 deterministic Deep Field boards with exact adjacency and protected openings; daily replay, chording, pause/resume, touch, relic, win/loss, record and teardown paths; a complete three-chart campaign; all sixteen trial mount/pause/destroy cycles; every direct cartridge and major Observatory route; real puzzle movement and solved-board celebration; 390/768/1440px layouts; reduced motion; and legacy/malformed saves. Chromium parsed all 20 shipped JavaScript files and reported no uncaught exceptions. Node was unavailable, so the checked-in Node depth suites were **not executed** in this environment. Physical-device, cross-browser, accessibility-at-scale and external balance/playtesting remain unclaimed.
 
 Development check (5 November 2026): the Python browser integration passed in headless Chromium; additional browser-driven runs cleared Bastion’s six sieges, Hunt’s three acts (with two drafts), and Chain’s five encounters with four relic drafts and a final boss. A Labyrinth run reached its relic draft and entered a generated chamber; 1,600 generated Labyrinth rooms checked in the browser had no disconnected key, seal, fragment or exit. Bastion’s unbuilt first siege produced one defeat. The five new Node/Playwright depth suites are checked in but were **not executed** on the development machine (Node was unavailable). Balance, controller/touch readability and cross-browser behaviour still need human verification.
 
@@ -67,23 +72,28 @@ Eight field guides — one per planet — each pairing illustrated plates and ro
 - **Uranus · Axis shift** — tilt the tray; every capsule slides together until something stops it.
 - **Neptune · Storm runner** — inertia navigation on limited fuel, visiting buoys in order.
 
-Each planet now shows a level-specific lesson, a contextual next-action instruction and feedback explaining the last move. Existing level records, undo/redo and solver hints remain in place; Jupiter’s burn plan is free to edit, but its launched burns each cost one move.
+Each planet now shows a level-specific lesson, a contextual next-action instruction and feedback explaining the last move. Rovers, crates, capsules, probes and ring blocks glide from their actual visual positions—even during rapid consecutive inputs—while pipes, rivers and orbital dials animate their changed state. Blocked moves give mechanical refusal feedback, and solved plates finish with an engraved-light celebration. Reduced motion keeps the same immediate rules without cosmetic travel or particles. Existing level records, undo/redo and solver hints remain in place; Jupiter’s burn plan is free to edit, but its launched burns each cost one move.
 
 ## The Grand Tour
 
 ### Cartridge cabinet
 
-The cartridge cabinet at `#voyage` is an optional anthology destination; the bare `/aether/` route opens the Observatory overview. These direct, replayable routes have their own personal-best records and never alter an in-progress Grand Tour save. Four of the five cartridges offer three modes — an authored **Campaign**, an **Endless run**, and a seeded **Daily Vigil**:
+The cartridge cabinet at `#voyage` is an optional anthology destination; the bare `/aether/` route opens the Observatory overview. These direct, replayable routes have their own personal-best records and never alter an in-progress Grand Tour save. All ten cartridges are visible together, with working Action, Strategy and Arcade filters and concise feature labels. Five cartridges offer three modes — an authored **Campaign**, an **Endless run**, and a seeded **Daily Vigil**. Starforge has six connected contracts; the four original arcade cabinets offer immediate play and Daily Vigil:
 
 - `index.html?standalone=1&cartridge=shooter&mode=campaign#voyage` — Starfall Skirmish. A three-act authored hunt with scheduled enemy packets and telegraphed entries. Four selectable weapon families (1–4 or the armoury bar): Pulse (steady mid-range), Scatter (short five-pellet fan), Lance (hold-to-charge piercing shot), Mortar (delayed area blast). Between acts, draft an instrument for the rest of the hunt. Endless mode keeps the Reinforce/Overclock field refits between waves.
 - `index.html?standalone=1&cartridge=bastion&mode=campaign#voyage` — Aether Bastion. Six authored sieges with a planning phase: read the manifest (lanes, hull types, counts), place towers, then launch. Enemy armour, runners, lane currents and a final Titan demand complementary towers; refine with Q/E, set front/heavy targeting with R, sell with right-click, double time with F.
 - `index.html?standalone=1&cartridge=labyrinth&mode=campaign#voyage` — Glass Labyrinth. A seeded stealth roguelite: four chambers with generated, connectivity-validated layouts, Watcher encounter profiles, and a relic draft between chambers (six relics with real tradeoffs — longer veil vs faster decoys, faster movement vs quicker alarms, and so on). Endless mode keeps the authored first circuit and generates sharper rooms on later circuits.
 - `index.html?standalone=1&cartridge=starforge#voyage` — Starforge orbital factory contracts. The Mirror catches the core ray at the fixed top gate; Conductor at right carries it, Furnace at bottom converts it. The on-screen guide and gate links show alignment and missing devices. Replacing a device moves it (it cannot silently duplicate). Align the cooling devices too, deliver ember units, vent once, survive eclipses, and defeat the Dying Clock.
 - `index.html?standalone=1&cartridge=chain&mode=campaign#voyage` — Constellation Chain. Five authored encounters ending in a boss, with three switchable formations (F) that change range and fire rate, and relic drafts between encounters — eight relics with stacking ranks (extra targets, piercing, magnetism, shields, novas, speed, frost, a Space-bar pulse).
+- `index.html?standalone=1&cartridge=merge#arcade` — Planet Drop. Aim and merge matching worlds without overflowing the jar.
+- `index.html?standalone=1&cartridge=hop#arcade` — Comet Surf. Hold to orbit, release to slingshot through golden rings.
+- `index.html?standalone=1&cartridge=dash#arcade` — Stardust Dash. Catch stars and power-ups in the Quick Forecast or full Moonboat Expedition.
+- `index.html?standalone=1&cartridge=breaker#arcade` — Orbit Breaker. Steer the orbital paddle and shatter every crystal without losing the final comet.
+- `index.html?standalone=1&cartridge=deepfield&mode=campaign#voyage` — Deep Field, a complete Minesweeper cartridge. Three board classes (9×9, 12×10, 16×12), a three-chart campaign, escalating endless boards and deterministic Daily Vigils. Protected first openings, flood reveals, chording, flag/question cycles, Oracle hints, three expedition relics, zoom, optional sound, active-time scoring, long-press/touch flag mode and full keyboard controls. The same engine powers Deep Field in the Grand Tour.
 
 The twelve-leg Grand Tour remains available as the optional long-form expedition below the cabinet. Aborting a hunt or trial costs one hull; non-combat locations provide a clear no-reward exit.
 
-Starfall Skirmish, Aether Bastion, Glass Labyrinth, and Constellation Chain also offer **Daily Vigil** from the cabinet or their mode switch. Each uses the same local-date encounter seed on repeat attempts and saves a separate best for that day (alongside the all-time and campaign bests); it needs no account or network. Glass Labyrinth remixes the opening watcher positions for the daily run. Starforge instead retains its six authored contracts and independent replay/score chase. Campaign clears are counted per cartridge on the mode screen.
+Starfall Skirmish, Aether Bastion, Glass Labyrinth, Constellation Chain, Planet Drop, Comet Surf, Stardust Dash, Orbit Breaker, and Deep Field offer **Daily Vigil** from the cabinet or their mode switch. Each uses the same local-date encounter seed on repeat attempts and saves a separate best for that day (alongside existing records); it needs no account or network. Glass Labyrinth remixes the opening watcher positions for the daily run. Starforge instead retains its six authored contracts and independent replay/score chase. Campaign clears are counted per flagship cartridge on the mode screen.
 
 A run-based roguelite expedition from the Sun's doorstep to the Umbral Maw at Neptune. Arena **hunts** are the core game — sharp twin-stick movement, a burst dash with i-frames, telegraphed enemies (chasers, weavers, shards, maws), waves, and a two-phase boss. Around them: rule-rewriting **instruments** (drafts and the chandlery), trials that pay salvage, oddities with consequences, and sanctuaries. Death resets the run; what persists is knowledge, records, and new hulls in the hangar.
 

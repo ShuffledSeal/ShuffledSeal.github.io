@@ -1,7 +1,11 @@
 {
   "private": true,
   "scripts": {
+    "test": "npm run test:release",
     "test:browser": "node tests/browser-smoke.mjs",
+    "test:cabinet": "python3 tests/cartridge_cabinet.py",
+    "test:deepfield": "python3 tests/deepfield-release.py",
+    "test:release": "python3 tests/deepfield-release.py && python3 tests/release-audit.py && python3 tests/browser-integration.py && python3 tests/cartridge_cabinet.py",
     "test:cartridges": "node tests/cartridge-depth.mjs",
     "test:trials": "node tests/verify-trial-registry.mjs",
     "test:hunt": "node tests/hunt-depth.mjs",

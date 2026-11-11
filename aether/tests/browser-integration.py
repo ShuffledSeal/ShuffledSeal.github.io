@@ -40,8 +40,8 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             page.goto(f'{base}/grand-tour.html', wait_until='networkidle')
             assert page.get_by_role('link', name='Begin your expedition', exact=False).count() > 0
             page.goto(f'{base}/index.html?standalone=1#voyage', wait_until='networkidle')
-            assert page.locator('.cartridge-card').count() == 5
-            assert page.locator('.cartridge-daily-link').count() == 4
+            assert page.locator('.cartridge-card').count() == 10
+            assert page.locator('.cartridge-daily-link').count() == 9
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
 
             for cartridge in ('shooter', 'bastion', 'labyrinth', 'chain'):
@@ -73,6 +73,12 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                     page.locator('[data-chain-formation="halo"]').click()
                     assert canvas.get_attribute('data-chain-formation') == 'halo'
 
+            page.goto(f'{base}/index.html?standalone=1&cartridge=deepfield&mode=campaign#voyage', wait_until='networkidle')
+            assert page.locator('.deepfield-cell').count() == 81
+            page.locator('.deepfield-cell').nth(40).click()
+            assert int(page.locator('.deepfield-grid').get_attribute('data-revealed')) > 0
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Deep Field: phone overflow'
+
             page.goto(f'{base}/index.html?standalone=1&cartridge=starforge#voyage', wait_until='networkidle')
             assert page.locator('.starforge-canvas').count() == 1
 
@@ -88,7 +94,7 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             legacy.close()
             assert not errors, f'uncaught browser exceptions: {errors}'
             browser.close()
-            print('Browser integration passed: cabinet, four campaigns, controls, seeded rooms, Starforge, legacy saves, phone layout and console.')
+            print('Browser integration passed: ten-cartridge cabinet, five campaigns, Deep Field input, controls, seeded rooms, Starforge, legacy saves, phone layout and console.')
     finally:
         server.shutdown()
         thread.join(timeout=2)

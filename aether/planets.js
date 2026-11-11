@@ -98,7 +98,21 @@ window.AetherPlanets = (() => {
     if(!['mars','saturn','uranus','neptune'].includes(s.id))return '';
     return `<div class="puzzle-direction-pad" role="group" aria-label="${s.id==='uranus'?'Tilt direction':'Movement controls'}">${[3,0,2,1].map(d=>`<button class="button" data-puzzle-direction="${d}" aria-label="${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[d]}">${['↑','→','↓','←'][d]}</button>`).join('')}<span>${s.id==='saturn'?`Selected: ${s.selected===0?'probe P':`block ${s.selected}`}`:s.id==='uranus'?'All capsules move together':s.id==='neptune'?`${Math.max(0,s.par+3-s.moves)} fuel charges`:'Move the rover'}</span></div>`;
   }
-  function syncPieces(s,won) {
+  function glidePiece(el,x,y,animate) {
+    const oldX=Number(el.dataset.x??x),oldY=Number(el.dataset.y??y),moving=animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&(oldX!==x||oldY!==y);
+    // Capture the actual visual position, including an in-flight transform,
+    // before committing the next logical target. Rapid inputs never snap to
+    // the previous destination first.
+    const current=moving?el.getBoundingClientRect():null;
+    if(moving)el.getAnimations().forEach(animation=>animation.cancel());
+    el.dataset.x=x;el.dataset.y=y;el.style.setProperty('--x',x);el.style.setProperty('--y',y);
+    if(!moving)return;
+    const target=el.getBoundingClientRect(),dx=current.left-target.left,dy=current.top-target.top;
+    el.classList.add('is-gliding');
+    const animation=el.animate([{transform:`translate(${dx}px,${dy}px)`,offset:0},{transform:'translate(0,0)',offset:1}],{duration:300,easing:'cubic-bezier(.2,.78,.25,1)'});
+    animation.onfinish=()=>{el.classList.remove('is-gliding');animation.cancel();};
+  }
+  function syncPieces(s,won,animate=false) {
     const wrap=document.querySelector('#puzzle-board');if(!wrap)return;
     let layer=wrap.querySelector('.pieces-layer');
     const hasPieces=['mars','uranus','neptune','saturn'].includes(s.id);
@@ -113,7 +127,7 @@ window.AetherPlanets = (() => {
     if(s.id==='saturn') {
       layer.querySelectorAll('.ring-block').forEach((el,i)=>{
         const b=s.def.blocks[i],p=s.board.positions[i];
-        el.style.setProperty('--x',b.axis==='h'?p:b.x);el.style.setProperty('--y',b.axis==='v'?p:b.y);
+        glidePiece(el,b.axis==='h'?p:b.x,b.axis==='v'?p:b.y,animate);
         el.classList.toggle('selected',s.selected===i);el.classList.toggle('hinted',s.hintCell===i);
         el.setAttribute('aria-pressed',String(s.selected===i));
       });
@@ -121,14 +135,14 @@ window.AetherPlanets = (() => {
     }
     const pieces=layer.querySelectorAll('.piece');
     if(s.id==='mars') {
-      s.board.crates.forEach((p,i)=>{const{x,y}=pos(p),el=pieces[i];el.style.setProperty('--x',x);el.style.setProperty('--y',y);el.classList.toggle('stored',s.def.goals.includes(p));});
+      s.board.crates.forEach((p,i)=>{const{x,y}=pos(p),el=pieces[i];glidePiece(el,x,y,animate);el.classList.toggle('stored',s.def.goals.includes(p));});
       const rover=pieces[s.board.crates.length],{x,y}=pos(s.board.player);
-      rover.style.setProperty('--x',x);rover.style.setProperty('--y',y);rover.style.setProperty('--face',[270,0,90,180][s.face]+'deg');
+      glidePiece(rover,x,y,animate);rover.style.setProperty('--face',[270,0,90,180][s.face]+'deg');
     } else if(s.id==='uranus') {
-      s.board.balls.forEach((p,i)=>{const{x,y}=pos(p),el=pieces[i];el.style.setProperty('--x',x);el.style.setProperty('--y',y);el.classList.toggle('docked',s.def.goals.includes(p));});
+      s.board.balls.forEach((p,i)=>{const{x,y}=pos(p),el=pieces[i];glidePiece(el,x,y,animate);el.classList.toggle('docked',s.def.goals.includes(p));});
     } else {
       const probe=pieces[0],{x,y}=pos(s.board.player);
-      probe.style.setProperty('--x',x);probe.style.setProperty('--y',y);probe.style.setProperty('--face',[270,0,90,180][s.face]+'deg');
+      glidePiece(probe,x,y,animate);probe.style.setProperty('--face',[270,0,90,180][s.face]+'deg');
     }
   }
   function paint(message,focusSelector) {
@@ -142,10 +156,13 @@ window.AetherPlanets = (() => {
     const won=P.won(s.id,s.def,s.board);
     const wrap=document.querySelector('#puzzle-board');
     const gridHTML=P.boardHTML(s.id,s.def,s.board,{selected:s.selected,hintCell:s.hintCell,deal:s.justDealt,won,changed:s.changed,face:s.face,plan:s.plan});
-    const oldGrid=wrap.querySelector('.puzzle-grid, .orbital-dials');
+    const oldGrid=wrap.querySelector('.puzzle-grid, .orbital-dials'),animatePieces=Boolean(s.motion)&&!s.justDealt;
     if(oldGrid)oldGrid.outerHTML=gridHTML;else wrap.innerHTML=gridHTML;
-    syncPieces(s,won);
-    s.justDealt=false;s.changed=null;
+    wrap.querySelector('.puzzle-grid, .orbital-dials')?.classList.toggle('is-blocked',Boolean(s.blocked));
+    syncPieces(s,won,animatePieces);
+    if(won&&!wrap.querySelector('.puzzle-celebration'))wrap.insertAdjacentHTML('beforeend',`<div class="puzzle-celebration" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="--spark:${i};--angle:${i*20}deg"></i>`).join('')}</div>`);
+    if(!won)wrap.querySelector('.puzzle-celebration')?.remove();
+    s.justDealt=false;s.changed=null;s.motion=false;s.blocked=false;
     const guide=document.querySelector('#puzzle-instruction');if(guide)guide.textContent=P.instruction(s.id,s.def,s.board);
     document.querySelector('#puzzle-controls').innerHTML=controls(s);
     document.querySelector('#puzzle-moves').textContent=s.moves;
@@ -180,10 +197,10 @@ window.AetherPlanets = (() => {
     if(s.actions.length>=1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
     if(s.id==='neptune'&&s.moves>=s.par+3) {paint('Out of fuel. Undo a leg or restart to plan a shorter route.');return;}
     const before=s.board, next=P.transition(s.id,s.def,s.board,action);
-    if(!next) {if(action.type==='move'||action.type==='block')paint('That direction is blocked. Try another direction or undo.');return;}
+    if(!next) {s.blocked=true;paint(action.type==='move'||action.type==='block'?'That direction is blocked. Try another direction or undo.':'That piece is fixed in this configuration. Try another instrument.');return;}
     hintController?.abort();s.hintCell=-1;
     s.history.push({board:before,moves:s.moves,action});s.actions.push(action);s.future=[];
-    s.moves+=P.actionCost(s.id,before,next);s.board=next;
+    s.moves+=P.actionCost(s.id,before,next);s.board=next;s.motion=true;
     if(action.type==='move')s.face=action.value;
     if(s.id==='mercury')s.changed=new Set(s.board.lights.flatMap((v,i)=>v!==before.lights[i]?[i]:[]));
     else if(s.id==='venus')s.changed=new Set([action.value]);
@@ -199,7 +216,7 @@ window.AetherPlanets = (() => {
   }
   function queueBurn(i) {
     const s=current;if(!s||s.id!=='jupiter'||P.won(s.id,s.def,s.board))return;
-    s.plan[i]=(s.plan[i]||0)+1;
+    s.plan[i]=(s.plan[i]||0)+1;s.changed=new Set([i]);
     paint();
   }
   function launchPlan() {
@@ -210,7 +227,7 @@ window.AetherPlanets = (() => {
     if(s.actions.length+total>1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
     // Each queued burn is committed as its own action, so undo steps back one
     // burn at a time and saved drafts keep the same plain action format.
-    const {actions}=P.orbitPlan(s.def,s.board,counts);
+    const {actions}=P.orbitPlan(s.def,s.board,counts),phasesBefore=s.board.phases.slice();
     hintController?.abort();s.hintCell=-1;s.future=[];
     for(const action of actions) {
       const next=P.transition(s.id,s.def,s.board,action);if(!next)break;
@@ -218,7 +235,7 @@ window.AetherPlanets = (() => {
       s.moves+=P.actionCost(s.id,s.board,next);s.board=next;
     }
     const names=counts.map((c,i)=>c?`${P.moonNames[i]} ×${c}`:null).filter(Boolean).join(', ');
-    s.plan=[];
+    s.changed=new Set(s.board.phases.flatMap((phase,i)=>phase!==phasesBefore[i]?[i]:[]));s.motion=true;s.plan=[];
     const won=P.won(s.id,s.def,s.board);
     if(won) { recordWin(s); if(s.hosted) hostHooks.onSolve?.({moves:s.moves,hints:s.hints,par:s.par}); }
     stash(s);
@@ -306,11 +323,11 @@ window.AetherPlanets = (() => {
       const previous=s.history.pop();
       if(previous.restart){const old=previous.restart;s.board=old.board;s.moves=old.moves;s.actions=old.actions;s.hints=old.hints;s.future=[];}
       else {s.future.push({board:s.board,moves:s.moves,action:previous.action});s.board=previous.board;s.moves=previous.moves;s.actions.pop();}
-      stash(s);paint('Move undone. '+P.progress(s.id,s.def,s.board));return;
+      s.motion=true;stash(s);paint('Move undone. '+P.progress(s.id,s.def,s.board));return;
     }
     if(action==='redo' && s.future.length) {
       const next=s.future.pop();s.history.push({board:s.board,moves:s.moves,action:next.action});s.board=next.board;s.moves=next.moves;s.actions.push(next.action);
-      if(P.won(s.id,s.def,s.board))recordWin(s);stash(s);paint('Move restored.');
+      s.motion=true;if(P.won(s.id,s.def,s.board))recordWin(s);stash(s);paint('Move restored.');
     }
   }
   function onClick(event) {

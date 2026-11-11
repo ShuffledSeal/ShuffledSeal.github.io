@@ -56,6 +56,10 @@ body[data-observatory-theme="rose"] .workspace { background: radial-gradient(ell
 .cartridge-bastion::before { background: radial-gradient(circle at 82% 0%, #d58c562b, transparent 57%); }
 .cartridge-labyrinth::before { background: radial-gradient(circle at 82% 0%, #a67cc72b, transparent 57%); }
 .cartridge-starforge::before { background: radial-gradient(circle at 82% 0%, #e0a55230, transparent 57%); }
+.cartridge-merge::before { background: radial-gradient(circle at 82% 0%, #e9a17f2c, transparent 57%); }
+.cartridge-hop::before { background: radial-gradient(circle at 82% 0%, #b5a0df2c, transparent 57%); }
+.cartridge-dash::before { background: radial-gradient(circle at 82% 0%, #82cbb62c, transparent 57%); }
+.cartridge-breaker::before { background: radial-gradient(circle at 82% 0%, #8eaade2c, transparent 57%); }
 .cartridge-card p, .cartridge-card footer small, .cartridge-footer, .cartridge-playbill span, .cartridge-record span { color: #aebbad; }
 .cartridge-card > span:not(.cartridge-icon) { color: #c8c5b4; }
 .cartridge-card h2, .cartridge-icon, .cartridge-card footer, .cartridge-playbill, .cartridge-record strong, .cartridge-recap h2, .cartridge-recap dd { color: var(--brass-light); }
@@ -70,3 +74,111 @@ body[data-observatory-theme="rose"] .workspace { background: radial-gradient(ell
 .button:not(.button-primary), .mode-switch .button { background: #d1b2770a; border-color: #d1b27745; color: #dfd5bd; }
 .button:not(.button-primary):hover, .mode-switch .button:hover { background: #d1b27717; border-color: var(--brass); }
 @media (max-width: 760px) { .cartridge-cabinet { grid-template-columns: 1fr; } }
+
+/* ── Cartographer's release: readable black-book theatre ────────────────── */
+:root { --ink-deep:#070a09; --ink:#0d120f; --ink-raised:#141b16; --vellum:#eee4cc; --brass:#cbae70; --brass-light:#f0d9a4; --oxblood:#6d3530; }
+body { background:var(--ink-deep); }
+.standalone-game body { background:radial-gradient(ellipse at 85% 0,#70572b13,transparent 38%),radial-gradient(ellipse at 0 75%,#30463812,transparent 42%),#070a09; }
+.workspace { position:relative;isolation:isolate; }
+.workspace::before { content:'';position:fixed;inset:0 0 0 var(--sidebar-width);z-index:-1;pointer-events:none;opacity:.32;background:radial-gradient(circle at 92% 8%,transparent 0 80px,#b79a5d09 80px 81px,transparent 81px 112px,#b79a5d08 112px 113px,transparent 113px),repeating-conic-gradient(from 0deg at 92% 8%,#b79a5d07 0 .35deg,transparent .35deg 15deg);mask:linear-gradient(#000,transparent 62%); }
+.button { min-height:42px;font-size:11px;border-radius:2px; }
+.eyebrow,.section-label { font-size:9px; }
+.view-header p { font-size:12px;line-height:1.8; }
+.standalone-game .tour-standalone-nav { min-height:66px;font-size:9px;border-bottom-color:#cbae7040; }
+.standalone-game .tour-standalone-nav a { min-height:44px;display:inline-flex;align-items:center; }
+.standalone-game .tour-standalone-nav a:first-child::before { content:'☉';margin-right:10px;font-size:18px;color:var(--brass); }
+.standalone-game .tour-page .view-header { padding-top:38px; }
+
+/* Cabinet index: three generous plates, not a wall of narrow tiles. */
+.cabinet-intro { position:relative;border-bottom:1px solid var(--edge);padding-bottom:30px;margin-bottom:0; }
+.cabinet-intro h1 { max-width:900px; }
+.cabinet-intro > div:first-child > p:last-child { max-width:690px; }
+.cabinet-edition { position:relative;display:grid;place-items:center;align-content:center;width:126px;height:126px;flex:0 0 auto;border:1px solid #cbae7045;border-radius:50%;color:var(--brass);background:repeating-conic-gradient(from 0deg,#cbae7035 0 .5deg,transparent .5deg 15deg);box-shadow:inset 0 0 0 10px #090d0b,inset 0 0 0 11px #cbae7025; }
+.cabinet-edition::before,.cabinet-edition::after { content:'';position:absolute;inset:22px -9px;border:1px solid #cbae7035;border-radius:50%;transform:rotate(-28deg); }
+.cabinet-edition::after { inset:-8px 39px;transform:rotate(28deg); }
+.cabinet-edition > span { font-size:15px;line-height:1; }.cabinet-edition b { font:35px/1 var(--serif);font-weight:400; }.cabinet-edition small { margin-top:4px;text-align:center;font-size:6px;letter-spacing:.18em;line-height:1.5; }
+.cabinet-filters { display:flex;gap:0;margin:0 0 24px;border-bottom:1px solid var(--edge);overflow-x:auto;scrollbar-width:thin; }
+.cabinet-filters button { display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;padding:0 18px;border-bottom:2px solid transparent;color:#aeb3a1;font-size:11px;white-space:nowrap; }
+.cabinet-filters button span { display:grid;place-items:center;min-width:21px;height:21px;border:1px solid #cbae7030;border-radius:50%;color:#c8b686;font-size:9px; }
+.cabinet-filters button:hover { color:var(--vellum);background:#cbae7008; }.cabinet-filters button[aria-pressed=true] { color:var(--brass-light);border-bottom-color:var(--brass);background:linear-gradient(0deg,#cbae7010,transparent); }
+.cartridge-cabinet { grid-template-columns:repeat(3,minmax(0,1fr));gap:18px; }
+.cartridge-card { --card-accent:#d8bd81;--card-glow:#c3a25c25;display:grid;grid-template-columns:68px minmax(0,1fr);grid-template-rows:1fr auto;gap:0 18px;width:100%;min-height:330px;padding:23px;border-radius:2px;background:linear-gradient(145deg,#cbae7009,transparent 45%),linear-gradient(155deg,#151d17,#090e0c 80%); }
+.cartridge-card::before { background:radial-gradient(circle at 85% 0,var(--card-glow),transparent 58%); }
+.cartridge-card::after { inset:8px;border-color:#d5b87520; }
+.cartridge-card:hover { transform:translateY(-3px);border-color:var(--card-accent);box-shadow:inset 0 1px #fff0c810,0 18px 40px #0007; }
+.cartridge-shooter { --card-accent:#e5c98c;--card-glow:#b8873530; }.cartridge-bastion { --card-accent:#d99d76;--card-glow:#a75d3830; }.cartridge-labyrinth { --card-accent:#c0a8d8;--card-glow:#73528b35; }.cartridge-starforge { --card-accent:#e4b76e;--card-glow:#c97c2d30; }.cartridge-chain { --card-accent:#b9d4c1;--card-glow:#527b6930; }.cartridge-merge { --card-accent:#e1aa8a;--card-glow:#9b5c4730; }.cartridge-hop { --card-accent:#c3b1e0;--card-glow:#76609930; }.cartridge-dash { --card-accent:#9ed3b9;--card-glow:#3e806b30; }.cartridge-breaker { --card-accent:#a8bce2;--card-glow:#4f6d9e30; }.cartridge-deepfield { --card-accent:#e0c183;--card-glow:#743c3438; }
+.cartridge-emblem { position:relative;display:grid;place-items:center;width:66px;height:66px;border:1px solid color-mix(in srgb,var(--card-accent) 50%,transparent);border-radius:50%;color:var(--card-accent);background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--card-accent) 25%,transparent) 0 .7deg,transparent .7deg 30deg);box-shadow:inset 0 0 0 7px #0a0f0c,inset 0 0 0 8px color-mix(in srgb,var(--card-accent) 18%,transparent); }
+.cartridge-emblem::before,.cartridge-emblem::after { content:'';position:absolute;inset:15px -7px;border:1px solid color-mix(in srgb,var(--card-accent) 30%,transparent);border-radius:50%;transform:rotate(-25deg); }
+.cartridge-emblem::after { inset:-6px 22px;transform:rotate(25deg); }.cartridge-emblem i { position:relative;z-index:1;font:29px var(--serif);font-style:normal;text-shadow:0 0 18px var(--card-glow); }
+.cartridge-copy { min-width:0; }.cartridge-copy > p { color:var(--card-accent);font-size:8px;letter-spacing:.16em;line-height:1.5; }
+.cartridge-card h2 { margin:9px 0 12px;color:#eee2c6;font-size:31px;line-height:.98;letter-spacing:-.02em; }
+.cartridge-card .cartridge-brief { display:block;color:#c2c4b2;font-size:12px;line-height:1.7;max-width:none; }
+.cartridge-card .cartridge-features { display:flex;flex-wrap:wrap;gap:5px;margin-top:15px; }
+.cartridge-card .cartridge-features b { padding:3px 6px;border:1px solid color-mix(in srgb,var(--card-accent) 20%,transparent);color:#aeb6a4;background:#0002;font-size:8px;font-weight:400;line-height:1.4; }
+.cartridge-card footer { grid-column:1/-1;align-self:end;width:100%;margin:20px 0 0;padding:16px 0 0;border-top:1px solid #cbae7025;color:var(--card-accent);font-size:9px; }
+.cartridge-card footer small { color:#9fa895;font-size:8px; }.cartridge-card footer > b { font-weight:500; }
+.cartridge-daily-link,.cartridge-contract-note { display:flex;align-items:center;min-height:42px;padding:10px 14px;border:1px solid #cbae7035;border-top:0;background:#111711;color:#b7ad90;font-size:8px;letter-spacing:.08em;line-height:1.5; }
+.cartridge-daily-link:hover,.cartridge-daily-link:focus-visible { background:#2b2117;color:#eed59f;outline-color:var(--brass-light); }.cartridge-contract-note { color:#8f9a87;background:#0c110e; }
+.cartridge-header { border-bottom:1px solid var(--edge);padding-bottom:25px; }.cartridge-header h1 { color:#f0e5cb; }.cartridge-header .cartridge-modes { margin-top:20px; }.cartridge-modes .button { min-width:112px; }.cartridge-record { border-left-color:#cbae7040;background:linear-gradient(90deg,#cbae7008,transparent); }
+.cartridge-stage { position:relative;border-color:#cbae7040;background:radial-gradient(circle at 50% -20%,#cbae7010,transparent 45%),#090e0c;box-shadow:inset 0 0 0 5px #cbae7005,0 24px 60px #0007; }
+.cartridge-playbill { border-color:#cbae7040;background:linear-gradient(90deg,#201811,#0d1511 50%,#201811); }.cartridge-playbill strong { color:#d9c498; }.cartridge-detail { margin:0 0 20px;color:#b9c0aa!important;font-size:12px!important; }
+.tour-expedition-divider { margin-top:14px;border-top-color:#cbae7040; }.hangar-card,.tour-oddity,.tour-cache-card,.tour-stats>div { background-color:#111812; }
+
+/* Direct arcade: play above the fold; catalogue copy becomes supporting text. */
+.standalone-game .arcade-page { max-width:1320px;margin:0 auto; }
+.standalone-game .arcade-page > .exp-heading { margin:25px 0 20px;padding-bottom:20px;border-bottom:1px solid var(--edge); }
+.standalone-game .arcade-page > .exp-heading h1 { margin:8px 0 10px;font-size:clamp(32px,3.5vw,48px); }
+.standalone-game .arcade-page > .exp-heading h1 br { display:none; }.standalone-game .arcade-page > .exp-heading h1 em::before { content:' '; }
+.standalone-game .arcade-page > .exp-heading .exp-subtitle { font-size:12px; }
+.arcade-selector { gap:12px;margin-bottom:20px; }
+.arcade-choice { min-height:94px;border-radius:2px;border-color:#cbae7030;background:linear-gradient(135deg,var(--accent-wash),transparent 60%),#101612; }
+.arcade-choice.selected { border-color:var(--accent);box-shadow:inset 0 -2px var(--accent); }.arcade-choice:hover { transform:translateY(-2px); }
+.choice-art { width:84px;height:72px; }.choice-art > svg { transform:scale(1.12); }.choice-copy small { font-size:8px;letter-spacing:.09em; }.choice-copy strong { font-size:23px; }
+.game-cabinet,.instrument-panel { border-radius:2px; }.game-cabinet { border-color:#cbae7045;background:linear-gradient(145deg,#182019,#0b110e);box-shadow:0 20px 55px #0005; }
+.game-topline { padding:12px 16px;background:#0a0f0c; }.game-label { font-size:21px; }.game-tools .button { min-height:38px;font-size:10px; }
+.game-scoreboard { padding:17px 24px;background:radial-gradient(ellipse at 50% 0,var(--accent-wash),transparent 70%),#101611; }.game-scoreboard small { font-size:9px;letter-spacing:1.2px; }.game-scoreboard strong { font-family:var(--serif);font-size:36px;font-weight:400; }
+.game-screen { border-inline-color:#cbae7030;background:#080d0c; }.game-overlay { background:radial-gradient(circle at 50% 20%,var(--accent-wash),transparent 45%),linear-gradient(#101813ed,#070b09f2);backdrop-filter:blur(3px); }
+.game-overlay .overlay-emblem { text-shadow:0 0 25px var(--accent-wash); }.game-overlay .overlay-footnote { font-size:10px!important; }.game-bottom > p { font-size:11px; }.game-bottom > p > span { font-size:9px; }
+.game-tip p,.instrument-panel > p { font-size:12px; }.tiny-note,.instrument-panel .tiny-note { font-size:11px; }.pact-rail button,.pact-rail span { min-height:40px;font-size:11px; }
+.arcade-aside .instrument-panel { background:linear-gradient(145deg,#cbae7007,transparent 50%),#101611; }.arcade-contract { border-color:#cbae7030; }.relic-entry { border-color:#cbae7030; }
+
+.cartridge-choice:last-child { grid-column:1/-1; }
+.cartridge-choice:last-child .cartridge-card { min-height:230px;grid-template-columns:82px minmax(0,1fr); }
+.cartridge-choice:last-child .cartridge-emblem { width:74px;height:74px; }
+.cartridge-choice:last-child .cartridge-brief { max-width:68ch; }
+.cartridge-cabinet:has(.cartridge-choice[hidden]) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+@media (max-width:1100px) {
+  .cartridge-cabinet { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .cabinet-edition { width:104px;height:104px; }.cartridge-card { min-height:310px; }
+  .choice-art { width:65px; }.choice-copy strong { font-size:20px; }.choice-copy small { font-size:7px; }
+}
+@media (max-width:760px) {
+  .workspace::before { left:0; }
+  .cabinet-intro { padding-bottom:22px; }.cabinet-edition { display:none; }.cabinet-intro h1 { font-size:46px; }
+  .cabinet-filters { margin-bottom:18px; }.cabinet-filters button { min-height:46px;padding:0 13px;font-size:10px; }
+  .cartridge-cabinet,.cartridge-cabinet:has(.cartridge-choice[hidden]) { grid-template-columns:1fr;gap:15px; }.cartridge-card { min-height:250px;grid-template-columns:58px minmax(0,1fr);gap:0 14px;padding:19px; }
+  .cartridge-choice:last-child { grid-column:auto; }.cartridge-choice:last-child .cartridge-card { min-height:250px;grid-template-columns:58px minmax(0,1fr); }.cartridge-choice:last-child .cartridge-emblem { width:56px;height:56px; }
+  .standalone-game .tour-page .cartridge-header { padding-top:20px;padding-bottom:17px;margin-bottom:17px; }
+  .standalone-game .cartridge-header h1 { margin:8px 0;font-size:44px; }
+  .standalone-game .cartridge-header .cartridge-modes { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:13px 0; }
+  .standalone-game .cartridge-header .cartridge-modes .button { min-width:0;padding:8px 5px;font-size:9px; }
+  .cartridge-header .mode-date { display:none; }
+  .standalone-game .cartridge-header .cartridge-record { display:flex;align-items:center;gap:12px;width:max-content;max-width:100%;margin-top:12px;padding:8px 12px; }
+  .standalone-game .cartridge-header .cartridge-record strong { margin:0;font-size:25px; }.standalone-game .cartridge-header .cartridge-clears { margin:0; }
+  .cartridge-emblem { width:56px;height:56px; }.cartridge-emblem i { font-size:24px; }.cartridge-card h2 { font-size:29px; }.cartridge-card .cartridge-brief { font-size:12px; }.cartridge-card footer { margin-top:17px; }
+  .standalone-game .arcade-page > .exp-heading { margin-top:20px; }.standalone-game .arcade-page > .exp-heading .passport-pill { display:none; }
+  .standalone-game .arcade-page > .exp-heading h1 { font-size:38px; }.standalone-game .arcade-page > .exp-heading .exp-subtitle { font-size:11px; }
+  .arcade-selector { gap:8px; }.arcade-choice { min-height:104px; }.choice-art { width:70px;height:64px; }.choice-copy strong { font-size:20px; }
+  .game-scoreboard { padding:15px;gap:15px; }.game-scoreboard small { font-size:8px; }.game-scoreboard strong { font-size:30px; }.game-next strong { font-size:12px; }
+  .game-tools { flex-wrap:wrap; }.game-tools .button { min-height:40px; }.game-topline { align-items:flex-start; }
+}
+@media (max-width:430px) {
+  .standalone-game .tour-standalone-nav { gap:8px;font-size:7px;letter-spacing:.1em; }.standalone-game .tour-standalone-nav a:first-child::before { display:none; }
+  .cabinet-intro h1 { font-size:41px; }.cartridge-card { grid-template-columns:48px minmax(0,1fr);padding:17px;gap:0 12px; }.cartridge-emblem { width:46px;height:46px; }.cartridge-emblem i { font-size:20px; }.cartridge-card h2 { font-size:27px; }.cartridge-card .cartridge-features b { font-size:7px; }
+  .cartridge-card footer { font-size:8px; }.cartridge-daily-link,.cartridge-contract-note { font-size:7px; }
+  .choice-art { display:none; }.arcade-choice { min-height:76px;padding:12px; }.choice-copy small { font-size:7px; }.choice-copy strong { font-size:22px; }
+  .game-label { font-size:18px; }.game-tools .button { font-size:9px;padding:6px; }.game-scoreboard { gap:10px;padding-inline:12px; }.game-scoreboard strong { font-size:27px; }.game-next { max-width:40%; }
+}
+@media (hover:none) { .cartridge-card:hover,.arcade-choice:hover { transform:none; } }
+@media (prefers-reduced-motion:reduce) { .cartridge-card:hover,.arcade-choice:hover { transform:none; }.workspace::before { opacity:.2; } }

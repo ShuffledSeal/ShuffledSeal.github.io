@@ -15,11 +15,16 @@ window.AetherVoyage = (() => {
   const HULLS = window.AetherSkirmish.HULLS;
   const SECTORS = window.AetherSkirmish.SECTORS;
   const CARTRIDGES = {
-    shooter: { name: 'Starfall Skirmish', eyebrow: '01 · ACTION', icon: '✦', brief: 'Pilot through hostile formations, build your arsenal between waves, and turn dangerous close calls into FLOW.', goal: 'Clear every wave. Choose a field refit between encounters and use your dash to cross enemy fire.', controls: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER FIRE · SPACE / RIGHT CLICK DASH', trial: null },
-    bastion: { name: 'Aether Bastion', eyebrow: '02 · STRATEGY', icon: '◇', brief: 'Forecast the siege, build complementary towers, and commit your alloy to a defence that can survive the next assault.', goal: 'Protect the eight-heart core through the siege. Build before launching; inspect lanes, armour and tower refinements.', controls: '1–4 BUILD · CLICK PLACE / SELECT · Q / E REFINE · R TARGET · SPACE PULSE', trial: 'bastion' },
-    labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · STEALTH ROGUELITE', icon: '◈', brief: 'Infiltrate a shifting archive. Steal keys, draft relics, and decide whether an optional ward is worth crossing a Watcher’s patrol.', goal: 'Collect each chamber’s required keys and reach its eastern gate. Walls block sight; decoys create openings. Seals protect against one alarm.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL · F DECOY · P PAUSE', trial: 'labyrinth' },
-    starforge: { name: 'Starforge', eyebrow: '04 · FACTORY', icon: '✦', brief: 'Build an orbital factory. Align moving machinery, route starlight, and contain the heat you create.', controls: 'SELECT DEVICE · CLICK ORBIT · SPACE IGNITES / PAUSES', trial: null },
-    chain: { name: 'Constellation Chain', eyebrow: '05 · SURVIVAL', icon: '✧', brief: 'Shape a living constellation. Choose a formation, weave between threats, and draft a build that changes how your stars fight.', goal: 'Clear the encounters and defeat the final guardian. Your formation determines where your links can protect you.', controls: 'MOUSE / WASD MOVE · READ THE FORMATION AND DRAFT CONTROLS BELOW · P PAUSE', trial: 'chain' },
+    shooter: { name: 'Starfall Skirmish', eyebrow: '01 · ACTION', icon: '✦', family: 'action', brief: 'Pilot hostile formations, master four weapons, and turn dangerous close calls into FLOW.', goal: 'Clear every wave. Choose a field refit between encounters and use your dash to cross enemy fire.', controls: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER FIRE · SPACE / RIGHT CLICK DASH', features: ['4 weapons', '3 acts', 'Build drafts'], trial: null },
+    bastion: { name: 'Aether Bastion', eyebrow: '02 · STRATEGY', icon: '◇', family: 'strategy', brief: 'Forecast each siege and commit your alloy to a defence that survives the next assault.', goal: 'Protect the eight-heart core through the siege. Build before launching; inspect lanes, armour and tower refinements.', controls: '1–4 BUILD · CLICK PLACE / SELECT · Q / E REFINE · R TARGET · SPACE PULSE', features: ['6 sieges', 'Tower refining', 'Lane forecasts'], trial: 'bastion', playbill: { campaign: 'THE SIX SIEGES · BREAK THE CROWN ENGINE', endless: 'THE CITADEL HAS NO DAWN' } },
+    labyrinth: { name: 'Glass Labyrinth', eyebrow: '03 · STEALTH ROGUELITE', icon: '◈', family: 'action', brief: 'Infiltrate a shifting archive, steal its keys, and outwit the Watchers on your own route.', goal: 'Collect each chamber’s required keys and reach its eastern gate. Walls block sight; decoys create openings. Seals protect against one alarm.', controls: 'MOUSE / WASD MOVE · SPACE / RIGHT CLICK VEIL · F DECOY · P PAUSE', features: ['4 chambers', 'Relic builds', 'Seeded routes'], trial: 'labyrinth', playbill: { campaign: 'A SEALED ROUTE THROUGH THE SHIFTING ARCHIVE', endless: 'THE ARCHIVE REWRITES ITSELF · EVERY CIRCUIT SHARPENS THE WATCHERS' } },
+    starforge: { name: 'Starforge', eyebrow: '04 · FACTORY', icon: '✦', family: 'strategy', brief: 'Align an orbital factory, route living starlight, and contain the heat you create.', controls: 'SELECT DEVICE · CLICK ORBIT · SPACE IGNITES / PAUSES', features: ['6 contracts', 'Moving gates', 'Heat management'], trial: null },
+    chain: { name: 'Constellation Chain', eyebrow: '05 · SURVIVAL', icon: '✧', family: 'action', brief: 'Shape a living constellation, switch formations, and draft stars that fight as one.', goal: 'Clear the encounters and defeat the final guardian. Your formation determines where your links can protect you.', controls: 'MOUSE / WASD MOVE · READ THE FORMATION AND DRAFT CONTROLS BELOW · P PAUSE', features: ['5 encounters', '3 formations', '8 relics'], trial: 'chain', playbill: { campaign: 'FIVE ENCOUNTERS · FOUR RELIC DRAFTS · THE UNRAVELLER WAITS', endless: 'THE CHAIN HOLDS · EVERY CIRCUIT SHARPENS THE SKY' } },
+    merge: { name: 'Planet Drop', eyebrow: '06 · MERGE', icon: '●', family: 'arcade', brief: 'Stack little worlds, merge matching pairs, and keep the universe below the rim.', goal: 'Build the largest world you can without overflowing the jar.', controls: '← / → AIM · SPACE DROP · X NUDGE · P PAUSE', features: ['Relic builds', '3 forecasts', 'Chain reactions'], arcade: true },
+    hop: { name: 'Comet Surf', eyebrow: '07 · GRAVITY', icon: '➶', family: 'arcade', brief: 'Borrow a planet’s gravity, then release at the perfect tangent through the golden skyway.', goal: 'Hold to orbit, release to fly, and collect rings without losing all three hearts.', controls: 'HOLD SPACE / POINTER TO ORBIT · RELEASE TO LAUNCH · P PAUSE', features: ['Route choices', 'Relic builds', 'Easy orbit'], arcade: true },
+    dash: { name: 'Stardust Dash', eyebrow: '08 · CATCHER', icon: '✦', family: 'arcade', brief: 'Steer a moonboat through strange weather and master its curious gifts.', goal: 'Survive the forecast or complete the Moonboat Expedition and meet the Umbra Whale.', controls: '← / → STEER · SPACE / X DASH · P PAUSE', features: ['6 weathers', 'Power gifts', 'Whale finale'], arcade: true },
+    breaker: { name: 'Orbit Breaker', eyebrow: '09 · PINBALL', icon: '◈', family: 'arcade', brief: 'Keep the comet inside your orbit and shatter a living constellation.', goal: 'Angle paddle returns, break every crystal, and never lose the final comet.', controls: 'POINTER / ← / → PADDLE · X SLOW ORBIT · P PAUSE', features: ['Crystal waves', 'Multiball', 'Relic builds'], arcade: true },
+    deepfield: { name: 'Deep Field', eyebrow: '10 · MINESWEEPER', icon: '✹', family: 'strategy', brief: 'Chart a haunted firmament in a lavish, logical game of Minesweeper.', goal: 'Reveal every safe sector. First-click protection, chording, Oracle hints and expedition relics reward careful reading.', controls: 'CLICK REVEAL · RIGHT CLICK / F FLAG · C CHORD · H ORACLE · P PAUSE', features: ['3 board classes', 'Expedition relics', 'Touch + keyboard'], trial: 'deepfield', playbill: { campaign: 'THE THREE OCCULTATIONS · MERCATOR’S INSTRUMENTS AWAIT', endless: 'EVERY CHART DEEPENS · CHOOSE YOUR BOARD CLASS', daily: 'TODAY’S FIXED FIRMAMENT · ONE CHART, ONE LEDGER' } },
   };
 
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
@@ -102,8 +107,10 @@ window.AetherVoyage = (() => {
     const scores = Object.fromEntries(Object.keys(CARTRIDGES).map(id => [id, Number.isFinite(best[id]) ? safeInt(Math.round(best[id])) : 0]));
     // Keep a small local archive of daily scores; old cartridge records remain unchanged.
     const earliest = new Date(); earliest.setDate(earliest.getDate() - 45);
+    const dailyIds = Object.keys(CARTRIDGES).filter(id => id !== 'starforge' && !CARTRIDGES[id].arcade);
+    const dailyKey = new RegExp(`^(${dailyIds.join('|')}):(\\d{4}-\\d{2}-\\d{2})$`);
     for (const [key, value] of Object.entries(best)) {
-      const match = /^(shooter|bastion|labyrinth|chain):(\d{4}-\d{2}-\d{2})$/.exec(key);
+      const match = dailyKey.exec(key);
       if (match && match[2] >= dateKey(earliest) && Number.isFinite(value)) scores[key] = safeInt(Math.round(value));
     }
     for (const id of Object.keys(CARTRIDGES)) scores[`${id}:campaign`] = safeInt(best[`${id}:campaign`]);
@@ -115,13 +122,20 @@ window.AetherVoyage = (() => {
     const id = new URLSearchParams(location.search).get('cartridge');
     return id && CARTRIDGES[id] ? id : null;
   }
-  const cartridgeHref = id => `index.html?standalone=1&cartridge=${id}#voyage`;
-  const campaignHref = id => id === 'starforge' ? cartridgeHref(id) : `index.html?standalone=1&cartridge=${id}&mode=campaign#voyage`;
+  const cartridgeHref = id => `index.html?standalone=1&cartridge=${id}#${CARTRIDGES[id]?.arcade ? 'arcade' : 'voyage'}`;
+  const campaignHref = id => id === 'starforge' || CARTRIDGES[id]?.arcade ? cartridgeHref(id) : `index.html?standalone=1&cartridge=${id}&mode=campaign#voyage`;
   const dailyDate = () => dateKey(new Date());
   const dailyMode = id => id !== 'starforge' && new URLSearchParams(location.search).get('challenge') === 'daily';
   const campaignMode = id => id !== 'starforge' && !dailyMode(id) && new URLSearchParams(location.search).get('mode') === 'campaign';
   const dailySeed = (id, day) => { let hash = 2166136261; for (const char of `${id}:${day}`) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return hash >>> 0; };
-  const dailyHref = id => `index.html?standalone=1&cartridge=${id}&challenge=daily#voyage`;
+  const dailyHref = id => `index.html?standalone=1&cartridge=${id}&challenge=daily#${CARTRIDGES[id]?.arcade ? 'arcade' : 'voyage'}`;
+  function arcadeBest(id) {
+    try {
+      const data = JSON.parse(localStorage.getItem('aether-wonder-rooms-v1')) || {};
+      const best = data.best && typeof data.best === 'object' ? data.best : {};
+      return Math.max(Number(best[`${id}:v3`]) || 0, id === 'dash' ? Number(best['dash:v3:exp']) || 0 : 0);
+    } catch { return 0; }
+  }
   function recordCartridge(id, score, day = null, campaign = false, won = false) {
     const key = day ? `${id}:${day}` : campaign ? `${id}:campaign` : id;
     const previous = cartridgeRecords.best[key] || 0;
@@ -202,7 +216,10 @@ window.AetherVoyage = (() => {
   // ── Rendering ────────────────────────────────────────────────────────────
   function renderVoyage() {
     const direct = cartridgeId();
-    if (direct) return renderCartridge(direct);
+    if (direct) {
+      const content = renderCartridge(direct);
+      return new URLSearchParams(location.search).has('standalone') ? `<div class="tour-standalone-nav"><a href="grand-tour.html">✧ ÆTHER · THE GRAND TOUR</a><span>THE CARTOGRAPHER'S EDITION</span><a href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a></div>${content}` : content;
+    }
     if (!run && store.active) run = hydrate(store.active);
     const content = run?.over ? renderRecap(false) : run?.won ? renderRecap(true) : run?.node ? renderNode() : run ? renderChart() : renderLanding();
     if (new URLSearchParams(location.search).has('standalone')) {
@@ -219,15 +236,16 @@ window.AetherVoyage = (() => {
     const card = CARTRIDGES[id];
     const daily = dailyMode(id), campaign = campaignMode(id), day = dailyDate();
     const key = daily ? `${id}:${day}` : campaign ? `${id}:campaign` : id;
-    const modeLinks = id === 'starforge' ? '' : `<div class="cartridge-modes" aria-label="Challenge mode"><a class="button" href="${campaignHref(id)}" ${campaign ? 'aria-current="page"' : ''}>Campaign</a><a class="button" href="${cartridgeHref(id)}" ${!campaign && !daily ? 'aria-current="page"' : ''}>Endless run</a><a class="button" href="${dailyHref(id)}" ${daily ? 'aria-current="page"' : ''}>Daily Vigil · ${day}</a></div>`;
-    const modeNote = daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : campaign ? `<p>${card.goal || card.brief}</p>` : '';
+    const modeLinks = id === 'starforge' ? '' : `<div class="cartridge-modes" aria-label="Challenge mode"><a class="button" href="${campaignHref(id)}" ${campaign ? 'aria-current="page"' : ''}>Campaign</a><a class="button" href="${cartridgeHref(id)}" ${!campaign && !daily ? 'aria-current="page"' : ''}>Endless run</a><a class="button" href="${dailyHref(id)}" ${daily ? 'aria-current="page"' : ''}>Daily Vigil<span class="mode-date"> · ${day}</span></a></div>`;
+    const modeNote = daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : `<p>${card.goal || card.brief}</p>`;
     const recordLabel = daily ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST';
     const clears = campaign && cartridgeRecords.clears[id] ? `<span class="cartridge-clears">${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}</span>` : '';
     return `<div class="view-enter tour-page cartridge-page"><section class="view-header cartridge-header"><div><p class="eyebrow">ÆTHER CARTRIDGE · ${card.eyebrow}${daily ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h1>${card.name}.</h1><p>${card.brief}</p>${modeLinks}${modeNote}</div><div class="cartridge-record"><span>${recordLabel}</span><strong>${(cartridgeRecords.best[key] || 0).toLocaleString()}</strong>${clears}</div></section><div id="cartridge-stage" class="cartridge-stage" aria-live="polite"></div><div class="cartridge-footer"><a class="button" href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a><span>${card.controls}</span></div></div>`;
   }
 
   function renderLanding() {
-    return `<div class="view-enter tour-page"><section class="view-header"><div><p class="eyebrow">ÆTHER · GAME CARTRIDGES</p><h1>Choose a sky.<em> Learn its rules.</em></h1><p>Five distinct games — each with an authored campaign, an endless score chase and clean restarts. Pick a cartridge and play immediately.</p></div></section><section class="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<div class="cartridge-choice"><a class="cartridge-card cartridge-${id}" href="${campaignHref(id)}"><span class="cartridge-icon">${card.icon}</span><p>${card.eyebrow}</p><h2>${card.name}</h2><span>${card.brief}</span><footer><b>${id === 'starforge' ? 'PLAY NOW' : 'PLAY CAMPAIGN'}</b><small>BEST ${(cartridgeRecords.best[id === 'starforge' ? id : `${id}:campaign`] || 0).toLocaleString()}</small></footer></a>${id === 'starforge' ? '' : `<a class="cartridge-daily-link" href="${dailyHref(id)}">Daily Vigil · same sky for every attempt ↗</a>`}</div>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
+    const filters = [['all', 'Complete cabinet'], ['action', 'Action & infiltration'], ['strategy', 'Strategy & logic'], ['arcade', 'Relic arcade']];
+    return `<div class="view-enter tour-page"><section class="view-header cabinet-intro"><div><p class="eyebrow">ÆTHER · THE CARTOGRAPHER’S CABINET</p><h1>Ten heavens.<em> Choose your instrument.</em></h1><p>Immediate play, authored campaigns, endless expeditions and a fixed Daily Vigil. Every cartridge teaches its controls before you begin.</p></div><div class="cabinet-edition" aria-hidden="true"><span>✧</span><b>X</b><small>GAMES<br>IN ORBIT</small></div></section><nav class="cabinet-filters" aria-label="Filter the game cabinet">${filters.map(([id, label]) => `<button type="button" data-cabinet-filter="${id}" aria-pressed="${id === 'all'}" aria-controls="cartridge-cabinet">${label}<span>${id === 'all' ? Object.keys(CARTRIDGES).length : Object.values(CARTRIDGES).filter(card => card.family === id).length}</span></button>`).join('')}</nav><section class="cartridge-cabinet" id="cartridge-cabinet" aria-label="Playable Æther cartridges">${Object.entries(CARTRIDGES).map(([id, card]) => `<div class="cartridge-choice" data-cabinet-family="${card.family}"><a class="cartridge-card cartridge-${id}" href="${campaignHref(id)}" aria-label="Play ${card.name}${id === 'starforge' || card.arcade ? '' : ' campaign'}"><span class="cartridge-emblem" aria-hidden="true"><i>${card.icon}</i></span><div class="cartridge-copy"><p>${card.eyebrow}</p><h2>${card.name}</h2><span class="cartridge-brief">${card.brief}</span><span class="cartridge-features">${card.features.map(feature => `<b>${feature}</b>`).join('')}</span></div><footer><b>${id === 'starforge' || card.arcade ? 'PLAY NOW' : 'PLAY CAMPAIGN'}</b><small>BEST ${(card.arcade ? arcadeBest(id) : cartridgeRecords.best[id === 'starforge' ? id : `${id}:campaign`] || 0).toLocaleString()}</small></footer></a>${id === 'starforge' ? '<span class="cartridge-contract-note">SIX AUTHORED CONTRACTS · ONE CONNECTED CAMPAIGN</span>' : `<a class="cartridge-daily-link" href="${dailyHref(id)}">DAILY VIGIL · TODAY’S FIXED SKY ↗</a>`}</div>`).join('')}</section><div class="tour-expedition-divider"><span>OPTIONAL LONG-FORM MODE</span><strong>THE GRAND TOUR</strong><p>A twelve-leg expedition with route choices, instruments, and permanent Tour records.</p></div>
     <div class="tour-landing"><div>
       <p class="section-label">THE HANGAR · CHOOSE YOUR SKIFF</p><p class="tour-feature-lead">A twelve-leg odyssey across living starfields. Every instrument bends the rules. Every death writes another story.</p>
       <div class="hangar">${Object.entries(HULLS).map(([id, h]) => {
@@ -368,10 +386,13 @@ window.AetherVoyage = (() => {
     const day = dailyMode(id) ? dailyDate() : null;
     const campaign = campaignMode(id);
     const seed = day ? dailySeed(id, day) : (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-    const end = ({ won, score = 0 }) => {
+    const end = ({ won, score = 0, detail = '' }) => {
       const record = recordCartridge(id, score, day, campaign, won);
+      const recordValue = $('.cartridge-record strong'); if (recordValue) recordValue.textContent = record.best.toLocaleString();
+      if (campaign && won) { const clears = $('.cartridge-clears'); if (clears) clears.textContent = `${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}`; else $('.cartridge-record')?.insertAdjacentHTML('beforeend', `<span class="cartridge-clears">${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}</span>`); }
       const heading = won ? (campaign ? 'Campaign cleared.' : 'A new mark in the ledger.') : 'The sky keeps score.';
-      stage.innerHTML = `<div class="cartridge-recap"><p class="eyebrow">${won ? 'RUN COMPLETE' : 'RUN ENDED'}${day ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h2>${heading}</h2><dl><div><dt>RUN SCORE</dt><dd>${Math.round(score).toLocaleString()}</dd></div><div><dt>${day ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST'}</dt><dd>${record.best.toLocaleString()}</dd></div></dl><p>${record.newBest ? day ? 'NEW DAILY BEST' : campaign ? 'NEW CAMPAIGN BEST' : 'NEW PERSONAL BEST' : 'One more run is waiting.'}</p><div class="tour-recap-actions"><button class="button button-primary" data-tour="cartridge-replay">PLAY AGAIN</button><a class="button" href="index.html?standalone=1#voyage">CARTRIDGE CABINET</a></div></div>`;
+      stage.innerHTML = `<div class="cartridge-recap"><p class="eyebrow">${won ? 'RUN COMPLETE' : 'RUN ENDED'}${day ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h2 tabindex="-1">${heading}</h2><dl><div><dt>RUN SCORE</dt><dd>${Math.round(score).toLocaleString()}</dd></div><div><dt>${day ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST'}</dt><dd>${record.best.toLocaleString()}</dd></div></dl><p>${record.newBest ? day ? 'NEW DAILY BEST' : campaign ? 'NEW CAMPAIGN BEST' : 'NEW PERSONAL BEST' : 'One more run is waiting.'}</p>${detail ? `<p class="cartridge-detail">${esc(detail)}</p>` : ''}<div class="tour-recap-actions"><button class="button button-primary" data-tour="cartridge-replay">PLAY AGAIN</button><a class="button" href="index.html?standalone=1#voyage">CARTRIDGE CABINET</a></div></div>`;
+      $('.cartridge-recap h2', stage)?.focus({ preventScroll: true });
     };
     if (id === 'shooter') {
       // Controls live in the persistent cartridge footer; the brief stays a brief.
@@ -381,12 +402,8 @@ window.AetherVoyage = (() => {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ORBITAL FACTORY</span><strong>THE LAST CELESTIAL FOUNDRY</strong></div><div class="starforge-frame"></div>`;
       gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { onEnd: end });
     } else {
-      const playbill = id === 'bastion'
-        ? (campaign ? 'THE SIX SIEGES · BREAK THE CROWN ENGINE' : 'THE CITADEL HAS NO DAWN')
-        : id === 'chain'
-          ? (campaign ? 'FIVE ENCOUNTERS · FOUR RELIC DRAFTS · THE UNRAVELLER WAITS' : 'THE CHAIN HOLDS · EVERY CIRCUIT SHARPENS THE SKY')
-          : (campaign ? 'A SEALED ROUTE THROUGH THE SHIFTING ARCHIVE' : 'THE ARCHIVE REWRITES ITSELF · EVERY CIRCUIT SHARPENS THE WATCHERS');
-      stage.innerHTML = `<div class="cartridge-playbill"><span>${campaign ? 'CAMPAIGN CARTRIDGE' : 'ENDLESS CARTRIDGE'}</span><strong>${playbill}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
+      const playbill = day ? card.playbill?.daily || card.playbill?.endless : card.playbill?.[campaign ? 'campaign' : 'endless'] || `${card.name.toUpperCase()} · THE INSTRUMENTS ARE READY`;
+      stage.innerHTML = `<div class="cartridge-playbill"><span>${day ? 'DAILY VIGIL' : campaign ? 'CAMPAIGN CARTRIDGE' : 'ENDLESS CARTRIDGE'}</span><strong>${playbill}</strong></div><div class="trial-cabinet"><div class="trial-frame"></div></div>`;
       trialHandle = window.AetherTrials.create(card.trial, $('.trial-frame', stage), { sound: true, endless: !campaign, campaign, daily: Boolean(day), seed, verbs: new Set(), onEnd: end });
       // Focus the trial's own surface (a div for Deep Field), not canvas-only.
       (trialHandle?.canvas ?? $('.trial-frame canvas', stage))?.focus?.({ preventScroll: true });
@@ -522,6 +539,15 @@ window.AetherVoyage = (() => {
       requestAnimationFrame(() => ($('.tour-expedition-divider') || $('.tour-landing'))?.scrollIntoView({ behavior: 'instant', block: 'start' }));
     }
     main.addEventListener('click', event => {
+      const filterButton = event.target.closest('[data-cabinet-filter]');
+      if (filterButton) {
+        const filter = filterButton.dataset.cabinetFilter;
+        document.querySelectorAll('[data-cabinet-filter]').forEach(button => button.setAttribute('aria-pressed', String(button === filterButton)));
+        document.querySelectorAll('[data-cabinet-family]').forEach(choice => { choice.hidden = filter !== 'all' && choice.dataset.cabinetFamily !== filter; });
+        const visible = [...document.querySelectorAll('[data-cabinet-family]')].filter(choice => !choice.hidden).length;
+        $('#cartridge-cabinet')?.setAttribute('aria-label', `${visible} playable Æther cartridge${visible === 1 ? '' : 's'} shown`);
+        return;
+      }
       const difficultyBtn = event.target.closest('[data-difficulty]');
       if (difficultyBtn && !run) {
         pendingDifficulty = difficultyBtn.dataset.difficulty;

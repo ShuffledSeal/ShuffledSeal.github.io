@@ -41,7 +41,17 @@ try {
   assert.equal(await page.evaluate(() => window.location.hash), '', 'the bare Æther route must open the Observatory overview');
   await page.goto(`${base}/index.html#voyage`, { waitUntil: 'networkidle' });
   await assertVisible(page, '.cartridge-cabinet');
-  assert.equal(await page.locator('.cartridge-daily-link').count(), 4, 'the four roguelite cartridges must expose a Daily Vigil');
+  assert.equal(await page.locator('.cartridge-card').count(), 10, 'all ten cartridges must remain visible in the cabinet');
+  assert.equal(await page.locator('.cartridge-daily-link').count(), 9, 'all nine seeded cartridges must expose a Daily Vigil');
+  await page.goto(`${base}/index.html?standalone=1&cartridge=deepfield&challenge=daily#voyage`, { waitUntil: 'networkidle' });
+  const dailyField = page.locator('.deepfield-grid');
+  assert.equal(await page.locator('.deepfield-cell').count(), 120, 'Daily Deep Field uses the Navigator chart');
+  await page.locator('.deepfield-cell').nth(55).click();
+  const fieldSignature = await dailyField.getAttribute('data-grid-signature');
+  assert.ok(Number(await dailyField.getAttribute('data-revealed')) > 0, 'the first Deep Field reveal must open safe sectors');
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.deepfield-cell').nth(55).click();
+  assert.equal(await dailyField.getAttribute('data-grid-signature'), fieldSignature, 'Deep Field daily boards must be deterministic for the same opening');
   await page.goto(`${base}/index.html?standalone=1&cartridge=labyrinth&challenge=daily#voyage`, { waitUntil: 'networkidle' });
   const dailyLabyrinth = page.locator('.cartridge-stage .trial-frame canvas');
   await dailyLabyrinth.waitFor({ state: 'visible' });

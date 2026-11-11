@@ -104,7 +104,9 @@
     };
   }
   const voyage = readVoyage();
-  let activeGame = 'merge', challenge = false, relaxed = false, expedition = false, gameHandle = null, challengeDate = dateKey(new Date()), lastLives = 3, forecastOffered = false;
+  const launchParams = new URLSearchParams(location.search), requestedCabinet = launchParams.get('cartridge');
+  const directCabinet = Object.hasOwn(games, requestedCabinet) ? requestedCabinet : null, standaloneArcade = launchParams.has('standalone');
+  let activeGame = directCabinet || 'merge', challenge = launchParams.get('challenge') === 'daily', relaxed = false, expedition = activeGame === 'dash' && (challenge || launchParams.get('mode') === 'campaign'), gameHandle = null, challengeDate = dateKey(new Date()), lastLives = 3, forecastOffered = false;
   let cleanups = [], controller, lastGamePhase, lastGameScore = 0, currentPhoto = voyage.photos[0]?.id;
   let telescope = { x: 800, y: 450, focus: 50, zoom: 1, target: 'saturn', open: false };
   let world = { name: 'Somewhere strange', hue: 166, size: 1, mass: 1, atmosphere: 60, tilt: 23, moons: 2, rings: true, speed: 24, marks: [] };
@@ -187,7 +189,7 @@
     const g = games[activeGame];
     if (challenge) challengeDate = dateKey(new Date());
     const [width, height] = window.AetherArcade.dimensions(activeGame);
-    return `<div class="experience arcade-page ${activeGame === 'merge' ? 'portrait-game' : 'wide-game'}">${heading('THE RELIC EXPEDITIONS · FOUR LITTLE UNIVERSES', 'One more run.<br><em>One stranger build.</em>', 'Earn curious relics. Combine their powers. See what your next run becomes.', passport())}
+    return `${standaloneArcade ? '<div class="tour-standalone-nav"><a href="grand-tour.html">✧ ÆTHER · THE GRAND TOUR</a><span>THE RELIC ARCADE</span><a href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a></div>' : ''}<div class="experience arcade-page ${activeGame === 'merge' ? 'portrait-game' : 'wide-game'}">${heading('THE RELIC EXPEDITIONS · FOUR LITTLE UNIVERSES', 'One more run.<br><em>One stranger build.</em>', 'Earn curious relics. Combine their powers. See what your next run becomes.', passport())}
       <div class="arcade-selector" role="group" aria-label="Choose a game">${Object.entries(games).map(([id, game], i) => `<button class="arcade-choice ${game.colour} ${id === activeGame ? 'selected' : ''}" data-exp="choose-game" data-id="${id}" aria-pressed="${id === activeGame}"><span class="choice-art">${gameArt(id)}</span><span class="choice-copy"><small>${game.badge}</small><strong>${game.title}</strong></span><span class="choice-number">0${i + 1}</span></button>`).join('')}</div>
       <div class="arcade-layout"><section class="game-cabinet ${g.colour}" aria-label="${g.title}"><div class="game-topline"><span class="game-label">${icon(g.icon)} ${g.title}</span><div class="game-tools">${expButton('game-sound', voyage.sound ? 'Sound on' : 'Sound off', false, `id="game-sound" aria-pressed="${voyage.sound}"`)}${expButton('game-pause', 'Pause', false, 'id="game-pause" disabled')}${expButton('game-theatre', 'Expand', false, 'id="game-theatre" aria-pressed="false"')}</div></div>
       <div class="game-scoreboard"><div><small>SCORE</small><strong id="game-score">0</strong></div><div><small>PERSONAL BEST</small><strong id="game-best">${voyage.best[gameKey()] || 0}</strong></div><div class="game-next"><small>${activeGame === 'merge' ? 'COMING UP' : 'MISSION STATUS'}</small><strong id="game-next">READY TO GO</strong><div id="next-worlds" class="next-worlds" ${activeGame === 'merge' ? '' : 'hidden'}></div></div></div>

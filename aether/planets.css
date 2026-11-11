@@ -60,7 +60,7 @@ button.puzzle-cell:hover{background:#2c3a2b}.puzzle-cell:focus-visible{z-index:4
 .board-wrap{position:relative}
 .pieces-layer{position:absolute;inset:6px;pointer-events:none;z-index:3}
 .pieces-layer.ring-pieces{inset:0;pointer-events:none}
-.piece{position:absolute;left:calc(var(--x)*100%/var(--grid));top:calc(var(--y)*100%/var(--grid));width:calc(100%/var(--grid));height:calc(100%/var(--grid));display:grid;place-items:center;transition:left .22s cubic-bezier(.35,.75,.35,1.15),top .22s cubic-bezier(.35,.75,.35,1.15)}
+.piece{position:absolute;left:calc(var(--x)*100%/var(--grid));top:calc(var(--y)*100%/var(--grid));width:calc(100%/var(--grid));height:calc(100%/var(--grid));display:grid;place-items:center;transition:filter .2s}
 .puzzle-grid{position:relative}
 .puzzle-grid.is-won::before,.orbital-dials.is-won::before{content:'';position:absolute;inset:0;z-index:6;pointer-events:none;background:linear-gradient(115deg,transparent 32%,#ecd18c26 44%,#f2d795b0 50%,#ecd18c26 56%,transparent 68%);background-size:280% 100%;animation:win-sweep 1.1s ease-out .1s both}
 .puzzle-grid.is-won,.orbital-dials.is-won .orbital-dial.aligned{box-shadow:0 0 0 1px #d9c08255,0 0 34px #c9a95c26}
@@ -142,7 +142,7 @@ button.puzzle-cell:hover{background:#2c3a2b}.puzzle-cell:focus-visible{z-index:4
 /* ── Saturn · ring slabs ───────────────────────────────────────────────── */
 .board-saturn{background:#0d110c;border-color:#9c8f5f44}
 .board-saturn .ring-square{border-color:#a78e5c0d;background:linear-gradient(160deg,#141c14,#0f1510)}
-.ring-block{background:repeating-linear-gradient(0deg,#ffffff06 0 2px,transparent 2px 10px),linear-gradient(135deg,#3c4a3e,#253028);border:1px solid #87936b;border-radius:5px;box-shadow:inset 0 1px 0 #ffffff14,inset 0 -2px 4px #0007,0 3px 8px #0007;transition:left .16s ease-out,top .16s ease-out,box-shadow .2s;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:auto}
+.ring-block{background:repeating-linear-gradient(0deg,#ffffff06 0 2px,transparent 2px 10px),linear-gradient(135deg,#3c4a3e,#253028);border:1px solid #87936b;border-radius:5px;box-shadow:inset 0 1px 0 #ffffff14,inset 0 -2px 4px #0007,0 3px 8px #0007;transition:box-shadow .2s,filter .2s;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:auto}
 .ring-block::before,.ring-block::after{content:'';position:absolute;background:#93865f;border-radius:2px}
 .ring-block[style*="--w:2"]::before,.ring-block[style*="--w:3"]::before{left:1px;top:12%;bottom:12%;width:3px}
 .ring-block[style*="--w:2"]::after,.ring-block[style*="--w:3"]::after{right:1px;top:12%;bottom:12%;width:3px}
@@ -211,3 +211,23 @@ button.puzzle-cell:hover{background:#2c3a2b}.puzzle-cell:focus-visible{z-index:4
 .burn-chip button:disabled{opacity:.35;cursor:default}
 .burn-plan .button{font-size:11px;min-height:42px;padding:8px 14px}
 @media(max-width:650px){.burn-plan{gap:8px}.burn-chip{font-size:10px}}
+
+/* ── Release motion: physical pieces, mechanical refusals, sealed plates ── */
+.piece.is-gliding,.ring-block.is-gliding{z-index:7;filter:drop-shadow(0 5px 5px #0009)}
+.puzzle-grid.is-blocked,.orbital-dials.is-blocked{animation:puzzle-denied .28s ease-out}
+button.puzzle-cell:active{transform:scale(.94)}
+.orbital-dial.changed{animation:dial-burn .48s ease-out}
+.orbital-dial.changed .dial-moon{transform-box:fill-box;transform-origin:center;animation:moon-arrive .5s cubic-bezier(.2,.75,.25,1)}
+.pipe-cell.changed .pipe-joint{transform-box:fill-box;transform-origin:center;animation:joint-set .34s ease-out}
+.flow-cell.changed .pipe-core{animation:river-draw .42s ease-out}
+.piece.crate.stored::before,.piece.capsule.docked::before{animation:stored-settle .42s cubic-bezier(.2,.8,.25,1.2)}
+.puzzle-celebration{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden}
+.puzzle-celebration i{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:#f2d795;box-shadow:0 0 8px #e6c778;animation:puzzle-spark .95s cubic-bezier(.15,.65,.3,1) both;animation-delay:calc(var(--spark)*20ms)}
+@keyframes puzzle-denied{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}55%{transform:translateX(4px)}80%{transform:translateX(-2px)}}
+@keyframes dial-burn{0%{box-shadow:0 0 0 #e9cc8700}45%{box-shadow:0 0 30px #e9cc8745}100%{box-shadow:none}}
+@keyframes moon-arrive{0%{opacity:.25;transform:scale(.3)}65%{transform:scale(1.45)}100%{opacity:1;transform:scale(1)}}
+@keyframes joint-set{0%{transform:scale(.5)}65%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes river-draw{from{stroke-dasharray:100;stroke-dashoffset:100;opacity:.2}to{stroke-dasharray:100;stroke-dashoffset:0;opacity:1}}
+@keyframes stored-settle{0%{transform:translateY(-12%) scale(.85)}60%{transform:translateY(3%) scale(1.06)}100%{transform:none}}
+@keyframes puzzle-spark{0%{opacity:0;transform:rotate(var(--angle)) translateX(20px) scale(.3)}25%{opacity:1}100%{opacity:0;transform:rotate(var(--angle)) translateX(240px) scale(.1)}}
+@media(prefers-reduced-motion:reduce){.puzzle-celebration{display:none}.piece.is-gliding,.ring-block.is-gliding{filter:none}}
