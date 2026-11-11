@@ -15,6 +15,7 @@ This roadmap distinguishes what is playable **today** from proposed work. It del
 - A working research cabinet with ordered/searchable saved works, marginalia, guided study, linked journal observations and Markdown export.
 - Solution-backed Daily Charts and three-board seeded Circuits in all eight planetary puzzle rooms, with isolated resumable saves.
 - Veteran Sky unlocks for all six flagship cartridges, with separate records and engine-specific challenge rules.
+- Expanded Veteran content: a fourth Skirmish act, two Bastion sieges, two Labyrinth chambers, an alternate Chain route, a fourth Deep Field chart class, and two advanced Starforge contracts, with the Astral Crucible verified winnable through real controls.
 - Illustrated upgrade controls with readable refinement text, and silent non-flashing score updates.
 - Save & Leave on every Grand Tour screen, resumable encounters, and confirmed abandonment with complete game teardown.
 - Existing Observatory, puzzles, arcade games, orchestra with sequencer, journal, progress and local-save model remain in place.

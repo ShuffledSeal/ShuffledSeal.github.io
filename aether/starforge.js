@@ -24,6 +24,8 @@ window.AetherStarforge = (() => {
     { name: 'Ash Vault', brief: 'A cooling rail is the only mercy in this close-packed furnace.', target: 12, seconds: 52, cap: 54, required: ['rail'], tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
     { name: 'Black Glass Relay', brief: 'The eclipse swallows every third pulse. Store enough light to endure it.', target: 15, seconds: 58, cap: 72, required: ['splitter', 'capacitor', 'rail'], eclipse: true, tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
     { name: 'The Dying Clock', brief: 'Every quarter turn seals a machine type. Vent once, then finish the star.', target: 18, seconds: 62, cap: 86, boss: true, freeze: ['splitter', 'capacitor', 'rail'], tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
+    { name: 'The Astral Crucible', brief: 'Two eclipses in one cycle. Store charge between the dark pulses and keep the furnace below its brass limit.', target: 21, seconds: 64, cap: 78, required: ['splitter', 'capacitor', 'rail'], eclipse: true, tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
+    { name: 'The Last Orrery', brief: 'The mirror and regulator take turns being sealed. Build for the recovery windows, not for a single perfect pulse.', target: 26, seconds: 70, cap: 76, boss: true, required: ['splitter', 'capacitor', 'rail'], eclipse: true, freeze: ['mirror', 'regulator'], tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
   ];
 
   function readSave() {
@@ -38,9 +40,10 @@ window.AetherStarforge = (() => {
   function create(container, options = {}) {
     const stored = readSave();
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    let scenarioIndex = clamp(Number.isInteger(options.scenario) ? options.scenario : stored.completed, 0, scenarios.length - 1);
+    const available = options.veteran ? scenarios : scenarios.slice(0, 6);
+    let scenarioIndex = clamp(Number.isInteger(options.scenario) ? options.scenario : stored.completed, 0, available.length - 1);
     let selected = 'mirror', modules = [], motes = [], phase = 0, pulse = 0, pulseCount = 0, energy = 0, heat = 0, vents = 1;
-    let remaining = scenarios[scenarioIndex].seconds, running = false, ended = false, paused = false, destroyed = false, frame = 0, last = 0, endTimer = 0;
+    let remaining = available[scenarioIndex].seconds, running = false, ended = false, paused = false, destroyed = false, frame = 0, last = 0, endTimer = 0;
     let renderedTools = '', renderedScenarios = '';
     const controller = new AbortController();
     const { signal } = controller;
@@ -54,7 +57,7 @@ window.AetherStarforge = (() => {
     const guideTitle = container.querySelector('#starforge-guide-title'), guideDetail = container.querySelector('#starforge-guide-detail');
     canvas.style.touchAction = 'none';
 
-    function scenario() { const base = scenarios[scenarioIndex]; return options.veteran ? { ...base, target: Math.ceil(base.target * 1.25), cap: Math.round(base.cap * .9) } : base; }
+    function scenario() { const base = available[scenarioIndex]; return options.veteran ? { ...base, target: Math.ceil(base.target * 1.25), cap: Math.round(base.cap * .9) } : base; }
     function position(slot, radius = 182) {
       const angle = phase + slot * TAU / 8 - Math.PI / 2;
       return { x: W * .5 + Math.cos(angle) * radius, y: H * .5 + Math.sin(angle) * radius, angle };
@@ -102,7 +105,7 @@ window.AetherStarforge = (() => {
       ventButton.textContent = `VENT HEAT · ${vents}`;
       ventButton.disabled = vents < 1 || ended;
       const nextTools = level.tools.map(id => `<button type="button" data-star-tool="${id}" aria-pressed="${selected === id}"><b style="color:${devices[id].tone}">${devices[id].glyph}</b>${devices[id].name}</button>`).join('');
-      const nextScenarios = scenarios.map((item, index) => `<button type="button" data-star-scenario="${index}" ${index > stored.completed ? 'disabled' : ''} aria-pressed="${scenarioIndex === index}"><span>${index < stored.completed ? '✦' : index + 1}</span>${item.name}</button>`).join('');
+      const nextScenarios = available.map((item, index) => `<button type="button" data-star-scenario="${index}" ${(index < 6 && index > stored.completed) || (index >= 6 && stored.completed < 6) ? 'disabled' : ''} aria-pressed="${scenarioIndex === index}"><span>${index < stored.completed ? '✦' : index + 1}</span>${item.name}</button>`).join('');
       if (nextTools !== renderedTools) { tools.innerHTML = nextTools; renderedTools = nextTools; }
       if (nextScenarios !== renderedScenarios) { scenarioList.innerHTML = nextScenarios; renderedScenarios = nextScenarios; }
       explainPath();
@@ -140,7 +143,7 @@ window.AetherStarforge = (() => {
       if (ended) return;
       ended = true; running = false;
       if (won) {
-        if (!options.veteran) stored.completed = Math.max(stored.completed, Math.min(scenarios.length, scenarioIndex + 1));
+        if (!options.veteran) stored.completed = Math.max(stored.completed, Math.min(available.length, scenarioIndex + 1));
         stored.best = Math.max(stored.best, energy);
         save(stored);
       }

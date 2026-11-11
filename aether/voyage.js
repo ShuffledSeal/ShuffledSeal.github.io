@@ -46,12 +46,12 @@ window.AetherVoyage = (() => {
     deepfield: ['celestial-eagle-chart.webp', 'A double-headed eagle bearing an intricate map of the heavens'],
   };
   const VETERAN_RULES = {
-    shooter: 'Eclipse hulls, faster hostile fire, 1.32× rewards',
-    bastion: 'Enemy hulls +18%, same tactical economy',
-    labyrinth: 'Watchers patrol 18% faster',
-    starforge: 'Targets +25%, heat ceiling −10%',
-    chain: 'Threat speed and hazards +18%',
-    deepfield: 'Novae +20%, one fewer Oracle charge',
+    shooter: 'Fourth act · Eclipse hulls and fire',
+    bastion: 'Two new sieges · enemy hulls +18%',
+    labyrinth: 'Two new chambers · patrols +18%',
+    starforge: 'Two advanced contracts · tighter heat',
+    chain: 'Alternate route · threats +18%',
+    deepfield: 'Fourth chart class · novae +20%',
   };
   function hasVeteran(id) {
     if (cartridgeRecords.clears[id] > 0) return true;
@@ -481,7 +481,7 @@ window.AetherVoyage = (() => {
     if (id === 'shooter') {
       // Controls live in the persistent cartridge footer; the brief stays a brief.
       stage.innerHTML = `<div class="flight-brief"><span class="flight-status"><span class="flight-status-dot"></span> ${veteran ? 'VETERAN SKY' : campaign ? 'THREE-ACT CAMPAIGN' : 'ENDLESS VIGIL'}</span><strong>STARFALL SKIRMISH</strong></div><div class="tour-hunt-frame"></div><div class="flight-legend"><span><b>✦</b> Collect stardust</span><span><b>◎</b> Read telegraphs</span><span><b>ϟ</b> Dash through danger</span><span><b>◈</b> Build FLOW</span></div>`;
-      gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: !campaign, hull: 'kite', instruments: [], seed, difficulty: veteran ? 'eclipse' : 'standard', onEnd({ won, score }) { end({ won, score }); } });
+      gameHandle = window.AetherSkirmish.create($('.tour-hunt-frame', stage), { sector: 1, elite: true, endless: !campaign, hull: 'kite', instruments: [], seed, veteran, difficulty: veteran ? 'eclipse' : 'standard', onEnd({ won, score }) { end({ won, score }); } });
     } else if (id === 'starforge') {
       stage.innerHTML = `<div class="cartridge-playbill"><span>ORBITAL FACTORY</span><strong>THE LAST CELESTIAL FOUNDRY</strong></div><div class="starforge-frame"></div>`;
       gameHandle = window.AetherStarforge.create($('.starforge-frame', stage), { veteran, onEnd: end });

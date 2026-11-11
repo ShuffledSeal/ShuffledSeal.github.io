@@ -8,6 +8,7 @@ window.AetherDeepField = (() => {
     apprentice: Object.freeze({ name: 'Apprentice', subtitle: 'A gentle firmament', cols: 9, rows: 9, mines: 10, hints: 2 }),
     navigator: Object.freeze({ name: 'Navigator', subtitle: 'The cartographer’s chart', cols: 12, rows: 10, mines: 22, hints: 2 }),
     eclipse: Object.freeze({ name: 'Eclipse', subtitle: 'A crowded occultation', cols: 16, rows: 12, mines: 42, hints: 1 }),
+    cathedral: Object.freeze({ name: 'Cathedral', subtitle: 'The long night of glass', cols: 18, rows: 12, mines: 52, hints: 1 }),
   });
   const CAMPAIGN = ['apprentice', 'navigator', 'eclipse'];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -69,6 +70,7 @@ window.AetherDeepField = (() => {
     const abort = new AbortController(), timers = new Set(), holds = new Set();
     const settings = readSettings(), reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mode = options.campaign ? 'campaign' : options.daily ? 'daily' : options.endless ? 'endless' : 'trial', veteran = options.veteran === true;
+    const campaign = veteran ? [...CAMPAIGN, 'cathedral'] : CAMPAIGN;
     const verbs = options.verbs || new Set(), onEnd = typeof options.onEnd === 'function' ? options.onEnd : () => {};
     let soundOn = options.sound === false ? false : settings.sound;
     let audio = null, audioGain = null, destroyed = false, callbackFired = false;
@@ -89,7 +91,7 @@ window.AetherDeepField = (() => {
     const elapsed = () => elapsedBefore + (started && !paused && !roundOver ? performance.now() - startedAt : 0);
     const seconds = () => Math.floor(elapsed() / 1000);
     const roundConfig = () => {
-      const base = PRESETS[mode === 'campaign' ? CAMPAIGN[Math.min(stage, CAMPAIGN.length - 1)] : presetId];
+      const base = PRESETS[mode === 'campaign' ? campaign[Math.min(stage, campaign.length - 1)] : presetId];
       const tune = config => ({ ...config, mines: veteran ? Math.min(Math.floor(config.cols * config.rows * .28), Math.ceil(config.mines * 1.2)) : config.mines, hints: Math.max(0, config.hints + hintBonus - (veteran ? 1 : 0)) });
       if (mode === 'trial') return { ...PRESETS.apprentice, name: 'Deep Field', mines: 12, hints: 2 };
       if (mode !== 'endless') return tune(base);
@@ -152,7 +154,7 @@ window.AetherDeepField = (() => {
       if (mode === 'trial') { strip.hidden = true; return; }
       strip.hidden = false;
       if (mode === 'campaign' || mode === 'daily') {
-        strip.innerHTML = `<span class="df-route-label">${mode === 'daily' ? 'DAILY VIGIL · FIXED NAVIGATOR CHART' : 'THE THREE OCCULTATIONS'}</span><div class="df-route">${(mode === 'campaign' ? CAMPAIGN : ['navigator']).map((id, i) => `<span class="${i === stage ? 'current' : i < stage ? 'passed' : ''}">${i < stage ? '✓' : ['Ⅰ', 'Ⅱ', 'Ⅲ'][i]} ${PRESETS[id].name}<small>${PRESETS[id].cols} × ${PRESETS[id].rows} · ${PRESETS[id].mines} novae</small></span>`).join('')}</div>`;
+        strip.innerHTML = `<span class="df-route-label">${mode === 'daily' ? 'DAILY VIGIL · FIXED NAVIGATOR CHART' : veteran ? 'THE FOUR OCCULTATIONS' : 'THE THREE OCCULTATIONS'}</span><div class="df-route">${(mode === 'campaign' ? CAMPAIGN : ['navigator']).map((id, i) => `<span class="${i === stage ? 'current' : i < stage ? 'passed' : ''}">${i < stage ? '✓' : ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]} ${PRESETS[id].name}<small>${PRESETS[id].cols} × ${PRESETS[id].rows} · ${PRESETS[id].mines} novae</small></span>`).join('')}</div>`;
       } else {
         strip.innerHTML = `<span class="df-route-label">CHOOSE A BOARD CLASS · CHANGING IT STARTS A NEW EXPEDITION</span><div class="df-preset-buttons">${Object.entries(PRESETS).map(([id, preset]) => `<button type="button" data-df-preset="${id}" aria-pressed="${id === presetId}"><strong>${preset.name}</strong><small>${preset.cols} × ${preset.rows} · ${preset.mines} novae</small></button>`).join('')}</div>`;
       }
@@ -214,7 +216,7 @@ window.AetherDeepField = (() => {
       container.querySelector('[data-df-action="retry"]').disabled = roundOver;
       container.querySelector('[data-df-action="fresh"]').disabled = roundOver;
       container.querySelectorAll('[data-df-preset]').forEach(button => { button.disabled = roundOver; });
-      container.querySelector('[data-df-mode]').textContent = mode === 'campaign' ? `CAMPAIGN · CHART ${stage + 1} / ${CAMPAIGN.length}` : mode === 'daily' ? 'DAILY VIGIL · ONE SHARED SKY' : mode === 'endless' ? `ENDLESS EXPEDITION · CHART ${stage + 1}` : 'GRAND TOUR · SINGLE SURVEY';
+      container.querySelector('[data-df-mode]').textContent = mode === 'campaign' ? `CAMPAIGN · CHART ${stage + 1} / ${campaign.length}` : mode === 'daily' ? 'DAILY VIGIL · ONE SHARED SKY' : mode === 'endless' ? `ENDLESS EXPEDITION · CHART ${stage + 1}` : 'GRAND TOUR · SINGLE SURVEY';
       container.querySelector('[data-df-seed]').textContent = `SEED ${String(roundSeed).padStart(10, '0')}`;
       board.dataset.revealed = String(charted); board.dataset.flags = String(flagged.size); board.dataset.questions = String(questioned.size);
       board.dataset.hints = String(hintsUsed); board.dataset.aegis = String(aegis); board.dataset.score = String(Math.round(runScore));
@@ -358,7 +360,7 @@ window.AetherDeepField = (() => {
         board.classList.add('is-won'); burstAt(Math.floor(gridLength() / 2), 'victory', 30); motif([392, 523.25, 659.25, 783.99]);
       }
       updateHUD(success ? `Chart sealed. ${formatTime(totalElapsed / 1000)} active time across the expedition.` : 'The survey is lost. Your partial chart remains in the ledger.');
-      if (success && ((mode === 'campaign' && stage < CAMPAIGN.length - 1) || mode === 'endless')) after(showIntermission, reduced() ? 80 : 650);
+      if (success && ((mode === 'campaign' && stage < campaign.length - 1) || mode === 'endless')) after(showIntermission, reduced() ? 80 : 650);
       else after(() => emitEnd(success), reduced() ? 120 : 900);
     }
     function showIntermission() {
@@ -397,7 +399,7 @@ window.AetherDeepField = (() => {
       else roundSeed = (runSeed ^ Math.imul(stage + 1, 0x45d9f3b)) >>> 0;
       gameplayRandom = random(roundSeed ^ 0x9e3779b9); fxRandom = random(roundSeed ^ 0x51f15e);
       config = roundConfig();
-      if (mode === 'campaign') presetId = CAMPAIGN[Math.min(stage, CAMPAIGN.length - 1)];
+      if (mode === 'campaign') presetId = campaign[Math.min(stage, campaign.length - 1)];
       if (!same) initialSafe = -1;
       grid = same && initialSafe >= 0 ? generate({ ...config, seed: roundSeed, safeIndex: initialSafe }).grid : null;
       hintsLeft = config.hints; hintsUsed = 0; shieldsUsed = 0; started = false; paused = false; roundOver = false; won = false;

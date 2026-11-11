@@ -60,11 +60,12 @@ window.AetherSkirmish = (() => {
     mortar: { name: 'Mortar', key: '4', range: 460, speed: 420, cycle: 4.1, damage: 3.2, radius: 76, colour: '#cfb1ff', note: '100–460 range · delayed blast · lead clustered threats' },
   };
   const WEAPON_IDS = Object.keys(WEAPONS);
-  const ACTS = [
+  const BASE_ACTS = [
     { name: 'Break the screen', hint: 'Drifters rush; the rear weaver keeps its distance.' },
     { name: 'Crossfire', hint: 'Lancers lock their aim. Flank the volley; sweep the shards.' },
     { name: 'Silence the command', hint: 'The command Maw charges a beam. Clear its escorts, then strike.' },
   ];
+  const VETERAN_ACT = { name: 'The glass cathedral', hint: 'Two maws guard a lattice of lancers. Break the escorts without feeding the FLOW into a crossfire.' };
 
   function rng(seed) { let n = seed >>> 0; return () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }
 
@@ -78,6 +79,7 @@ window.AetherSkirmish = (() => {
     const rand = rng(options.seed ?? 1);
     const boss = options.boss === true;
     const endless = options.endless === true;
+    const ACTS = options.veteran ? [...BASE_ACTS, VETERAN_ACT] : BASE_ACTS;
     const mode = options.difficulty === 'explorer' ? {hp:.78,velocity:.85,damage:.70,reward:.8} :
       options.difficulty === 'eclipse' ? {hp:1.38,velocity:1.16,damage:1.28,reward:1.32} :
       {hp:1,velocity:1,damage:1,reward:1};
@@ -115,6 +117,7 @@ window.AetherSkirmish = (() => {
     canvas.dataset.paused = 'false';
     canvas.dataset.boltsFired = '0';
     canvas.dataset.difficulty = options.difficulty || 'standard';
+    canvas.dataset.actCount = ACTS.length;
     const ctx = canvas.getContext('2d');
     const abort = new AbortController();
     const listen = (el, type, fn, o) => el.addEventListener(type, fn, { ...o, signal: abort.signal });
@@ -181,12 +184,13 @@ window.AetherSkirmish = (() => {
         // Authored roles, two readable packets rather than one random pile.
         const roster = wave === 1 ? ['drifter', 'drifter', 'drifter', 'weaver']
           : wave === 2 ? ['shard', 'shard', 'drifter', 'lancer', 'weaver', 'shard']
-          : ['maw', 'drifter', 'drifter', 'lancer', 'shard', 'shard', 'weaver'];
+          : wave === 3 ? ['maw', 'drifter', 'drifter', 'lancer', 'shard', 'shard', 'weaver']
+          : ['maw', 'maw', 'lancer', 'lancer', 'blossom', 'shard', 'weaver'];
         const firstPacket = Math.ceil(n * .55);
         for (let i = 0; i < n; i++) scheduleEnemy(roster[i % roster.length], i < firstPacket ? 0 : 4.5);
         if (refit === 'pursuit') scheduleEnemy('lancer', 4.5, true);
       }
-      if ((options.elite && wave === 3) || (endless && wave % 4 === 0)) spawnEnemy((options.sector ?? 0) > 0 ? 'blossom' : 'weaver', true);
+      if ((options.elite && wave === 3) || (options.veteran && wave === 4) || (endless && wave % 4 === 0)) spawnEnemy((options.sector ?? 0) > 0 ? 'blossom' : 'weaver', true);
       if (lure && (wave === 3 || (endless && wave % 5 === 0))) spawnEnemy('maw', true);
       notice = { text: !endless ? `ACT ${wave} · ${ACTS[wave - 1].name.toUpperCase()}` : wave % 4 === 0 ? `WAVE ${wave} · GILDED HARBINGER` : `WAVE ${wave} · CONTACTS INBOUND`, ttl: 2.5 };
       waveIntro = 1.4;
@@ -473,7 +477,7 @@ window.AetherSkirmish = (() => {
       if (!boss) {
         if (phase === 'combat' && !pending.length && enemies.every(e => e.hp <= 0) && !bossEnt) {
           if (refit === 'pursuit') { dust += 24; popup(W / 2, H / 2 - 70, '+24 SIGNAL BOUNTY', sector.mote); }
-          if (!endless && wave >= 3) return end(true);
+          if (!endless && wave >= ACTS.length) return end(true);
           openRefit();
         }
       }

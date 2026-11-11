@@ -26,6 +26,11 @@
       {name:'The five gates',hint:'Every lane opens. Keep a rear defence; move spare alloy into uncovered lanes or refinements.',reward:100,goal:'no leaks',packets:[[1,1,'runner',4,1],[2,2,'iron',3,2],[1,3,'scout',8,.55],[3,4,'iron',3,2],[2,5,'runner',4,1]]},
       {name:'The crown engine',hint:'Destroy the Titan in lane 3: its breach ends the mission. Heavy priority, chill and refined towers help.',reward:0,goal:'destroy Titan',packets:[[1,3,'titan',1,0],[3,1,'iron',3,2],[3,5,'iron',3,2],[6,2,'runner',5,.8],[6,4,'runner',5,.8],[9,3,'scout',6,.5]]},
     ].map(m=>({...m,entries:m.packets.flatMap(([at,lane,kind,count,gap])=>Array.from({length:count},(_,i)=>({at:at+i*gap,row:lane-1,kind}))).sort((a,b)=>a.at-b.at)}));
+    const VETERAN_SIEGES=[
+      {name:'The copper eclipse',hint:'Armoured columns arrive behind runners. Hold the centre without starving the flanks.',reward:120,goal:'no leaks',packets:[[1,2,'runner',6,.7],[2,3,'iron',5,1.6],[4,1,'scout',8,.55],[6,5,'iron',4,1.8]]},
+      {name:'The eighth hemisphere',hint:'A second Titan joins the last procession. Preserve a stun for its arrival and keep both outer lanes chilled.',reward:0,goal:'destroy Titans',packets:[[1,1,'iron',4,1.6],[2,5,'runner',7,.65],[4,3,'titan',1,0],[8,2,'runner',6,.7],[10,4,'iron',5,1.4]]},
+    ].map(m=>({...m,entries:m.packets.flatMap(([at,lane,kind,count,gap])=>Array.from({length:count},(_,i)=>({at:at+i*gap,row:lane-1,kind}))).sort((a,b)=>a.at-b.at)}));
+    const missions=veteran?[...CAMPAIGN,...VETERAN_SIEGES]:CAMPAIGN;
     const TOWERS=[
       {name:'Needle',icon:'✦',cost:45,cool:.52,damage:20,range:280,color:'#dfdfab',detail:'Fast lane cannon',paths:{left:['Needlepoint','Heavy, decisive bolts'],right:['Clockwork','Faster firing rhythm']}},
       {name:'Frostbell',icon:'❄',cost:65,cool:1.15,damage:9,range:210,color:'#b7e9ed',detail:'Slows every target',paths:{left:['Deepwinter','Longer, wider chill'],right:['Rime charge','Harder impact strikes']}},
@@ -44,7 +49,7 @@
     let focusRow=endless?Math.floor(rand()*N):0,planning=!endless,overdrive=0;
     let waveTime=0,entryIndex=0,leaks=0,cleared=0,reserve=false,lastReward=0,fast=false,titanKilled=false;
     let keyboardCell={col:0,row:1};
-    const mission=()=>CAMPAIGN[wave-1];
+    const mission=()=>missions[wave-1];
     let messages=[{t:3,text:'INSTALL A DEFENCE · 1–4 SELECT · CLICK A HEX · P PAUSES'}];
     const g=frame(container,W,H,{label:`Aether Bastion: tactical tower defence. 1–4 select a tower; click a cell or use arrows and Enter to build/select. Q/E refine, R targets heavy/front, right click or Delete sells. Space pulses. F toggles double speed; P pauses. Keep the eight-heart core alive${endless?' through an endless siege.':' through six authored sieges; destroy the final Titan.'} Planning freezes combat. Z repairs, X overdrives, C saves alloy and launches the forecast wave.`,sound:options.sound,step,draw});
     const {canvas,ctx,listen,tone,burst,starfield}=g,stars=starfield(104,90);
@@ -71,7 +76,7 @@
       if(orders.hidden===planning)orders.hidden=!planning;
       if(!planning)return;
       const forecast=endless?`SIEGE ${wave+1} FORECAST · LANE ${focusRow+1} draws extra threats${(wave+1)%4===0?' · TITAN EXPECTED':''}. Choose an order; towers can be placed now.`:
-        `PLAN ${wave} / ${CAMPAIGN.length} · ${mission().name} · ${mission().entries.length} threats · Build freely, then choose an order to launch.`;
+        `PLAN ${wave} / ${missions.length} · ${mission().name} · ${mission().entries.length} threats · Build freely, then choose an order to launch.`;
       const title=orders.querySelector('[data-bastion-forecast]');if(title.textContent!==forecast)title.textContent=forecast;
       if(!endless){
         const manifest=Array.from({length:N},(_,row)=>{const counts={};mission().entries.filter(e=>e.row===row).forEach(e=>counts[e.kind]=(counts[e.kind]||0)+1);return `Lane ${row+1}: ${Object.entries(counts).map(([kind,n])=>`${n} ${kind}`).join(' + ')||'clear'}`;}).join(' · ');
@@ -225,7 +230,7 @@
        }
        if(!endless&&entryIndex===mission().entries.length&&!enemies.length&&!telegraphs.length){
          cleared++;lastReward=mission().reward+(leaks===0?35:0)+(reserve?15:0);credits+=lastReward;
-         if(wave===CAMPAIGN.length)return finish(titanKilled);
+         if(wave===missions.length)return finish(titanKilled);
          wave++;planning=true;overdrive=0;bolts=[];selectedTower=towers.includes(selectedTower)?selectedTower:null;
          // Readiness is explicit at each refit, not gained by waiting in menus.
          pulseCd=0;slowTime=0;announce(`SIEGE CLEARED · +${lastReward} ALLOY${leaks===0?' · PERFECT DEFENCE':''}`);
@@ -356,7 +361,7 @@
        setDiag('survived',Math.floor(survivalTime));
       setDiag('incoming',telegraphs.length);
       setDiag('phase',over|| (planning?'planning':'combat'));
-      setDiag('waveCount',endless?'infinite':CAMPAIGN.length);
+      setDiag('waveCount',endless?'infinite':missions.length);
       setDiag('waveName',endless?'Endless siege':mission().name);
       setDiag('waveTime',waveTime.toFixed(2));
       setDiag('waveCleared',cleared);
@@ -454,7 +459,7 @@
       // Manufactured UI: crisp numeric state, large distinct actions.
       ctx.fillStyle='#06111ceb';ctx.fillRect(0,0,W,97);ctx.strokeStyle='#ceb88066';ctx.beginPath();ctx.moveTo(0,97);ctx.lineTo(W,97);ctx.stroke();
       txt(ctx,'AETHER BASTION',27,28,21,GOLD);
-        txt(ctx,endless?`SIEGE ${wave} · ENDLESS`:`SIEGE ${wave} / ${CAMPAIGN.length} · ${planning?'PLAN':'DEFEND'}`,28,53,12,'#bce9db');
+        txt(ctx,endless?`SIEGE ${wave} · ENDLESS`:`SIEGE ${wave} / ${missions.length} · ${planning?'PLAN':'DEFEND'}`,28,53,12,'#bce9db');
       txt(ctx,`ALLOY ✦ ${credits}`,240,29,17,'#f6da9e');txt(ctx,`KILLS  ${kills}`,240,52,12,'#b9c4c2');
        txt(ctx,`CORE ${core} / 8`,425,28,17,core<=2?RED:TEAL);
          txt(ctx,endless?`SURVIVED ${Math.floor(survivalTime)}s${overdrive?' · OVERDRIVE':''}`:`${fast?'2× · ':''}${overdrive?'OVERDRIVE · ':''}${planning?'BUILD & CHOOSE ORDER':`${mission().entries.length-entryIndex+enemies.length+telegraphs.length} THREATS LEFT`}`,425,51,12,'#b9c4c2');
@@ -501,6 +506,10 @@
     {bars:[[6,1,9,[2,3]],[12,1,9,[7,8]],[15,2,7,[4,5]]],keys:[[3,7],[14,4]],bonus:[[8,3],[16,8]],patrol:[[4,4,2,8,'v'],[9,6,2,9,'v'],[16,7,14,16,'h'],[14,3,2,8,'v']]},
     {bars:[[5,1,9,[2,8]],[10,1,9,[3,7]],[14,1,9,[4,6]]],keys:[[3,2],[8,7],[12,3]],requiredKeys:2,bonus:[[12,5]],routes:[['SERVICE ROUTE',3,2,'#b6d8c9'],['CRYPT PASSAGE',8,7,'#d8c795'],['WATCHER GALLERY',12,3,'#f1a1b1']],patrol:[[3,5,1,8,'v'],[8,5,2,8,'v'],[12,6,2,8,'v'],[16,7,14,16,'h']]},
   ];
+  const VETERAN_LAYOUTS=[
+    {name:'THE SALT CRYPT',title:'CHAMBER V · THE SALT CRYPT',bars:[[4,1,9,[3,7]],[9,1,9,[2,5,8]],[14,1,9,[4,6]]],keys:[[2,2],[15,8]],requiredKeys:2,bonus:[[7,6]],patrol:[[3,3,1,8,'v'],[8,6,2,9,'v'],[15,2,12,16,'h'],[11,4,7,9,'v']]},
+    {name:'THE MERIDIAN VAULT',title:'CHAMBER VI · THE MERIDIAN VAULT',bars:[[3,1,9,[4]],[7,1,9,[2,6]],[11,1,9,[3,7]],[15,1,9,[5]]],keys:[[5,3],[13,7],[8,5]],requiredKeys:3,bonus:[[10,2]],patrol:[[4,5,2,8,'v'],[7,6,3,9,'v'],[12,2,10,15,'h'],[15,6,3,8,'v'],[9,4,6,8,'v']]},
+  ];
   const RELICS=[
     {id:'veil',name:'Mothglass Mantle',detail:'Veil lasts +1.8s and recharges 3s sooner. Decoy recharge takes +4s.'},
     {id:'chime',name:'Chorus Prism',detail:'Decoys last +3s, lure farther, and recharge 3s sooner. Veil loses its stun pulse.'},
@@ -528,11 +537,12 @@
     return seen;
   }
   // Independent room RNG: drafting/cosmetics never consume the layout stream.
-  function course(seed,chamber=0,cycles=0,authored=false){
-    chamber=clamp(Math.floor(chamber)||0,0,3);cycles=Math.max(0,Math.floor(cycles)||0);
+  function course(seed,chamber=0,cycles=0,authored=false,extraLayouts=[]){
+    const deck=[...layouts,...extraLayouts];
+    chamber=clamp(Math.floor(chamber)||0,0,deck.length-1);cycles=Math.max(0,Math.floor(cycles)||0);
     const pick=rng(((seed>>>0)^Math.imul(chamber+1,2654435761)^Math.imul(cycles+1,1597334677))>>>0);
     const integer=(a,b)=>a+Math.floor(pick()*(b-a+1));
-    const source=layouts[chamber],walls=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>x===0||x===17||y===0||y===10));
+    const source=deck[chamber],walls=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>x===0||x===17||y===0||y===10));
     walls[5][17]=false;
     let bars=source.bars;
     if(!authored)bars=[integer(4,5),integer(9,10),integer(13,14)].map(col=>{
@@ -558,7 +568,7 @@
     };
     const keys=authored?source.keys.map(p=>p.slice()):[choose(2,7),choose(10,15),...(chamber===3?[choose(7,12)]:[])];
     keys.forEach(p=>used.add(p.join(',')));
-    const seal=authored?[[8,6],[7,7],[9,6],[12,6]][chamber]:choose(6,15);
+    const seal=authored?([[8,6],[7,7],[9,6],[12,6]][chamber]||choose(6,15)):choose(6,15);
     used.add(seal.join(','));
     const bonus=authored?source.bonus.map(p=>p.slice()):[choose(2,8),choose(9,16)];
     let patrol=source.patrol.map(p=>p.slice());
@@ -618,6 +628,9 @@
     const has=id=>relics.includes(id);
     const CHAMBER_NAMES=['THE IVORY ARCHIVE','THE HALL OF ECHOES','THE LAST OBSERVATORY','THE TRIUNE ARCHIVE'];
     const CHAMBER_TITLES=['CHAMBER I · THE IVORY ARCHIVE','CHAMBER II · ECHO HALL','CHAMBER III · THE LAST OBSERVATORY','CHAMBER IV · THE TRIUNE ARCHIVE'];
+    const activeLayouts=options.veteran?[...layouts,...VETERAN_LAYOUTS]:layouts;
+    const activeNames=options.veteran?[...CHAMBER_NAMES,...VETERAN_LAYOUTS.map(room=>room.name)]:CHAMBER_NAMES;
+    const activeTitles=options.veteran?[...CHAMBER_TITLES,...VETERAN_LAYOUTS.map(room=>room.title)]:CHAMBER_TITLES;
     // Every relic tradeoff lands in one of these tunables; diagnostics mirror them.
     const veilDuration=()=>(verbs.has('gyro')?3.6:2.8)+(has('veil')?1.8:0);
     const veilCooldown=()=>(verbs.has('freeze')?8:11)-(has('veil')?3:0)+(has('gambit')?4:0);
@@ -626,7 +639,7 @@
     const speedFactor=()=>has('runner')?1.18:1;
     const lureRadius=()=>encounter.lure*(has('chime')?1.35:1);
     const keyValue=()=>250+(has('gambit')?150:0)-(has('mercy')?100:0);
-    if(Number.isInteger(options.startChamber))chamber=clamp(options.startChamber,0,layouts.length-1);
+    if(Number.isInteger(options.startChamber))chamber=clamp(options.startChamber,0,activeLayouts.length-1);
     const inBounds=(x,y)=>x>=0&&x<COLS&&y>=0&&y<ROWS;
     const blocked=(x,y)=>{
       const t=toCell(x,y);
@@ -641,8 +654,8 @@
     // Later chambers/circuits come from the seeded, connectivity-checked
     // course generator and carry one of four encounter temperaments.
     function buildRoom(){
-      const authored=endless?cycles===0:chamber===0;
-      const room=course(runSeed,chamber,cycles,authored);
+      const authored=endless?cycles===0:(options.veteran&&chamber>=layouts.length)||chamber===0;
+      const room=course(runSeed,chamber,cycles,authored,options.veteran?VETERAN_LAYOUTS:[]);
       roomInfo=room;encounter=encounters[room.encounter];requiredKeys=room.requiredKeys;routes=room.routes;
       // The Daily Vigil still remixes patrol starts on the authored walls,
       // keys and exit; generated rooms arrive pre-patrolled from course().
@@ -666,8 +679,8 @@
        canvas.dataset.course=guards.map(guard=>`${Math.round(guard.x)},${Math.round(guard.y)},${guard.dir}`).join('|');
        player={...tile(1,5),vx:0,vy:0};cursor=null;pointerActive=false;
        found=0;roomTransition=1.3;entrance=2;cloak=0;cloakCd=0;decoy=null;decoyCd=0;lastDirection={x:1,y:0};
-       roomTitle=room.authored?CHAMBER_TITLES[chamber]:`${CHAMBER_TITLES[chamber].split(' · ')[0]} · ${encounter.name}`;
-       message={text:room.authored?CHAMBER_NAMES[chamber]:`${CHAMBER_NAMES[chamber]} · ${encounter.name} · ${encounter.hint}`,t:5};
+       roomTitle=room.authored?activeTitles[chamber]:`${activeTitles[chamber].split(' · ')[0]} · ${encounter.name}`;
+       message={text:room.authored?activeNames[chamber]:`${activeNames[chamber]} · ${encounter.name} · ${encounter.hint}`,t:5};
     }
     buildRoom();
     // Relic drafts run on their own seed stream so drafting never perturbs
@@ -801,7 +814,7 @@
          score+=350+escapeBonus;
          if(escapeBonus){tone(1000,.18,'sine',.05);if(has('gambit'))hearts=Math.min(3,hearts+1);}
          chamber++;
-         if(chamber>=layouts.length){
+         if(chamber>=activeLayouts.length){
           if(!endless)return end(true);
           cycles++;chamber=0;hearts=Math.min(3,hearts+1);
           score+=cycles*200;
@@ -869,7 +882,7 @@
       canvas.dataset.mode=endless?'endless':'mission';
       canvas.dataset.speedScale=String(options.speedScale||1);
       canvas.dataset.chamber=String(chamber+1);
-      canvas.dataset.chamberCount=String(layouts.length);
+      canvas.dataset.chamberCount=String(activeLayouts.length);
       canvas.dataset.keysAvailable=String(collectibles.length);
       canvas.dataset.keysRequired=String(requiredKeys);
       canvas.dataset.keysFound=String(found);
@@ -966,7 +979,7 @@
       // Inventory/controls overlay: first eight seconds double as instruction.
       ctx.fillStyle='#07121dec';ctx.fillRect(0,0,W,66);ctx.strokeStyle='#d7c29266';ctx.beginPath();ctx.moveTo(0,65);ctx.lineTo(W,65);ctx.stroke();
       drawText(ctx,'GLASS LABYRINTH',22,27,20,GOLD);
-        drawText(ctx,endless?`CIRCUIT ${cycles+1} · CHAMBER ${chamber+1}`:`CHAMBER ${chamber+1} / ${layouts.length}`,23,47,11,'#a6d5cd');
+        drawText(ctx,endless?`CIRCUIT ${cycles+1} · CHAMBER ${chamber+1}`:`CHAMBER ${chamber+1} / ${activeLayouts.length}`,23,47,11,'#a6d5cd');
        drawText(ctx,`STARKEYS ${found}/${requiredKeys}`,260,28,16,found>=requiredKeys?MINT:GOLD);
       drawText(ctx,`HEARTS ${'♥'.repeat(hearts)}${'♡'.repeat(3-hearts)}`,260,48,13,PINK);
       drawText(ctx,`SCORE ${score}`,472,27,14,MINT);

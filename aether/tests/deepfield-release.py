@@ -85,7 +85,7 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                 return null;
             }''')
             assert generation is None, generation
-            print('PASS: 240 seeded boards, exact mine counts, adjacency, protected openings and flood safety')
+            print('PASS: 320 seeded boards, exact mine counts, adjacency, protected openings and flood safety')
 
             # Daily input, safe pre-start flagging, deterministic replay and clock pause.
             board = open_game(page, base)

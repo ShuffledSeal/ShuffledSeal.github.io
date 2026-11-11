@@ -46,13 +46,21 @@
       frost: ['Winter thread', 'Bolts slow enemies for 0.7 / 1.0 / 1.3 seconds.'],
       nova: ['Pulse heart', 'Space or Pulse: clear nearby threats. Radius 150 / 175 / 200; cooldown 6 / 5 / 4s.'],
     };
-    const ROUTE = [
+    const ROUTE_BASE = [
       { name: 'Drift nursery', hint: 'Gather teal motes. Your links are both weapons and health.', events: [[0, 'drift', 2], [3, 'drift', 2], [6, 'drift', 3]] },
       { name: 'Scissor crossing', hint: 'Dashed lanes lock before firing. Move across them, not along them.', events: [[0, 'cross', 3], [4, 'cross', 3], [8, 'cross', 4]] },
       { name: 'The Needle keeper', hint: 'The diamond aims, charges, then rests. Sidestep its locked line.', events: [[0, 'elite', 1], [3, 'drift', 3], [7, 'cross', 2]] },
       { name: 'Broken crown', hint: 'Two keepers cross the field. Orbit around them; recover in their wake.', events: [[0, 'elite', 1], [2, 'cross', 3], [5, 'elite', 1], [8, 'drift', 4]] },
       { name: 'The Unraveller', hint: 'Dodge the marked cross. Attack the open core between sweeps.', events: [[0, 'boss', 1]] },
     ];
+    const VETERAN_ROUTE = [
+      { name: 'Aurora crossing', hint: 'Scissor lanes arrive with a drifting recovery window. Read both before committing.', events: [[0, 'cross', 2], [2, 'drift', 3], [5, 'cross', 3]] },
+      { name: 'Twin needle', hint: 'Two keepers alternate their charges. Draw one away, then switch formation for the other.', events: [[0, 'elite', 1], [2, 'elite', 1], [5, 'cross', 2], [8, 'drift', 3]] },
+      { name: 'Falling choir', hint: 'Drift shards flood the staff lines. Collect only while the next lane is open.', events: [[0, 'drift', 4], [2, 'cross', 3], [4, 'drift', 4], [7, 'cross', 3]] },
+      { name: 'Splintered orbit', hint: 'Keepers hold opposite poles. Halo resists the centre; spear breaks their pair.', events: [[0, 'elite', 1], [1, 'elite', 1], [3, 'cross', 4], [6, 'drift', 4]] },
+      { name: 'The Unraveller ascendant', hint: 'The old pattern returns with sharper crosswinds. Preserve a pulse for the open core.', events: [[0, 'boss', 1]] },
+    ];
+    const ROUTE = options.veteran ? VETERAN_ROUTE : ROUTE_BASE;
     let phase = 'ready', encounter = 0, circuit = 1, elapsed = 0, eventIndex = 0, formation = 'ribbon';
     let invuln = 0, ward = 0, wardTime = 0, pulseTime = 0, moving = false, surge = false, orbitA = 0, tickN = 0;
     let hazards = [], choices = [], relics = {}, draftCount = 0, shotsFired = 0, collected = 0, destroyed = false;
@@ -113,6 +121,8 @@
       canvas.dataset.chainPhase = phase;
       canvas.dataset.chainEncounter = String(encounter + 1);
       canvas.dataset.chainCircuit = String(circuit);
+      canvas.dataset.chainRouteLength = String(ROUTE.length);
+      canvas.dataset.chainRoute = ROUTE[encounter].name;
       canvas.dataset.chainSpeedScale = String(scale);
       canvas.dataset.chainFormation = formation;
       canvas.dataset.chainRange = String(FORMATIONS[formation].range);
