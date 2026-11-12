@@ -45,6 +45,12 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                 localStorage.setItem('aether-starforge-v1',JSON.stringify({completed:1,best:3}));''')
             page.goto(f'{base}/index.html?standalone=1#voyage', wait_until='networkidle')
             assert page.locator('.cartridge-veteran-link:not(.locked)').count() == 6
+            for width in (1440, 390):
+                page.set_viewport_size({'width': width, 'height': 1000})
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+                assert page.locator('.cartridge-veteran-link:not(.locked)').evaluate_all('(links) => links.every(link => link.scrollWidth <= link.clientWidth + 1)')
+            page.set_viewport_size({'width': 1440, 'height': 1000})
+            print('PASS: six mechanic-rich Veteran links fit desktop and phone cabinets without overflow')
 
             page.goto(f'{base}/index.html?standalone=1&cartridge=shooter&mode=campaign&variant=veteran#voyage', wait_until='networkidle')
             assert page.locator('.cartridge-stage canvas').get_attribute('data-difficulty') == 'eclipse'

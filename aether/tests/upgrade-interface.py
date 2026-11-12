@@ -68,6 +68,7 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             page.wait_for_timeout(180)
             assert page.locator('#game-score.motion-score').count() == 0
             assert page.locator('#game-score').evaluate('(element) => getComputedStyle(element).animationName') == 'none'
+            assert page.locator('#game-score').evaluate('(element) => element.getAnimations().length') == 0
             assert page.locator('#game-score').inner_text() == '12'
             print('PASS: score changes update silently without flashing')
 

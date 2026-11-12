@@ -82,6 +82,31 @@ window.AetherArcade = (() => {
     { until: 225, name: 'THE LONG NIGHT', sub: 'Two weathers at once', speed: 1.28, spawn: .8, bad: 1, wind: 20, mission: { id: 'surge', text: 'Catch 10 stars during a surge', target: 10 } },
   ];
   const WHALE_AT = 225, EXPEDITION_LENGTH = 270;
+  // Veteran expeditions add authored chapters rather than inflating the whole
+  // cabinet's numbers. Every pattern below is deterministic and entity-capped.
+  const UMBRA_STAGE = { until: 45, name: 'UMBRA VEIL', sub: 'Dark starlight lands only inside the roaming lantern', speed: 1.05, spawn: 1.08, bad: 1, wind: 0, umbra: true, mission: { id: 'umbra', text: 'Catch 8 dark stars in the lantern', target: 8 } };
+  const veteranDashStages = [UMBRA_STAGE, ...dashStages.map(stage => Object.freeze({ ...stage, until: stage.until + 45 }))];
+  const VETERAN_WHALE_AT = 270, VETERAN_EXPEDITION_LENGTH = 315;
+  const MERGE_FORECAST_CYCLE = 58;
+  const mergeForecasts = [
+    { at: 4, duration: 12, name: 'THE FIRST SWING', hint: 'The counterweight crosses left to right', pull: 155, period: 6.4, gravity: 1 },
+    { at: 20, duration: 11, name: 'COUNTERWEIGHT', hint: 'A slower swing begins from the other wall', pull: -205, period: 7.2, gravity: .9 },
+    { at: 35, duration: 9, name: 'LOW TIDE', hint: 'Light worlds, short pendulum, early landings', pull: 115, period: 4.8, gravity: .68 },
+    { at: 48, duration: 10, name: 'BELL WEATHER', hint: 'Quick alternating pulls — drop between the bells', pull: 230, period: 4.1, gravity: 1.08 },
+  ];
+  // Each stop pairs a genuinely orbiting binary with a different gate verb:
+  // read a still opening, time a breathing iris, chase a drifting gap, make an
+  // S-turn through scissors, then choose either side of a crowned pillar.
+  const surfExpeditionPatterns = [
+    { gate: 'iris', label: 'BREATHING IRIS', gap: 160, y: 250, binaryY: 190, spin: .72 },
+    { gate: 'lantern', label: 'LANTERN GATE', gap: 176, y: 280, binaryY: 350, spin: -.82 },
+    { gate: 'drift', label: 'DRIFTING LOCK', gap: 142, y: 285, binaryY: 175, spin: .9 },
+    { gate: 'scissor', label: 'SCISSOR PAIR', gap: 142, y: 205, binaryY: 345, spin: -.96 },
+    { gate: 'crown', label: 'CROWNED PILLAR', gap: 190, y: 285, binaryY: 260, spin: .78 },
+  ];
+  const cathedralPatterns = ['THE NAVE', 'ROSE WINDOW', 'TWIN SPIRES'];
+  for (const entry of [...mergeForecasts, ...surfExpeditionPatterns, UMBRA_STAGE]) Object.freeze(entry);
+  Object.freeze(mergeForecasts); Object.freeze(surfExpeditionPatterns); Object.freeze(veteranDashStages); Object.freeze(cathedralPatterns);
   for (const catalog of [relics, synergies, powerUps]) {
     for (const entries of Object.values(catalog)) { entries.forEach(entry => { if (entry.ids) Object.freeze(entry.ids); Object.freeze(entry); }); Object.freeze(entries); }
     Object.freeze(catalog);
@@ -137,7 +162,16 @@ window.AetherArcade = (() => {
     let maxMetres = 0, totalCatches = 0, crystalHits = 0, ringsCaught = 0, shields = 0, shieldCharge = 0;
     let orbitCharge = 0, flightBoost = 0, reactorRings = 0, clockCatches = 0, splitHits = 0, ward = 0, wardReturns = 0, tetherAwaitingPress = false, routeMod = null;
     let forecastPick = null, gravityScale = 1;
+    let mergeGravityX = 0, mergeForecast = null, mergeForecastEvents = 0, mergeForecastKey = '';
+    let binarySystems = [], surfGates = [], surfRouteIndex = 0, nextSurfRoute = 900, surfGatesPassed = 0, surfGateHits = 0;
+    let umbraLightX = W / 2, umbraCatches = 0, umbraMisses = 0;
+    let cathedralSealBlocks = 0, cathedralArmourDents = 0, lastSealNote = -99;
+    const veteran = options.veteran === true;
     const expedition = options.game === 'dash' && options.expedition === true;
+    const veteranExpedition = veteran && expedition;
+    const stageCatalog = () => veteranExpedition ? veteranDashStages : dashStages;
+    const whaleAt = () => veteranExpedition ? VETERAN_WHALE_AT : WHALE_AT;
+    const expeditionLength = () => veteranExpedition ? VETERAN_EXPEDITION_LENGTH : EXPEDITION_LENGTH;
     const has = id => owned.some(r => r.id === id);
     const activeSynergies = () => synergies[options.game].filter(s => s.ids.every(has)).map(({ name, description }) => ({ name, description }));
     const dangerLimit = () => has('deep-cradle') ? 5.2 : 3.4;
@@ -153,14 +187,54 @@ window.AetherArcade = (() => {
     const stats = () => ({ simulationTime: time, totalMerges, totalCatches, crystalHits, ringsCaught, maxMetres: Math.floor(maxMetres), comets: comets.length, shields, shieldCharge, orbitCharge, ward, draftFallbacks, draftTimes: draftTimes.slice() });
 
     function notify() {
-      const detail = options.game === 'merge' ? `${names[largest]} · ${drops} drops` : options.game === 'hop' ? `${Math.floor(ship.x / 10)} m · sector ${level}` : options.game === 'dash' ? (expedition ? `${whale ? 'THE WHALE' : dashStages[dashStageIndex]?.name || 'THE FORECAST'} · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}` : `${Math.ceil(remaining)}s · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}`) : `Wave ${level} · ${bricks.filter(b => b.hp > 0).length} crystals`;
+      const detail = options.game === 'merge' ? `${names[largest]} · ${drops} drops` : options.game === 'hop' ? `${Math.floor(ship.x / 10)} m · sector ${level}` : options.game === 'dash' ? (expedition ? `${whale ? 'THE WHALE' : stageCatalog()[dashStageIndex]?.name || 'THE FORECAST'} · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}` : `${Math.ceil(remaining)}s · ×${Math.max(1, Math.min(8, 1 + Math.floor(combo / 5)))}`) : `Wave ${level} · ${bricks.filter(b => b.hp > 0).length} crystals`;
       canvas.dataset.phase = phase; canvas.dataset.score = score; canvas.dataset.count = balls?.length || 0;
       canvas.dataset.largest = largest; canvas.dataset.lives = lives; canvas.dataset.level = level;
       canvas.dataset.suspended = String(suspended);
       canvas.dataset.releases = releases; canvas.dataset.tethered = String(!!tether);
+      canvas.dataset.veteran = String(veteran);
+      canvas.dataset.expeditionName = !veteran ? '' : ({ merge: 'Pendulum Orrery', hop: 'Twin-Star Route', dash: veteranExpedition ? 'Umbra Veil' : '', breaker: 'Crystal Cathedral' })[options.game];
+      if (options.game === 'merge') {
+        canvas.dataset.gravityX = mergeGravityX.toFixed(2); canvas.dataset.gravityScale = gravityScale.toFixed(2);
+        canvas.dataset.pendulumVelocity = (balls.reduce((sum, b) => sum + b.vx, 0) / Math.max(1, balls.length)).toFixed(2);
+        canvas.dataset.forecastEvent = mergeForecast?.name || ''; canvas.dataset.forecastTelegraph = String(!!mergeForecast?.telegraph);
+        canvas.dataset.forecastEvents = mergeForecastEvents;
+      } else if (options.game === 'hop') {
+        const gate = surfGates.find(g => g.x > ship.x - 30);
+        canvas.dataset.binarySystems = binarySystems.length; canvas.dataset.surfGate = gate?.label || '';
+        canvas.dataset.binaryAngle = binarySystems[0] ? binarySystems[0].angle.toFixed(3) : ''; canvas.dataset.binaryTethered = String(!!tether?.planet?.binary);
+        canvas.dataset.surfGatesPassed = surfGatesPassed; canvas.dataset.surfGateHits = surfGateHits;
+        canvas.dataset.surfGateX = gate ? Math.round(gate.x - camera) : ''; canvas.dataset.surfGateY = gate ? Math.round(gate.gapY) : '';
+        canvas.dataset.surfGateGap = gate ? Math.round(gate.currentGap || gate.gap) : '';
+        canvas.dataset.shipX = (ship.x - camera).toFixed(1); canvas.dataset.shipY = ship.y.toFixed(1);
+      } else if (options.game === 'dash') {
+        const darkStar = falling.find(f => f.umbra && !f.taken);
+        let nextStar = null, nextMeteor = null;
+        for (const f of falling) {
+          if (f.taken || f.wait > 0) continue;
+          if (f.bad && (!nextMeteor || f.y > nextMeteor.y)) nextMeteor = f;
+          else if (!f.bad && (!nextStar || f.y > nextStar.y)) nextStar = f;
+        }
+        canvas.dataset.nextStarX = nextStar ? Math.round(nextStar.x) : ''; canvas.dataset.nextStarY = nextStar ? Math.round(nextStar.y) : '';
+        canvas.dataset.nextMeteorX = nextMeteor ? Math.round(nextMeteor.x) : ''; canvas.dataset.nextMeteorY = nextMeteor ? Math.round(nextMeteor.y) : '';
+        canvas.dataset.dashChapter = whale ? 'THE WHALE' : stageCatalog()[dashStageIndex]?.name || '';
+        canvas.dataset.dashStageCount = expedition ? stageCatalog().length : 0; canvas.dataset.umbraLightX = Math.round(umbraLightX);
+        canvas.dataset.umbraCatches = umbraCatches; canvas.dataset.umbraMisses = umbraMisses;
+        canvas.dataset.umbraStars = falling.filter(f => f.umbra && !f.taken).length;
+        canvas.dataset.umbraStarX = darkStar ? Math.round(darkStar.x) : ''; canvas.dataset.umbraStarY = darkStar ? Math.round(darkStar.y) : '';
+        canvas.dataset.umbraStarLit = darkStar ? String(!!darkStar.umbraLit) : ''; canvas.dataset.catcherX = Math.round(catcher.x);
+      } else {
+        const moving = bricks.filter(b => b.hp > 0 && b.motion);
+        canvas.dataset.cathedralPattern = veteran ? cathedralPatterns[(level - 1) % cathedralPatterns.length] : '';
+        canvas.dataset.movingCrystals = moving.length; canvas.dataset.armouredCrystals = bricks.filter(b => b.hp > 1).length;
+        canvas.dataset.sealedCrystals = bricks.filter(b => b.hp > 0 && b.sealed && bricks.some(k => k.key && k.hp > 0)).length;
+        canvas.dataset.cathedralSealBlocks = cathedralSealBlocks; canvas.dataset.cathedralArmourDents = cathedralArmourDents;
+        canvas.dataset.cathedralMotion = moving.reduce((sum, b) => sum + Math.hypot(b.x - b.baseX, b.y - b.baseY), 0).toFixed(2);
+        canvas.dataset.cometX = comets[0] ? comets[0].x.toFixed(1) : ''; canvas.dataset.cometY = comets[0] ? comets[0].y.toFixed(1) : '';
+      }
       const incomingPickup = options.game === 'dash' ? falling.find(g => g.kind === 'pickup' && !g.taken) : null;
       const incomingDef = incomingPickup && powerUps.dash.find(p => p.id === incomingPickup.pickupId);
-      options.onUpdate?.({ phase, suspended, score, best, next: names[queue?.[0] || 0], queue: queue.slice(), largest: names[largest], lives, combo, remaining: Math.ceil(remaining), danger: clamp(danger / dangerLimit(), 0, 1), drops, charge: Math.floor(charge), detail, result,
+      options.onUpdate?.({ phase, suspended, score, best, veteran, expedition: veteran ? canvas.dataset.expeditionName : '', next: names[queue?.[0] || 0], queue: queue.slice(), largest: names[largest], lives, combo, remaining: Math.ceil(remaining), danger: clamp(danger / dangerLimit(), 0, 1), drops, charge: Math.floor(charge), detail, result,
         relics: owned.slice(), offer: offer ? offer.slice() : null, synergies: activeSynergies(), stats: stats(), level,
         pact: { active: pact > 0, seconds: Math.ceil(pact), ready: pactReady(), used: pactUsed, failed: pactFailed },
         relicProgress: draftIndex < 4 ? { value: progressValue(), target: milestones[options.game][draftIndex], label: progressLabels[options.game] } : { value: owned.length, target: 4, label: 'relics collected' },
@@ -392,10 +466,103 @@ window.AetherArcade = (() => {
       if (route === 'storm' && random() < .5) rocks.push({ x: x + 260, y: 90 + random() * (H - 180), r: 18 + random() * 9, grazed: false });
       nextWorld += 370 + random() * 80;
     }
+    function newSurfExpeditionSegment() {
+      const index = surfRouteIndex++, def = surfExpeditionPatterns[index % surfExpeditionPatterns.length];
+      const cycle = Math.floor(index / surfExpeditionPatterns.length), x = nextSurfRoute;
+      const y = clamp(def.binaryY + [0, 32, -28][cycle % 3], 125, H - 125);
+      const radius = 48 + (index % 2) * 8, angle = index * 1.17;
+      const a = { x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius, r: 31, tier: 6, binary: true };
+      const b = { x: x - Math.cos(angle) * radius, y: y - Math.sin(angle) * radius, r: 27, tier: 2, binary: true };
+      worlds.push(a, b); binarySystems.push({ x, y, radius, angle, speed: def.spin, a, b });
+      rings.push({ x, y, taken: false, twin: true });
+      const addGate = (gx, baseY, suffix = 0) => {
+        const gate = { x: gx, baseY, gapY: baseY, gap: def.gap, pattern: def.gate, label: def.label + (suffix ? ' · RETURN' : ''), phase: index * .83 + suffix * Math.PI, passed: false, struck: false, cooldown: 0, suffix };
+        surfGates.push(gate);
+        if (def.gate === 'crown') {
+          rings.push({ x: gx, y: baseY - 61, taken: false, gate, lane: -1 });
+          rings.push({ x: gx, y: baseY + 61, taken: false, gate, lane: 1 });
+        } else rings.push({ x: gx, y: baseY, taken: false, gate, lane: 0 });
+      };
+      addGate(x + 285, def.y);
+      if (def.gate === 'scissor') addGate(x + 375, H - def.y, 1);
+      nextSurfRoute += def.gate === 'scissor' ? 720 : 640;
+    }
+    function updateSurfExpedition(dt) {
+      for (const system of binarySystems) {
+        system.angle += system.speed * dt;
+        system.a.x = system.x + Math.cos(system.angle) * system.radius; system.a.y = system.y + Math.sin(system.angle) * system.radius;
+        system.b.x = system.x - Math.cos(system.angle) * system.radius; system.b.y = system.y - Math.sin(system.angle) * system.radius;
+      }
+      for (const gate of surfGates) {
+        gate.cooldown = Math.max(0, gate.cooldown - dt);
+        if (gate.pattern === 'drift') gate.gapY = clamp(gate.baseY + Math.sin(time * 1.05 + gate.phase) * 108, 95, H - 95);
+        else if (gate.pattern === 'scissor') gate.gapY = clamp(gate.baseY + Math.sin(time * 1.35 + gate.phase) * 42, 90, H - 90);
+        else if (gate.pattern === 'crown') gate.gapY = gate.baseY + Math.sin(time * .7 + gate.phase) * 30;
+        else gate.gapY = gate.baseY;
+        gate.currentGap = gate.pattern === 'iris' ? 112 + (Math.sin(time * 1.45 + gate.phase) * .5 + .5) * 72 : gate.gap;
+      }
+      for (const ring of rings) if (ring.gate && !ring.attracted) ring.y = ring.gate.gapY + ring.lane * 61;
+      binarySystems = binarySystems.filter(s => s.x > camera - 350 || tether?.planet === s.a || tether?.planet === s.b);
+      surfGates = surfGates.filter(g => g.x > camera - 80);
+    }
+    function surfGateSafe(gate, y) {
+      const inside = Math.abs(y - gate.gapY) < gate.currentGap / 2 - 7;
+      // The crown's centre is solid; its two side lanes are the meaningful choice.
+      return inside && (gate.pattern !== 'crown' || Math.abs(y - gate.gapY) > 28);
+    }
+    function makeCathedralBricks() {
+      const pattern = (level - 1) % cathedralPatterns.length, cx = W / 2, cy = H / 2;
+      let serial = 0;
+      const add = (x, y, options = {}) => {
+        const key = !!options.key, armour = !key && !!options.armour;
+        bricks.push({ x, y, baseX: x, baseY: y, r: 15, hp: armour ? 2 : 1, tier: (serial++ + level * 2) % 8,
+          hit: 0, angle: Math.atan2(y - cy, x - cx), family: null, key, sealed: !key && !!options.sealed,
+          motion: options.motion || null, phase: options.phase || 0, orbitR: options.orbitR || 0, orbitA: options.orbitA || 0 });
+      };
+      if (pattern === 0) {
+        // Four aisles, a rounded arch and a small rose: a readable silhouette.
+        for (const x of [-132, -88, 88, 132]) for (const y of [-65, -15, 35, 85]) {
+          add(cx + x, cy + y, { armour: Math.abs(x) > 100 || y === 85, sealed: Math.abs(x) < 100, motion: 'nave', phase: (x > 0 ? Math.PI : 0) + y * .01 });
+        }
+        for (let i = 1; i < 8; i++) { const a = Math.PI + i / 8 * Math.PI; add(cx + Math.cos(a) * 160, cy + 25 + Math.sin(a) * 135, { armour: i % 2 === 0, motion: 'nave', phase: i * .3 }); }
+        for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; add(cx + Math.cos(a) * 47, cy - 47 + Math.sin(a) * 47, { sealed: true, motion: 'nave', phase: i * .4 }); }
+        // The threshold altar introduces armour on the opening serve.
+        add(cx, cy + 104, { armour: true, motion: 'nave', phase: 0 });
+        [[-176, 90], [176, 90], [-112, -127], [112, -127]].forEach(([x, y], i) => add(cx + x, cy + y, { key: true, motion: 'nave', phase: i * Math.PI / 2 }));
+      } else if (pattern === 1) {
+        for (const [count, radius, sealed] of [[8, 61, false], [12, 128, true]]) for (let i = 0; i < count; i++) {
+          const a = i / count * TAU;
+          add(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius, { armour: radius > 100 && i % 2 === 0, sealed, motion: 'rose', orbitR: radius, orbitA: a });
+        }
+        for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; add(cx + Math.cos(a) * 174, cy + Math.sin(a) * 174, { key: true, motion: 'rose', orbitR: 174, orbitA: a }); }
+      } else {
+        for (const side of [-1, 1]) for (let i = 0; i < 6; i++) add(cx + side * 108, cy - 122 + i * 43, { armour: i % 2 === 0, sealed: i > 1, motion: 'spire', phase: side < 0 ? 0 : Math.PI });
+        for (let i = 0; i < 7; i++) { const a = Math.PI + i / 6 * Math.PI; add(cx + Math.cos(a) * 73, cy + 34 + Math.sin(a) * 143, { armour: i % 3 === 0, motion: 'spire', phase: i * .35 }); }
+        for (let i = 0; i < 5; i++) add(cx - 64 + i * 32, cy + 104, { sealed: true, motion: 'spire', phase: i * .5 });
+        [[-176, 20], [176, 20], [0, -153], [0, 54]].forEach(([x, y], i) => add(cx + x, cy + y, { key: true, motion: 'spire', phase: i * Math.PI / 2 }));
+      }
+      oneCrystal = false; launchTimer = 1.5;
+      banner(`CATHEDRAL · ${cathedralPatterns[pattern]}`, '#d9c7f3', 18);
+      popups.push({ x: W / 2, y: H * .3 + 34, text: 'BREAK THE FOUR KEYSTONES TO UNSEAL THE GLASS', colour: '#edf19b', life: 2.4, size: 12 });
+    }
+    function moveCathedralBricks() {
+      if (!veteran) return;
+      for (const b of bricks) {
+        if (b.motion === 'rose') {
+          const a = b.orbitA + time * (b.key ? -.1 : .13);
+          b.x = W / 2 + Math.cos(a) * b.orbitR; b.y = H / 2 + Math.sin(a) * b.orbitR; b.angle = a;
+        } else if (b.motion === 'spire') {
+          b.x = b.baseX + Math.sin(time * .55 + b.phase) * 7; b.y = b.baseY + Math.sin(time * .9 + b.phase) * 20;
+        } else if (b.motion === 'nave') {
+          b.x = b.baseX + Math.sin(time * .85 + b.phase) * 13; b.y = b.baseY + Math.cos(time * .6 + b.phase) * 5;
+        }
+      }
+    }
     function makeBricks() {
       // The old constellation leaves a two-second ghost behind the new one.
       if (bricks?.length && bricks.every(b => !b.hp)) ghosts = bricks.map(b => ({ x: b.x, y: b.y, r: b.r, tier: b.tier, at: visualTime }));
       bricks = [];
+      if (veteran && options.game === 'breaker') { makeCathedralBricks(); return; }
       // A daily board should be a daily board: the seed rotates the rings and picks armoured crystals.
       const rotation = random() * TAU;
       [62, 111, 157].forEach((radius, ring) => {
@@ -434,7 +601,7 @@ window.AetherArcade = (() => {
       if (options.game === 'dash') {
         const pickupRandom = seeded(seed ^ 0x9c4d);
         let at = 8 + pickupRandom() * 4, previous = '';
-        const giftsUntil = expedition ? 255 : 67; // The last stretch stays gift-free.
+        const giftsUntil = expedition ? expeditionLength() - 15 : 67; // The last stretch stays gift-free.
         while (at < giftsUntil) {
           let def = powerUps.dash[Math.floor(pickupRandom() * powerUps.dash.length)];
           if (def.id === previous) def = powerUps.dash.find(p => p.id !== previous);
@@ -445,6 +612,10 @@ window.AetherArcade = (() => {
       }
       activePower = null; slow = 0;
       dashStageIndex = -2; missionProgress = 0; missionDone = false; lastHitTime = -99; giftCollected = false; whale = null; breathLanes = [];
+      mergeGravityX = 0; mergeForecast = null; mergeForecastEvents = 0; mergeForecastKey = '';
+      binarySystems = []; surfGates = []; surfRouteIndex = 0; nextSurfRoute = 900; surfGatesPassed = 0; surfGateHits = 0;
+      umbraLightX = W / 2; umbraCatches = 0; umbraMisses = 0;
+      cathedralSealBlocks = 0; cathedralArmourDents = 0; lastSealNote = -99;
       owned = []; offer = null; suspended = false; draftIndex = 0; lastDraftTime = 0; draftFallbacks = 0;
       maxMetres = 0; totalCatches = 0; crystalHits = 0; ringsCaught = 0; shields = 0; shieldCharge = 0;
       orbitCharge = 0; flightBoost = 0; reactorRings = 0; clockCatches = 0; splitHits = 0; ward = 0; wardReturns = 0; tetherAwaitingPress = false; releases = 0; routeMod = null;
@@ -464,6 +635,7 @@ window.AetherArcade = (() => {
       camera = 0; nextWorld = 250; worlds = []; rings = []; rocks = []; tether = null; tetherAwaitingPress = false; distanceScore = 0;
       ship = { x: 80, y: 235, vx: 235, vy: -30, trail: [] };
       while (nextWorld < 1600) newWorld();
+      if (veteran && options.game === 'hop') while (nextSurfRoute < 1600) newSurfExpeditionSegment();
       // Two settled companions greet the first drop — more on a crowded night.
       // Spaced so nothing starts overlapping or mid-merge.
       if (options.game === 'merge') {
@@ -472,7 +644,7 @@ window.AetherArcade = (() => {
           balls.push({ x: W / 2 + ox, y: H - 27 - radii[tier], vx: 0, vy: 0, tier, age: 5, angle, squash: 0, born: 0 });
         });
       }
-      catcher = { x: W / 2, vx: 0, tilt: 0 }; falling = []; spawn = .8; remaining = expedition ? EXPEDITION_LENGTH : 75; wave = 0; dashTime = 0; magnet = 0;
+      catcher = { x: W / 2, vx: 0, tilt: 0 }; falling = []; spawn = .8; remaining = expedition ? expeditionLength() : 75; wave = 0; dashTime = 0; magnet = 0;
       paddle = { angle: Math.PI / 2, target: Math.PI / 2 }; comets = [{ x: W / 2, y: H / 2 + 210, vx: 0, vy: -290, trail: [], secondary: false }]; slowTime = 0;
       makeBricks(); aim = W / 2; pointerAim = null; notify(); draw();
     }
@@ -549,7 +721,34 @@ window.AetherArcade = (() => {
         drops++; cooldown = .5; tone(200 + tier * 60, .09, 'triangle'); notify();
       } else if (options.game === 'dash' || options.game === 'breaker') ability();
     }
+    function updateMergeForecast() {
+      if (!veteran) { mergeGravityX = 0; mergeForecast = null; return; }
+      const cycle = Math.floor(time / MERGE_FORECAST_CYCLE), local = time - cycle * MERGE_FORECAST_CYCLE;
+      const index = mergeForecasts.findIndex(event => local >= event.at - 2.2 && local < event.at + event.duration);
+      if (index < 0) {
+        mergeForecast = null; mergeForecastKey = ''; mergeGravityX = 0;
+        gravityScale = forecastPick === 'lowgrav' ? .75 : 1;
+        return;
+      }
+      const def = mergeForecasts[index], telegraph = local < def.at, key = `${cycle}:${index}`;
+      const wasTelegraph = mergeForecast?.telegraph;
+      if (key !== mergeForecastKey && telegraph) {
+        banner(`FORECAST · ${def.name}`, '#d9c7f3', 16);
+        popups.push({ x: W / 2, y: H * .3 + 32, text: def.hint.toUpperCase(), colour: '#b7abc9', life: 2.1, size: 11 });
+      }
+      if (!telegraph && (key !== mergeForecastKey || wasTelegraph)) {
+        mergeForecastEvents++; banner(def.name, '#edf19b', 18); tone(196, .3, 'triangle', .04);
+      }
+      mergeForecastKey = key;
+      const elapsed = Math.max(0, local - def.at);
+      const strength = telegraph ? 0 : clamp(Math.min(elapsed / 1.1, (def.duration - elapsed) / 1.1), 0, 1);
+      mergeGravityX = def.pull * Math.sin(elapsed / def.period * TAU) * strength;
+      gravityScale = (forecastPick === 'lowgrav' ? .75 : 1) * def.gravity;
+      mergeForecast ||= {};
+      Object.assign(mergeForecast, { name: def.name, hint: def.hint, telegraph, remaining: telegraph ? def.at - local : def.at + def.duration - local });
+    }
     function mergeStep(dt) {
+      updateMergeForecast();
       const shocks = [];
       cooldown -= dt; comboTimer -= dt;
       if (comboTimer <= 0) combo = 0;
@@ -567,7 +766,7 @@ window.AetherArcade = (() => {
         }
       }
       if (has('guiding-thread') && guidedBall?.age < 1.1 && balls.includes(guidedBall)) guidedBall.vx += clamp((aim - guidedBall.x) * 3 - guidedBall.vx, -220, 220) * dt * 3;
-      balls.forEach(b => { b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); b.vy += (400 * gravityScale + Math.min(140, danger * 50)) * dt; b.vx *= Math.exp(-.38 * dt); b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35; });
+      balls.forEach(b => { b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); if (veteran) b.vx += mergeGravityX * dt; b.vy += (400 * gravityScale + Math.min(140, danger * 50)) * dt; b.vx *= Math.exp(-.38 * dt); b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35; });
       for (let pass = 0; pass < 6; pass++) {
         balls.forEach(b => {
           const r = radii[b.tier];
@@ -642,6 +841,7 @@ window.AetherArcade = (() => {
       if (danger > dangerLimit() || balls.length > 110) finish('One very full universe.', 1.4);
     }
     function surfStep(dt) {
+      if (veteran) updateSurfExpedition(dt);
       const held = pointerHeld || keys.has(' ') || keys.has('ArrowUp');
       flightBoost = Math.max(0, flightBoost - dt);
       if (held) tetherAwaitingPress = false;
@@ -694,6 +894,7 @@ window.AetherArcade = (() => {
       const cameraTarget = ship.x - 270 - (reduced ? look * .4 : look);
       camera = Math.max(camera, camera + (cameraTarget - camera) * (1 - Math.exp(-4 * dt)));
       while (nextWorld < camera + W + 650) newWorld();
+      if (veteran) while (nextSurfRoute < camera + W + 650) newSurfExpeditionSegment();
       worlds = worlds.filter(w => w.x > camera - 350 || tether?.planet === w);
       for (const w of worlds) {
         const wDistance = Math.hypot(ship.x - w.x, ship.y - w.y);
@@ -710,7 +911,7 @@ window.AetherArcade = (() => {
       for (const r of rings) {
         if (phase !== 'running') break;
         const dx = ship.x - r.x, dy = ship.y - r.y, d = Math.hypot(dx, dy);
-        if (!r.taken && d > 1 && d < ringReach()) { const pull = Math.min(d, (flightBoost > 0 ? 420 : 240) * dt) / d; r.x += dx * pull; r.y += dy * pull; }
+        if (!r.taken && d > 1 && d < ringReach()) { const pull = Math.min(d, (flightBoost > 0 ? 420 : 240) * dt) / d; r.x += dx * pull; r.y += dy * pull; r.attracted = true; }
         if (!r.taken && Math.hypot(ship.x - r.x, ship.y - r.y) < 35) {
           r.taken = true; combo++; ringsCaught++;
           if (has('comet-aegis') && shields === 0) {
@@ -733,6 +934,18 @@ window.AetherArcade = (() => {
         else if (d < r.r + 35 && !r.grazed) { r.grazed = true; scoreAt(35, r.x - camera, r.y - 30, 'CLOSE CALL +35'); note(196, 0, .09, 'triangle', .035); }
       }
       rocks = rocks.filter(r => r.x > camera - 70);
+      if (veteran) for (const gate of surfGates) {
+        if (phase !== 'running') break;
+        if (Math.abs(ship.x - gate.x) < 15 && !surfGateSafe(gate, ship.y) && gate.cooldown <= 0) {
+          gate.cooldown = 1.1; gate.struck = true; surfGateHits++;
+          banner(`${gate.label} · FIND THE OPENING`, '#f5a08c', 13);
+          hurt(clamp(gate.x - camera, 30, W - 30), ship.y);
+        }
+        if (!gate.passed && ship.x > gate.x + 24) {
+          gate.passed = true;
+          if (!gate.struck) { surfGatesPassed++; scoreAt(gate.pattern === 'scissor' ? 140 : 100, gate.x - camera, gate.gapY - 30, 'CLEAN GATE'); }
+        }
+      }
       // Orbiting ships may swing briefly outside the band; only free flight is punished.
       if (!tether && (ship.y < -20 || ship.y > H + 20 || ship.x < camera - 20)) {
         hurt(clamp(ship.x - camera, 30, W - 30), clamp(ship.y, 30, H - 30));
@@ -763,7 +976,7 @@ window.AetherArcade = (() => {
     }
     function spawnWave() {
       wave++;
-      const stage = expedition && dashStageIndex >= 0 ? dashStages[dashStageIndex] : null;
+      const stage = expedition && dashStageIndex >= 0 ? stageCatalog()[dashStageIndex] : null;
       const base = 75 + random() * (W - 150), pattern = wave % 4;
       // Every eighth wave is a golden surge: a breather and a streak-builder.
       const surge = wave % 8 === 0;
@@ -777,8 +990,9 @@ window.AetherArcade = (() => {
         let bad = surge ? false : pattern === 2 ? i === 0 || i === 4 : i === wave % 5;
         // Pink weather adds a second threat per wave.
         if (!surge && !bad && stage?.bad && random() < .35) bad = i === (wave + 2) % 5;
-        const isJelly = !bad && (i === 2 && (wave % 7 === 0 || (stage?.jelly && wave % 3 === 0)));
-        falling.push({ x, y: -30 - (pattern === 1 ? i * 35 : 0), speed: (155 + time * 2.4 + i * 6) * (surge ? .82 : 1) * (stage?.speed || 1), bad, kind: isJelly ? 'jelly' : 'star', r: bad ? 18 : 12, wait: bad ? .55 : .1, spin: i, taken: false, wind: stage?.wind || 0 });
+        const isJelly = !bad && !stage?.umbra && (i === 2 && (wave % 7 === 0 || (stage?.jelly && wave % 3 === 0)));
+        const isUmbra = !!stage?.umbra && !bad && i > 0;
+        falling.push({ x, y: -30 - (pattern === 1 ? i * 35 : 0), speed: (155 + time * 2.4 + i * 6) * (surge ? .82 : 1) * (stage?.speed || 1), bad, kind: isJelly ? 'jelly' : 'star', umbra: isUmbra, r: bad ? 18 : 12, wait: bad ? .55 : .1, spin: i, taken: false, wind: stage?.wind || 0 });
       }
     }
     function collectPickup(f) {
@@ -797,14 +1011,15 @@ window.AetherArcade = (() => {
       motif([[560, 0, .1], [840, .09, .2]], .06);
       notify();
     }
-    const stageStartTime = idx => idx <= 0 ? 0 : dashStages[idx - 1].until;
+    const stageStartTime = idx => idx <= 0 ? 0 : stageCatalog()[idx - 1].until;
     const WHALE_MISSION = { id: 'whale', text: 'Catch 20 breath-stars', target: 20 };
     const currentMission = () => {
       if (!expedition) return null;
       if (whale) return WHALE_MISSION;
-      return dashStageIndex >= 0 && dashStageIndex < dashStages.length ? dashStages[dashStageIndex].mission : null;
+      return dashStageIndex >= 0 && dashStageIndex < stageCatalog().length ? stageCatalog()[dashStageIndex].mission : null;
     };
     function missionCatch(f) {
+      if (f.umbra && f.umbraLit) umbraCatches++;
       const mission = currentMission();
       if (!mission || missionDone || f.bad) return;
       if (mission.id === 'catch' && f.kind === 'star') missionProgress++;
@@ -812,6 +1027,7 @@ window.AetherArcade = (() => {
       else if (mission.id === 'surge' && surgeUntil > time) missionProgress++;
       else if (mission.id === 'gift' && f.kind === 'pickup') missionProgress = 1;
       else if (mission.id === 'whale' && f.breath) missionProgress++;
+      else if (mission.id === 'umbra' && f.umbra && f.umbraLit) missionProgress++;
     }
     function dashStep(dt) {
       const wasDashing = dashTime > 0;
@@ -852,17 +1068,18 @@ window.AetherArcade = (() => {
       }
       catcher.x = clamp(catcher.x + catcher.vx * dt, basketWidth(), W - basketWidth()); catcher.tilt += (catcher.vx / 2200 - catcher.tilt) * dt * 12;
       catcher.pop = Math.max(0, (catcher.pop || 0) - dt * 1.4);
-      // Expedition staging: six named weathers, each with a mission.
-      const stage = expedition && dashStageIndex >= 0 && dashStageIndex < dashStages.length ? dashStages[dashStageIndex] : null;
+      // Expedition staging: standard keeps five weathers; Veteran adds Umbra.
+      const stage = expedition && dashStageIndex >= 0 && dashStageIndex < stageCatalog().length ? stageCatalog()[dashStageIndex] : null;
+      umbraLightX = stage?.umbra ? W / 2 + Math.sin((time - stageStartTime(dashStageIndex)) * .62) * 280 : W / 2;
       if (expedition) {
-        const idx = dashStages.findIndex(s => time < s.until);
+        const idx = stageCatalog().findIndex(s => time < s.until);
         if (idx !== dashStageIndex) {
           dashStageIndex = idx; missionProgress = 0; missionDone = false; giftCollected = false;
           if (idx >= 0) {
             dashAct = idx + 1;
-            banner(dashStages[idx].name, '#cbb287', 20);
-            popups.push({ x: W / 2, y: H * .3 + 36, text: dashStages[idx].sub, colour: '#b7abc9', life: 1.8, size: 13 });
-            popups.push({ x: W / 2, y: H * .3 + 60, text: `MISSION · ${dashStages[idx].mission.text.toUpperCase()}`, colour: '#a9d3be', life: 2.2, size: 12 });
+            banner(stageCatalog()[idx].name, '#cbb287', 20);
+            popups.push({ x: W / 2, y: H * .3 + 36, text: stageCatalog()[idx].sub, colour: '#b7abc9', life: 1.8, size: 13 });
+            popups.push({ x: W / 2, y: H * .3 + 60, text: `MISSION · ${stageCatalog()[idx].mission.text.toUpperCase()}`, colour: '#a9d3be', life: 2.2, size: 12 });
             motif([[587.33, 0, .15], [783.99, .1, .3]], .05);
           } else {
             dashAct = 5;
@@ -900,7 +1117,7 @@ window.AetherArcade = (() => {
               tone(523.25, .3, 'sine', .05);
             }
           }
-        } else if (time > WHALE_AT + 42) {
+        } else if (time > whaleAt() + 42) {
           finish('The Umbra Whale dives home, humming your tune.', 1.6, true);
         }
       }
@@ -926,12 +1143,14 @@ window.AetherArcade = (() => {
         f.wait -= dt; if (f.wait > 0) continue;
         f.y += f.speed * dt * fallFactor; f.spin += dt;
         if (f.wind) f.x = clamp(f.x + Math.sin(time * .7 + f.spin) * f.wind * dt, 20, W - 20);
-        if (!f.bad && Math.hypot(f.x - catcher.x, f.y - (H - 72)) < magnetReach()) {
+        f.umbraLit = !f.umbra || Math.abs(f.x - umbraLightX) <= 112;
+        if (!f.bad && f.umbraLit && Math.hypot(f.x - catcher.x, f.y - (H - 72)) < magnetReach()) {
           f.x += (catcher.x - f.x) * dt * (has('lodestone') ? 3.8 : 2.8); f.attracted = true;
         }
+        if (f.umbra) f.umbraLit = Math.abs(f.x - umbraLightX) <= 112;
         const atHeight = Math.abs(f.y - (H - 72)) < f.r + (activePower?.id === 'prism-net' ? 34 : 10);
-        const directCatch = atHeight && Math.abs(f.x - catcher.x) < basketWidth() + f.r * .7;
-        const echoCatch = !f.bad && atHeight && echoes.some(e => Math.abs(f.x - e.x) < basketWidth() + f.r * .7);
+        const directCatch = atHeight && f.umbraLit && Math.abs(f.x - catcher.x) < basketWidth() + f.r * .7;
+        const echoCatch = !f.bad && atHeight && f.umbraLit && echoes.some(e => Math.abs(f.x - e.x) < basketWidth() + f.r * .7);
         // A meteor that brushes the rim gets its own adrenaline bookkeeping.
         if (f.bad && !f.grazed && atHeight && !directCatch && Math.abs(f.x - catcher.x) < basketWidth() + f.r * .7 + 26) {
           f.grazed = true; popups.push({ x: f.x, y: H - 110, text: 'CLOSE', colour: '#f5a08c', life: .7 });
@@ -975,6 +1194,7 @@ window.AetherArcade = (() => {
         }
         if (!f.taken && !f.bad && f.y > H + 30) {
           f.taken = true;
+          if (f.umbra) umbraMisses++;
           // A missed star never breaks the streak — only a meteor does. The
           // promised ×8 has to be reachable, or the multiplier is decoration.
           if (f.kind === 'pickup') popups.push({ x: f.x, y: H - 60, text: 'THE GIFT DRIFTS BY', colour: '#b7abc9', life: 1.2 });
@@ -1013,7 +1233,18 @@ window.AetherArcade = (() => {
     }
     function hitCrystal(b, damage = 1) {
       if (b.hp <= 0) return;
+      if (veteran && b.sealed && bricks.some(k => k.key && k.hp > 0)) {
+        b.hit = .2; cathedralSealBlocks++;
+        if (time - lastSealNote > 1.4) { lastSealNote = time; banner('SEALED · BREAK THE GOLD KEYSTONES', '#edf19b', 13); }
+        relicField(b.x, b.y, 28, '#edf19b', .25); tone(180, .07, 'square', .025);
+        return false;
+      }
+      const wasKey = veteran && b.key;
       b.hp = Math.max(0, b.hp - damage); b.hit = .2; combo++; crystalHits++;
+      if (veteran && b.hp > 0) cathedralArmourDents++;
+      if (wasKey && !b.hp && !bricks.some(k => k.key && k.hp > 0)) {
+        banner('THE CATHEDRAL IS UNSEALED', '#9ed7c6', 18); relicField(W / 2, H / 2, 220, '#9ed7c6', .8);
+      }
       if (has('twin-comet')) splitHits++;
       charge = Math.min(100, charge + (has('chrono-coil') ? 20 : 12));
       scoreAt(25 * Math.min(8, combo), b.x, b.y - 20); burst(b.x, b.y, colours[b.tier], b.hp ? 7 : 22); shake = 2;
@@ -1027,12 +1258,14 @@ window.AetherArcade = (() => {
       tone(350 + b.tier * 65, .1, 'sine', .05);
       if (b.hp) note(220, 0, .05, 'square', .02);
       else note(1567.98, .02, .1, 'sine', .025);
+      return true;
     }
     function breakerStep(dt) {
       slowTime -= dt;
       const direction = (keys.has('ArrowRight') || keys.has('d') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('a') ? 1 : 0);
       if (direction) paddle.target = paddle.angle + direction * 3.5 * dt;
       paddle.angle += angleDiff(paddle.target, paddle.angle) * (direction ? 1 : 1 - Math.exp(-20 * dt));
+      moveCathedralBricks();
       bricks.forEach(b => { b.hit = Math.max(0, b.hit - dt); });
       if (launchTimer > 0) {
         launchTimer -= dt;
@@ -1058,8 +1291,8 @@ window.AetherArcade = (() => {
             c.x = b.x + nx * (b.r + radius + .1); c.y = b.y + ny * (b.r + radius + .1);
             const dot = c.vx * nx + c.vy * ny;
             if (dot < 0) { c.vx -= 2 * dot * nx; c.vy -= 2 * dot * ny; }
-            hitCrystal(b, has('dense-core') ? 2 : 1);
-            if (has('shatterglass')) {
+            const crystalHit = hitCrystal(b, has('dense-core') ? 2 : 1);
+            if (crystalHit && has('shatterglass')) {
               const prism = has('twin-comet') && c.secondary, reach = prism ? 105 : 62;
               const neighbours = bricks.filter(n => n !== b && n.hp > 0 && Math.hypot(n.x - b.x, n.y - b.y) <= reach).sort((a, n) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(n.x - b.x, n.y - b.y)).slice(0, prism ? 2 : 1);              for (const n of neighbours) { hitCrystal(n); fields.push({ x: b.x, y: b.y, toX: n.x, toY: n.y, radius: reach, colour: prism ? '#edf19b' : '#bba7ed', life: .4, max: .4 }); }
               relicField(b.x, b.y, reach, prism ? '#edf19b' : '#bba7ed', .35);
@@ -1243,6 +1476,10 @@ window.AetherArcade = (() => {
           hueCache.seaGlow = glowSprite(320, 90, '158,215,198', .5);
           hueCache.seaGlowWarm = glowSprite(320, 90, '245,142,155', .5);
           hueCache.poolGlow = glowSprite(140, 44, '158,215,198', .55);
+          if (veteranExpedition) {
+            hueCache.umbraGlow = glowSprite(260, H, '176,160,223', .3);
+            hueCache.umbraPool = glowSprite(280, 100, '176,160,223', .5);
+          }
           hueCache.motes = Array.from({ length: 12 }, () => ({ x: bgRandom(), y: bgRandom(), d: .5 + bgRandom() }));
         }
         if (options.game === 'breaker') {
@@ -1286,6 +1523,13 @@ window.AetherArcade = (() => {
       ctx.globalAlpha = 1;
     }
     function drawMerge() {
+      if (veteran) {
+        const swing = clamp(mergeGravityX / 230, -1, 1);
+        ctx.strokeStyle = '#d9c7f366'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(47, 12); ctx.lineTo(47 + swing * 27, 65); ctx.stroke();
+        ctx.fillStyle = '#d9c7f3'; ctx.beginPath(); ctx.arc(47 + swing * 27, 65, 6, 0, TAU); ctx.fill();
+        text(mergeForecast ? `${mergeForecast.telegraph ? 'FORECAST' : 'PENDULUM'} · ${mergeForecast.name}` : 'PENDULUM ORRERY · BETWEEN FRONTS', W - 24, 23, 9, mergeForecast?.telegraph ? '#edf19b' : '#d9c7f3', 'right');
+        if (mergeForecast) text(`${Math.ceil(mergeForecast.remaining)}s · ${mergeForecast.hint}`, W - 24, 40, 9, '#b7abc9', 'right');
+      }
       ctx.fillStyle = '#bea7f008'; ctx.fillRect(22, 92, W - 44, H - 119);
       // The jar is a place: glass depth, a shine on the walls, an ember pool.
       ctx.fillStyle = hueCache.jarShade; ctx.fillRect(22, 92, W - 44, H - 119);
@@ -1358,6 +1602,27 @@ window.AetherArcade = (() => {
         text('GOLD', gateX, H * .5, 9, '#edf19b');
         text('MOON', gateX, H * .84, 9, '#a9d3be');
       }
+      if (veteran) {
+        for (const system of binarySystems) {
+          const ax = system.a.x - camera, bx = system.b.x - camera;
+          if (Math.max(ax, bx) < -80 || Math.min(ax, bx) > W + 80) continue;
+          ctx.strokeStyle = '#d9c7f355'; ctx.lineWidth = 2; ctx.setLineDash([3, 7]); ctx.beginPath(); ctx.moveTo(ax, system.a.y); ctx.lineTo(bx, system.b.y); ctx.stroke(); ctx.setLineDash([]);
+          text('TWIN STAR', system.x - camera, system.y - system.radius - 45, 9, '#d9c7f3');
+        }
+        for (const gate of surfGates) {
+          const x = gate.x - camera, gap = gate.currentGap || gate.gap;
+          if (x < -40 || x > W + 40) continue;
+          const top = gate.gapY - gap / 2, bottom = gate.gapY + gap / 2;
+          ctx.fillStyle = '#17152acc'; ctx.fillRect(x - 11, 0, 22, Math.max(0, top)); ctx.fillRect(x - 11, bottom, 22, H - bottom);
+          ctx.strokeStyle = gate.cooldown > 0 ? '#f58e9b' : '#d9c7f3'; ctx.lineWidth = 2;
+          for (const y of [top, bottom]) { ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.lineTo(x + 18, y); ctx.stroke(); }
+          for (let y = 22; y < H; y += 46) if (y < top - 8 || y > bottom + 8) star(ctx, x, y, 7, '#8f83bd', 4, gate.phase + y);
+          ctx.globalAlpha = .25; ctx.setLineDash([3, 8]); ctx.beginPath(); ctx.moveTo(x - 34, gate.gapY); ctx.lineTo(x + 34, gate.gapY); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+          if (gate.pattern === 'crown') { orb(ctx, x, gate.gapY, 25, 3, false, visualTime * .15); text('OR', x, gate.gapY - 38, 8, '#edf19b'); }
+          text(gate.label, x, clamp(top - 12, 18, H - 18), 8, '#d9c7f3');
+        }
+        text(`TWIN-STAR ROUTE · ${surfGatesPassed} CLEAN GATES`, W - 28, H - 44, 9, '#d9c7f3', 'right');
+      }
       for (const w of worlds) {
         const x = w.x - camera;
         const fieldRadius = tetherReach();
@@ -1423,6 +1688,14 @@ window.AetherArcade = (() => {
       // Each act tints the sky; the last fifteen seconds warm toward dawn.
       const actTints = ['#396368', '#3d4a7a', '#67426c', '#8c4a5e', '#8c753d'];
       ctx.globalAlpha = .05 + seaT * .12; ctx.fillStyle = actTints[Math.min(dashAct - 1, 4)]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+      const umbraWeather = veteranExpedition && stageCatalog()[dashStageIndex]?.umbra;
+      if (umbraWeather) {
+        ctx.fillStyle = '#08081766'; ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = .8; ctx.drawImage(hueCache.umbraGlow, umbraLightX - 130, 0); ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#c4b5f266'; ctx.setLineDash([4, 10]); ctx.lineWidth = 1.5;
+        for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(umbraLightX + side * 112, 82); ctx.lineTo(umbraLightX + side * 112, H - 88); ctx.stroke(); }
+        ctx.setLineDash([]); text('ROAMING LANTERN · ONLY LIT DARK STARS CAN LAND', umbraLightX, 96, 10, '#d9c7f3');
+      }
       if (slow > 0 && hueCache.motes) {
         ctx.fillStyle = '#d8f4ec';
         for (const m of hueCache.motes) { ctx.globalAlpha = .1; ctx.beginPath(); ctx.arc(m.x * W, (m.y * H + (reduced ? 0 : visualTime * 8 * m.d)) % H, 1.2, 0, TAU); ctx.fill(); }
@@ -1448,6 +1721,10 @@ window.AetherArcade = (() => {
           }
         }
         else if (f.kind === 'jelly') { ctx.fillStyle = '#bba7ed'; ctx.beginPath(); ctx.arc(f.x, f.y, 17, Math.PI, TAU); ctx.lineTo(f.x + 17, f.y + 6); ctx.quadraticCurveTo(f.x, f.y - 4, f.x - 17, f.y + 6); ctx.fill(); for (let i = -1; i <= 1; i++) { ctx.strokeStyle = '#bba7ed'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(f.x + i * 10, f.y + 3); ctx.quadraticCurveTo(f.x + i * 10 + Math.sin(visualTime * 5) * 7, f.y + 18, f.x + i * 10, f.y + 25); ctx.stroke(); } }
+        else if (f.umbra) {
+          ctx.globalAlpha = f.umbraLit ? 1 : .28; star(ctx, f.x, f.y, f.r * 1.65, f.umbraLit ? '#edf19b' : '#a895d4', 5, f.spin);
+          ctx.globalAlpha = f.umbraLit ? .85 : .38; ctx.strokeStyle = f.umbraLit ? '#edf19b' : '#bba7ed'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, f.r + 5, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+        }
         else { ctx.globalAlpha = .15; star(ctx, f.x, f.y, f.r * 1.8, '#edf19b', 4, f.spin); ctx.globalAlpha = 1; star(ctx, f.x, f.y, f.r, '#edf19b', 4, f.spin); }
       }
       const reach = magnetReach();
@@ -1526,7 +1803,7 @@ window.AetherArcade = (() => {
         if (mission) {
           text(`${missionDone ? '✓ ' : ''}${mission.text.toUpperCase()} · ${Math.floor(missionProgress)}/${mission.target}`, 26, 56, 10, missionDone ? '#a9d3be' : '#a9b6c3', 'left');
         }
-        const stageName = whale ? 'THE WHALE' : dashStages[dashStageIndex]?.name;
+        const stageName = whale ? 'THE WHALE' : stageCatalog()[dashStageIndex]?.name;
         if (stageName) text(stageName, W - 27, 58, 10, '#cbb287', 'right');
       }
       text(`${Math.ceil(remaining)}s`, W - 27, 35, 22, remaining <= 10 && !expedition ? '#edf19b' : '#eee7d4', 'right');
@@ -1534,15 +1811,20 @@ window.AetherArcade = (() => {
       ctx.fillStyle = '#9ed7c622'; ctx.fillRect(25, H - 20, W - 50, 3);
       if (remaining <= 10 && !expedition) { ctx.globalAlpha = reduced ? .8 : .5 + .4 * Math.sin(visualTime * 8); ctx.fillStyle = '#edf19b'; }
       else ctx.fillStyle = '#9ed7c6';
-      ctx.fillRect(25, H - 20, (W - 50) * remaining / (expedition ? EXPEDITION_LENGTH : 75), 3); ctx.globalAlpha = 1;
+      ctx.fillRect(25, H - 20, (W - 50) * remaining / (expedition ? expeditionLength() : 75), 3); ctx.globalAlpha = 1;
       // The boat carries a lantern-pool of light.
       ctx.globalAlpha = .22 + glow * .3;
       ctx.drawImage(hueCache.poolGlow, catcher.x - 70, H - 88); ctx.globalAlpha = 1;
+      if (umbraWeather) { ctx.globalAlpha = .7; ctx.drawImage(hueCache.umbraPool, umbraLightX - 140, H - 112); ctx.globalAlpha = 1; }
     }
     function drawBreaker() {
       // The arena is an orrery: visible tracks, a beating heart at the centre.
       const alive = bricks.reduce((n, b) => n + (b.hp > 0 ? 1 : 0), 0);
       const critical = alive > 0 && alive <= bricks.length / 4;
+      if (veteran) {
+        text(`CATHEDRAL · ${cathedralPatterns[(level - 1) % cathedralPatterns.length]}`, W / 2, 28, 11, '#d9c7f3');
+        text(bricks.some(b => b.key && b.hp > 0) ? 'GOLD KEYSTONES BREAK THE SEALS' : 'THE GLASS IS UNSEALED', W / 2, 47, 9, '#edf19b');
+      }
       ctx.strokeStyle = '#b9a5dc'; ctx.globalAlpha = critical ? .13 : .05; ctx.setLineDash([2, 10]);
       for (const r of [62, 111, 157]) { ctx.beginPath(); ctx.arc(W / 2, H / 2, r, 0, TAU); ctx.stroke(); }
       ctx.setLineDash([]); ctx.globalAlpha = 1;
@@ -1574,6 +1856,10 @@ window.AetherArcade = (() => {
       ctx.globalAlpha = phase === 'ending' ? .45 : 1;
       for (const b of bricks) {
         if (!b.hp) continue;
+        if (veteran && b.motion) {
+          ctx.globalAlpha = .22; ctx.strokeStyle = '#bba7ed'; ctx.lineWidth = 1; ctx.setLineDash([2, 5]);
+          ctx.beginPath(); ctx.moveTo(b.baseX, b.baseY); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        }
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle + .4);
         const popScale = 1 + (b.hit / .2) * (reduced ? .14 : .28);
         ctx.scale(popScale, popScale);
@@ -1587,6 +1873,11 @@ window.AetherArcade = (() => {
         // Family marks: pulse crystals breathe blue; the heart beats pink.
         if (b.family === 'pulse') { ctx.fillStyle = '#a6d9ec'; ctx.beginPath(); ctx.arc(0, 0, 4 + (reduced ? 0 : Math.sin(visualTime * 4) * 1.5), 0, TAU); ctx.fill(); }
         else if (b.family === 'heart') { ctx.fillStyle = '#f5a08c'; ctx.font = '13px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('♥', 0, 1); ctx.textBaseline = 'alphabetic'; }
+        if (veteran && b.key) { star(ctx, 0, 0, 8, '#fff3a6', 4, reduced ? 0 : visualTime); }
+        else if (veteran && b.sealed && bricks.some(k => k.key && k.hp > 0)) {
+          ctx.strokeStyle = '#edf19b'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.arc(0, 0, b.r + 5, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle = '#211b35'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('×', 0, 1); ctx.textBaseline = 'alphabetic';
+        }
         ctx.restore();
       }
       ctx.globalAlpha = 1;

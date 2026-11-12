@@ -45,6 +45,12 @@
       haste: ['Solar sails', 'Move 14% faster per rank; moving also increases firing speed.'],
       frost: ['Winter thread', 'Bolts slow enemies for 0.7 / 1.0 / 1.3 seconds.'],
       nova: ['Pulse heart', 'Space or Pulse: clear nearby threats. Radius 150 / 175 / 200; cooldown 6 / 5 / 4s.'],
+      // Veteran refits add build-defining formation arts without diluting the
+      // standard draft pool (or changing its seeded offer order).
+      ...(options.veteran ? {
+        relay: ['Counterpoint spindle', 'Switch formation: every link fires a free volley and phases for 0.35 / 0.45 / 0.55s. Recharges in 8 / 7 / 6s.'],
+        lodestar: ['Lodestar clasp', 'Hold one formation for 3.5 / 3 / 2.5s to attune: Ribbon links gather motes, Halo shatters drifts, Spear gains 1 / 2 / 3 pierce. Switching resets it.'],
+      } : {}),
     };
     const ROUTE_BASE = [
       { name: 'Drift nursery', hint: 'Gather teal motes. Your links are both weapons and health.', events: [[0, 'drift', 2], [3, 'drift', 2], [6, 'drift', 3]] },
@@ -54,15 +60,17 @@
       { name: 'The Unraveller', hint: 'Dodge the marked cross. Attack the open core between sweeps.', events: [[0, 'boss', 1]] },
     ];
     const VETERAN_ROUTE = [
-      { name: 'Aurora crossing', hint: 'Scissor lanes arrive with a drifting recovery window. Read both before committing.', events: [[0, 'cross', 2], [2, 'drift', 3], [5, 'cross', 3]] },
-      { name: 'Twin needle', hint: 'Two keepers alternate their charges. Draw one away, then switch formation for the other.', events: [[0, 'elite', 1], [2, 'elite', 1], [5, 'cross', 2], [8, 'drift', 3]] },
-      { name: 'Falling choir', hint: 'Drift shards flood the staff lines. Collect only while the next lane is open.', events: [[0, 'drift', 4], [2, 'cross', 3], [4, 'drift', 4], [7, 'cross', 3]] },
-      { name: 'Splintered orbit', hint: 'Keepers hold opposite poles. Halo resists the centre; spear breaks their pair.', events: [[0, 'elite', 1], [1, 'elite', 1], [3, 'cross', 4], [6, 'drift', 4]] },
-      { name: 'The Unraveller ascendant', hint: 'The old pattern returns with sharper crosswinds. Preserve a pulse for the open core.', events: [[0, 'boss', 1]] },
+      { name: 'Aurora crossing', hint: 'A lattice warden tracks in violet, then locks its severing line. Cross after the lock; watch the scissor lanes.', events: [[0, 'warden', 1], [3, 'cross', 2], [6, 'drift', 3]] },
+      { name: 'Twin needle', hint: 'A keeper and warden alternate body and line attacks. Draw the charge away, then switch formation for the lock.', events: [[0, 'elite', 1], [2, 'warden', 1], [5, 'elite', 1], [8, 'drift', 3]] },
+      { name: 'Falling choir', hint: 'Wardens pin the recovery windows while drift shards flood the staff. A compact formation slips their locked lines.', events: [[0, 'drift', 3], [2, 'warden', 1], [4, 'cross', 2], [6, 'drift', 4], [9, 'warden', 1]] },
+      { name: 'Splintered orbit', hint: 'Two wardens hold opposite poles. Bait both locks before crossing; their cores take extra damage while they rest.', events: [[0, 'warden', 1], [1, 'elite', 1], [3, 'warden', 1], [5, 'cross', 3], [8, 'drift', 4]] },
+      { name: 'The Unraveller ascendant', hint: 'Three spokes lock around your last position. Leave the violet lines, then strike the gold core while it rests.', events: [[0, 'boss', 1]] },
     ];
     const ROUTE = options.veteran ? VETERAN_ROUTE : ROUTE_BASE;
-    let phase = 'ready', encounter = 0, circuit = 1, elapsed = 0, eventIndex = 0, formation = 'ribbon';
+    const startEncounter = clamp(Math.floor(Number(options.startEncounter) || 0), 0, ROUTE.length - 1);
+    let phase = 'ready', encounter = startEncounter, circuit = 1, elapsed = 0, eventIndex = 0, formation = 'ribbon';
     let invuln = 0, ward = 0, wardTime = 0, pulseTime = 0, moving = false, surge = false, orbitA = 0, tickN = 0;
+    let relayTime = 0, relayCount = 0, attune = 0, attuned = false;
     let hazards = [], choices = [], relics = {}, draftCount = 0, shotsFired = 0, collected = 0, destroyed = false;
     const level = id => relics[id] || 0;
     const keys = new Set();
@@ -110,10 +118,14 @@
       phase, encounter: encounter + 1, circuit, elapsed, formation, relics: { ...relics },
       range: FORMATIONS[formation].range, draft: !draft.hidden,
       links: links.length, linkPositions: links.map(l => ({ x: l.x, y: l.y })), head: { ...head }, choices: [...choices],
-      enemies: shards.map(s => ({ x: s.x, y: s.y, hp: s.hp, kind: s.kind, mode: s.mode, r: s.r, slow: s.slow })),
+      enemies: shards.map(s => ({ x: s.x, y: s.y, hp: s.hp, kind: s.kind, mode: s.mode, r: s.r, slow: s.slow, timer: s.timer, aim: s.aim, maxHp: s.maxHp })),
       boss: shards.find(s => s.kind === 'boss')?.hp ?? 0,
-      hazards: hazards.map(h => ({ x: h.x, y: h.y, dx: h.dx, dy: h.dy, warning: h.warning, width: h.width })),
-      shotsFired, collected, draftCount, ward, pulseTime, broken, over,
+      bossMode: shards.find(s => s.kind === 'boss')?.mode ?? '', bossPattern: options.veteran ? 'braid' : 'cross',
+      hazards: hazards.map(h => ({ x: h.x, y: h.y, dx: h.dx, dy: h.dy, warning: h.warning, width: h.width, kind: h.kind || 'lane', life: h.life ?? 0, length: h.length ?? 0 })),
+      motes: motes.map(m => ({ x: m.x, y: m.y })),
+      bolts: bolts.map(b => ({ x: b.x, y: b.y, damage: b.damage, pierce: b.pierce, lodestar: !!b.lodestar })),
+      shotsFired, collected, draftCount, ward, pulseTime, broken, over, invuln,
+      relayTime, relayCount, attune, attuned, routeNames: ROUTE.map(r => r.name),
     }) });
     // The same headline diagnostics mirrored onto the canvas as dataset
     // attributes so browser tests can wait on them without polling JS.
@@ -130,9 +142,15 @@
       canvas.dataset.chainRelics = Object.entries(relics).map(([id, rank]) => `${id}:${rank}`).join(',');
       canvas.dataset.chainDraft = draft.hidden ? 'closed' : 'open';
       canvas.dataset.chainBoss = String(Math.round(shards.find(s => s.kind === 'boss')?.hp ?? 0));
+      canvas.dataset.chainBossMode = shards.find(s => s.kind === 'boss')?.mode ?? '';
+      canvas.dataset.chainBossPattern = options.veteran ? 'braid' : 'cross';
       canvas.dataset.chainBroken = String(broken);
       canvas.dataset.chainWard = String(ward);
       canvas.dataset.chainCollected = String(collected);
+      canvas.dataset.chainRelay = relayTime > 0 ? relayTime.toFixed(2) : 'ready';
+      canvas.dataset.chainRelayCount = String(relayCount);
+      canvas.dataset.chainAttuned = String(attuned);
+      canvas.dataset.chainWardens = String(shards.filter(s => s.kind === 'warden').length);
     }
     canvas.style.touchAction = 'none';
     try { canvas.focus({ preventScroll: true }); } catch { canvas.focus(); }
@@ -146,12 +164,21 @@
       pulseButton.disabled = g.paused || phase !== 'combat' || pulseTime > 0 || !!over;
       pulseButton.textContent = pulseTime > 0 ? `Pulse · ${Math.ceil(pulseTime)}s` : 'Pulse ready · Space';
       for (const button of formations.children) button.setAttribute('aria-pressed', String(button.dataset.chainFormation === formation));
-      build.textContent = `Build: ${Object.entries(relics).map(([id, rank]) => `${RELICS[id][0]} ${rank}`).join(' · ') || 'Choose your formation; relics arrive after each encounter.'}`;
+      const arts = [];
+      if (level('relay')) arts.push(`Counterpoint ${relayTime > 0 ? `${Math.ceil(relayTime)}s` : 'ready'}`);
+      if (level('lodestar')) arts.push(attuned ? `${FORMATIONS[formation].name} attuned` : `Attunement ${Math.round(clamp(attune / (4 - .5 * level('lodestar')), 0, 1) * 100)}%`);
+      build.textContent = `Build: ${Object.entries(relics).map(([id, rank]) => `${RELICS[id][0]} ${rank}`).join(' · ') || 'Choose your formation; relics arrive after each encounter.'}${arts.length ? ` · ${arts.join(' · ')}` : ''}`;
       syncDataset();
     }
     function setFormation(id) {
-      if (g.paused || over || destroyed) return;
-      formation = id; tone(540, .06, 'sine', .03); syncControls();
+      if (g.paused || over || destroyed || !FORMATIONS[id]) return;
+      const changed = formation !== id;
+      formation = id;
+      if (changed) {
+        attune = 0; attuned = false;
+        if (phase === 'combat') triggerRelay();
+      }
+      tone(540, .06, 'sine', .03); syncControls();
     }
     function addLinks(n) {
       for (let k = 0; k < n && links.length < LINK_CAP; k++) {
@@ -178,12 +205,18 @@
         // Fisher–Yates is deterministic and consumes no cosmetic randomness.
         for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
         choices = pool.slice(0, 3);
+        // The first veteran refit always teaches both new formation builds;
+        // the third offer and every later draft still come from the seed.
+        if (options.veteran && draftCount === 0) {
+          const featured = ['relay', 'lodestar'].filter(id => pool.includes(id));
+          choices = [...featured, ...choices.filter(id => !featured.includes(id))].slice(0, 3);
+        }
         for (const id of ['mend', 'guard', 'surge']) if (choices.length < 3) choices.push(id);
         const supplies = { mend: ['Reweave', 'Restore four additional links.'], guard: ['Reserve shield', 'Absorb the next impact.'], surge: ['Solar charge', 'Fire 30% faster in the next encounter.'] };
         choices.forEach((id, i) => {
           const button = document.createElement('button'); button.type = 'button'; button.dataset.chainChoice = id;
           const info = RELICS[id] || supplies[id];
-          const iconId=RELICS[id]?id:({mend:'bloom',guard:'aegis',surge:'energy'})[id];
+          const iconId=RELICS[id]?({relay:'echo',lodestar:'compass'}[id]||id):({mend:'bloom',guard:'aegis',surge:'energy'})[id];
           button.innerHTML = `<span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(iconId)}</span><span class="upgrade-copy">${i + 1}. ${info[0]}${RELICS[id] ? ` · rank ${level(id) + 1}/3` : ''} — ${info[1]}</span>`;
           draft.append(button);
         });
@@ -206,7 +239,7 @@
     function launch() {
       if (destroyed || g.paused || over || phase === 'combat') return;
       phase = 'combat'; elapsed = 0; eventIndex = 0; moteAt = 2.2; invuln = 1.5;
-      pulseTime = 0; clearInput(); draft.hidden = true;
+      pulseTime = 0; relayTime = 0; attune = 0; attuned = false; clearInput(); draft.hidden = true;
       head.x = 450; head.y = 320; head.dx = 1; head.dy = 0;
       links.forEach((l, i) => { l.x = head.x - (i + 1) * SP; l.y = head.y; l.cool = .1 * i; });
       status.textContent = `${circuit > 1 ? `Circuit ${circuit}. ` : ''}${encounter + 1}/5 · ${ROUTE[encounter].name}. ${ROUTE[encounter].hint}`;
@@ -226,6 +259,7 @@
         if (kind === 'cross') {
           const fromLeft = rand() < .5;
           hazards.push({
+            kind: 'lane',
             x: fromLeft ? -24 : W + 24, y: clamp(head.y + (i - (count - 1) / 2) * 82, 90, H - 65),
             dx: fromLeft ? 1 : -1, dy: 0, warning: 1.15, width: 15, speed: 195 * scale * pressure,
           });
@@ -236,18 +270,19 @@
         let x = side === 0 ? -24 : side === 1 ? W + 24 : 80 + rand() * (W - 160);
         let y = side === 2 ? 65 : side === 3 ? H + 24 : 100 + rand() * (H - 190);
         if (kind === 'boss') { x = 680; y = 270; }
-        const hp = (kind === 'boss' ? 115 : kind === 'elite' ? 22 : 2) * pressure;
+        const hp = (kind === 'boss' ? 115 : kind === 'elite' ? 22 : kind === 'warden' ? 30 : 2) * pressure;
         const speed = (kind === 'elite' ? 95 : 76 + encounter * 8) * scale * pressure;
         const a = Math.atan2(head.y - y, head.x - x);
         const s = {
           x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-          r: kind === 'boss' ? 35 : kind === 'elite' ? 22 : 14,
+          r: kind === 'boss' ? 35 : kind === 'elite' ? 22 : kind === 'warden' ? 20 : 14,
           hp, maxHp: hp, a: rand() * TAU, spin: rand() - .5, kind,
-          mode: 'arrive', timer: kind === 'boss' ? 2.5 : 2, slow: 0, age: 0, aim: 0, sx: 0, sy: 0,
+          mode: 'arrive', timer: kind === 'boss' ? 2.5 : kind === 'warden' ? 1.4 : 2, slow: 0, age: 0, aim: 0, sx: 0, sy: 0,
         };
-        if (kind === 'elite') { s.sx = 150 + rand() * (W - 300); s.sy = 130 + rand() * (H - 260); }
+        if (kind === 'elite' || kind === 'warden') { s.sx = 150 + rand() * (W - 300); s.sy = 130 + rand() * (H - 260); }
         shards.push(s);
-        if (kind === 'boss') { status.textContent = 'The Unraveller. Dodge the marked cross; strike while the core is open.'; tone(98, .5, 'sawtooth', .06); }
+        if (kind === 'warden') { status.textContent = 'Lattice warden. Violet tracks you; the locked line does not. Cross it after the lock, then punish its rest.'; tone(205, .22, 'triangle', .04); }
+        if (kind === 'boss') { status.textContent = options.veteran ? 'The Unraveller ascendant. Three spokes lock around your last position; leave them and strike the open core.' : 'The Unraveller. Dodge the marked cross; strike while the core is open.'; tone(98, .5, 'sawtooth', .06); }
       }
     }
     function hurt(index = -1) {
@@ -262,6 +297,9 @@
     function radial(x, y, radius, amount) {
       arcs.push({ ring: true, x1: x, y1: y, radius, t: .35 });
       for (const s of [...shards]) if (Math.hypot(s.x - x, s.y - y) < radius + s.r) damage(s, amount);
+    }
+    function spawnBeam(x, y, angle, warning = .9, width = 11, life = .75) {
+      hazards.push({ kind: 'beam', x, y, dx: Math.cos(angle), dy: Math.sin(angle), warning, width, life, length: Math.hypot(W, H), speed: 0 });
     }
     function pulse() {
       if (g.paused || destroyed || over || phase !== 'combat' || !level('nova') || pulseTime > 0) return;
@@ -281,14 +319,45 @@
 
     function damage(s, amount) {
       if (!shards.includes(s)) return;
-      s.hp -= amount * (s.kind === 'boss' && s.mode !== 'open' ? .25 : 1);
+      const exposure = s.kind === 'boss' && s.mode !== 'open' ? .25 : s.kind === 'warden' && s.mode === 'rest' ? 1.5 : 1;
+      s.hp -= amount * exposure;
       if (s.hp > 0) { tone(320, .05, 'triangle', .03); return; }
       if (!shards.includes(s)) return;
       shards.splice(shards.indexOf(s), 1);
       broken++;
       burst(s.x, s.y, '#d8c48b', 16, 190); tone(240 + Math.random() * 80, .1, 'triangle', .06);
-      if ((broken % 6 === 0 || (verbs.has('parallax') && broken % 5 === 0) || s.kind === 'elite') && motes.length < 5)
+      if ((broken % 6 === 0 || (verbs.has('parallax') && broken % 5 === 0) || s.kind === 'elite' || s.kind === 'warden') && motes.length < 5)
         motes.push({ x: clamp(s.x, 50, W - 50), y: clamp(s.y, 90, H - 50), p: rand() * TAU });
+    }
+
+    // One shared bolt path keeps ordinary and Counterpoint volleys identical.
+    // A free switch volley shoots forward even when no target is in reach.
+    function fireLink(l, free = false) {
+      const form = FORMATIONS[formation];
+      const targets = [];
+      for (const s of shards) {
+        const d = Math.hypot(s.x - l.x, s.y - l.y);
+        if (d < form.range) targets.push([d, s]);
+      }
+      targets.sort((a, b) => a[0] - b[0]);
+      if (!targets.length && !free) return false;
+      const boltSpeed = formation === 'spear' ? 380 : 520;
+      const boltDamage = formation === 'spear' ? 2 : 1;
+      const lodestar = formation === 'spear' && attuned;
+      const shots = targets.length ? targets.slice(0, 1 + level('fork')).map(([, s]) => Math.atan2(s.y - l.y, s.x - l.x)) : [Math.atan2(head.dy, head.dx)];
+      for (let i = 0; i < shots.length; i++) {
+        const target = targets[i]?.[1] || null, a = shots[i];
+        bolts.push({ x: l.x, y: l.y, vx: Math.cos(a) * boltSpeed, vy: Math.sin(a) * boltSpeed, target, life: 1.6, speed: boltSpeed, damage: boltDamage, pierce: level('pierce') + (lodestar ? level('lodestar') : 0), lodestar, struck: [] });
+        shotsFired++;
+      }
+      return true;
+    }
+    function triggerRelay() {
+      if (!level('relay') || relayTime > 0 || phase !== 'combat') return;
+      relayTime = 9 - level('relay'); relayCount++;
+      invuln = Math.max(invuln, .25 + .1 * level('relay'));
+      for (const l of links) fireLink(l, true);
+      burst(head.x, head.y, '#b7d8e8', 12, 120); tone(620, .12, 'triangle', .04);
     }
 
     function step(dt) {
@@ -312,6 +381,18 @@
         const before = Math.ceil(pulseTime);
         pulseTime = Math.max(0, pulseTime - dt);
         if (Math.ceil(pulseTime) !== before || !pulseTime) syncControls();
+      }
+      if (relayTime > 0) {
+        const before = Math.ceil(relayTime);
+        relayTime = Math.max(0, relayTime - dt);
+        if (Math.ceil(relayTime) !== before || !relayTime) syncControls();
+      }
+      if (level('lodestar') && !attuned) {
+        const before = Math.floor(attune * 4);
+        attune += dt;
+        if (attune >= 4 - .5 * level('lodestar')) {
+          attuned = true; tone(740, .18, 'sine', .04); syncControls();
+        } else if (Math.floor(attune * 4) !== before) syncControls();
       }
       // Steer: keys win; otherwise glide toward the pointer. Haste speeds the
       // comet; the halo's tight orbit slows it.
@@ -385,17 +466,44 @@
             if (s.timer <= 0 || s.x < 30 || s.x > W - 30 || s.y < 60 || s.y > H - 30) { s.mode = 'rest'; s.timer = 1.35; s.vx = s.vy = 0; }
           } else if (s.timer <= 0) { s.mode = 'aim'; s.timer = 1.1; }
           s.x = clamp(s.x, 24, W - 24); s.y = clamp(s.y, 56, H - 24);
+        } else if (s.kind === 'warden') {
+          // Wardens hold their ground and sever formations with a line. The
+          // tracking aim is violet and dashed; lock stops following the head,
+          // creating a deliberate sidestep window before the beam appears.
+          s.timer -= dt * slowMul;
+          if (s.mode === 'arrive') {
+            const dx = s.sx - s.x, dy = s.sy - s.y, d = Math.hypot(dx, dy) || 1;
+            if (d > 8) { s.x += dx / d * 110 * scale * slowMul * dt; s.y += dy / d * 110 * scale * slowMul * dt; }
+            if (s.timer <= 0) { s.mode = 'aim'; s.timer = 1.15; }
+          } else if (s.mode === 'aim') {
+            s.aim = Math.atan2(head.y - s.y, head.x - s.x);
+            if (s.timer <= 0) { s.mode = 'lock'; s.timer = .55; tone(285, .12, 'triangle', .04); }
+          } else if (s.mode === 'lock') {
+            if (s.timer <= 0) {
+              spawnBeam(s.x, s.y, s.aim);
+              s.mode = 'channel'; s.timer = 1.65;
+              tone(125, .25, 'sawtooth', .05);
+            }
+          } else if (s.mode === 'channel') {
+            if (s.timer <= 0) { s.mode = 'rest'; s.timer = 1.4; }
+          } else if (s.timer <= 0) { s.mode = 'aim'; s.timer = 1.15; }
+          s.x = clamp(s.x, 24, W - 24); s.y = clamp(s.y, 56, H - 24);
         } else if (s.kind === 'boss') {
           const pressure = 1 + (circuit - 1) * .16;
           s.timer -= dt * slowMul;
           if (s.mode === 'arrive') {
             s.x += (680 - s.x) * Math.min(1, dt * 1.6); s.y += (270 - s.y) * Math.min(1, dt * 1.6);
-            if (s.timer <= 0) { s.mode = 'aim'; s.timer = 1.2; }
+            if (s.timer <= 0) { s.mode = 'aim'; s.timer = options.veteran ? 1.5 : 1.2; }
           } else if (s.mode === 'aim') {
             s.x = 680 + Math.sin(s.age * .7) * 36; s.y = 270 + Math.sin(s.age * 1.1) * 24;
-            if (s.timer <= 0) {
-              hazards.push({ x: -24, y: clamp(head.y, 80, H - 60), dx: 1, dy: 0, warning: 1.15, width: 15, speed: 235 * scale * pressure });
-              hazards.push({ x: clamp(head.x, 70, W - 40), y: -24, dx: 0, dy: 1, warning: 1.15, width: 15, speed: 215 * scale * pressure });
+            if (s.timer <= 0 && options.veteran) {
+              s.aim = Math.atan2(head.y - s.y, head.x - s.x);
+              for (let spoke = 0; spoke < 3; spoke++) spawnBeam(s.x, s.y, s.aim + spoke * TAU / 3, 1.1, 12, .85);
+              tone(130, .35, 'sawtooth', .05);
+              s.mode = 'sweep'; s.timer = 2.15;
+            } else if (s.timer <= 0) {
+              hazards.push({ kind: 'lane', x: -24, y: clamp(head.y, 80, H - 60), dx: 1, dy: 0, warning: 1.15, width: 15, speed: 235 * scale * pressure });
+              hazards.push({ kind: 'lane', x: clamp(head.x, 70, W - 40), y: -24, dx: 0, dy: 1, warning: 1.15, width: 15, speed: 215 * scale * pressure });
               tone(160, .3, 'sawtooth', .05);
               s.mode = 'sweep'; s.timer = 1.8;
             }
@@ -405,7 +513,7 @@
             const dx = head.x - s.x, dy = head.y - s.y, d = Math.hypot(dx, dy) || 1;
             if (d > 150) { s.x += dx / d * 30 * slowMul * dt; s.y += dy / d * 30 * slowMul * dt; }
             if (s.timer <= 0) {
-              s.mode = 'aim'; s.timer = 1.2;
+              s.mode = 'aim'; s.timer = options.veteran ? 1.5 : 1.2;
               if (shards.length < 6) spawn('drift', 2);
             }
           }
@@ -414,10 +522,25 @@
           if (s.x < -100 || s.x > W + 100 || s.y < -100 || s.y > H + 100) { shards.splice(i, 1); continue; }
         }
       }
-      // Scissor lanes: dashed while they lock, then a blade runs the line.
+      // Scissor lanes move a blade along a dashed lock. Veteran beams instead
+      // hold a fixed ray for a short active window after their longer warning.
       for (let i = hazards.length - 1; i >= 0; i--) {
         const h = hazards[i];
         if (h.warning > 0) { h.warning -= dt; if (h.warning <= 0) tone(310, .08, 'square', .04); continue; }
+        if (h.kind === 'beam') {
+          h.life -= dt;
+          if (h.life <= 0) { hazards.splice(i, 1); continue; }
+          const touch = (ex, ey, pad) => {
+            const rx = ex - h.x, ry = ey - h.y;
+            const along = rx * h.dx + ry * h.dy;
+            return along > -pad && along < h.length && Math.abs(rx * h.dy - ry * h.dx) < h.width + pad;
+          };
+          let struck = -1;
+          for (let j = 0; j < links.length; j++) if (touch(links[j].x, links[j].y, 7)) { struck = j; break; }
+          if (struck >= 0 || touch(head.x, head.y, 9)) hurt(struck);
+          if (over) return;
+          continue;
+        }
         h.x += h.dx * h.speed * dt; h.y += h.dy * h.speed * dt;
         const touch = (ex, ey, pad) => h.dx
           ? Math.abs(ey - h.y) < h.width + pad && Math.abs(ex - h.x) < 12
@@ -435,23 +558,10 @@
       let cool = form.rate;
       if (surge) cool *= .7;
       if (level('haste') && moving) cool *= 1 - .09 * level('haste');
-      const boltSpeed = formation === 'spear' ? 380 : 520;
-      const boltDamage = formation === 'spear' ? 2 : 1;
       for (const l of links) {
         l.cool -= dt;
         if (l.cool > 0) continue;
-        const targets = [];
-        for (const s of shards) {
-          const d = Math.hypot(s.x - l.x, s.y - l.y);
-          if (d < form.range) targets.push([d, s]);
-        }
-        if (!targets.length) { l.cool = .12; continue; }
-        targets.sort((a, b) => a[0] - b[0]);
-        for (const [, t] of targets.slice(0, 1 + level('fork'))) {
-          const a = Math.atan2(t.y - l.y, t.x - l.x);
-          bolts.push({ x: l.x, y: l.y, vx: Math.cos(a) * boltSpeed, vy: Math.sin(a) * boltSpeed, target: t, life: 1.6, speed: boltSpeed, damage: boltDamage, pierce: level('pierce'), struck: [] });
-          shotsFired++;
-        }
+        if (!fireLink(l)) { l.cool = .12; continue; }
         l.cool = cool;
         if (Math.random() < .35) tone(880 + Math.random() * 120, .04, 'square', .018);
       }
@@ -494,6 +604,9 @@
         for (let j = 0; j < links.length; j++) if (Math.hypot(links[j].x - s.x, links[j].y - s.y) < s.r + 9) { struck = j; break; }
         const headHit = Math.hypot(head.x - s.x, head.y - s.y) < s.r + 11;
         if (struck < 0 && !headHit) continue;
+        if (struck >= 0 && !headHit && formation === 'halo' && attuned && s.kind === 'drift') {
+          damage(s, s.hp + 1); tone(690, .08, 'triangle', .035); continue;
+        }
         if (s.kind !== 'boss') {
           shards.splice(i, 1);
           burst(s.x, s.y, '#f58e9b', 20, 210); tone(150, .25, 'sawtooth', .05);
@@ -507,11 +620,19 @@
       const magnetR = level('magnet') ? 40 + 25 * level('magnet') : 24;
       for (let i = motes.length - 1; i >= 0; i--) {
         const m = motes[i];
+        let gatherer = head;
+        if (formation === 'ribbon' && attuned) {
+          let best = Math.hypot(m.x - head.x, m.y - head.y);
+          for (const l of links) {
+            const d = Math.hypot(m.x - l.x, m.y - l.y);
+            if (d < best) { best = d; gatherer = l; }
+          }
+        }
         if (level('magnet')) {
-          const dx = head.x - m.x, dy = head.y - m.y, d = Math.hypot(dx, dy) || 1;
+          const dx = gatherer.x - m.x, dy = gatherer.y - m.y, d = Math.hypot(dx, dy) || 1;
           if (d < magnetR * 1.9) { m.x += dx / d * 95 * dt; m.y += dy / d * 95 * dt; }
         }
-        if (Math.hypot(m.x - head.x, m.y - head.y) < magnetR) {
+        if (Math.hypot(m.x - gatherer.x, m.y - gatherer.y) < magnetR) {
           motes.splice(i, 1); collected++;
           addLinks((verbs.has('trail') ? 2 : 1) + (level('bloom') ? 1 : 0));
           if (level('bloom')) radial(m.x, m.y, 110, 2 + 2 * level('bloom'));
@@ -530,6 +651,20 @@
       // Scissor lanes: rose dashes while they lock, a bright blade once live.
       for (const h of hazards) {
         ctx.save();
+        if (h.kind === 'beam') {
+          const x2 = h.x + h.dx * h.length, y2 = h.y + h.dy * h.length;
+          if (h.warning > 0) {
+            ctx.globalAlpha = reduced() ? .7 : .55 + Math.sin(clock * 12) * .18;
+            ctx.strokeStyle = '#c4a7e7'; ctx.lineWidth = 3; ctx.setLineDash([5, 9]);
+            ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(x2, y2); ctx.stroke();
+          } else {
+            ctx.strokeStyle = '#9d73c845'; ctx.lineWidth = h.width * 2;
+            ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(x2, y2); ctx.stroke();
+            ctx.strokeStyle = '#eadcff'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(x2, y2); ctx.stroke();
+          }
+          ctx.restore(); continue;
+        }
         if (h.warning > 0) {
           ctx.globalAlpha = .35 + Math.sin(clock * 14) * .2;
           ctx.strokeStyle = '#f58e9b'; ctx.lineWidth = 2; ctx.setLineDash([10, 9]);
@@ -599,17 +734,39 @@
           ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(s.aim) * 430, s.y + Math.sin(s.aim) * 430); ctx.stroke();
           ctx.restore();
         }
+        if (s.kind === 'warden' && (s.mode === 'aim' || s.mode === 'lock')) {
+          ctx.save();
+          ctx.globalAlpha = reduced() ? .8 : .6 + Math.sin(clock * 10) * .16;
+          ctx.strokeStyle = s.mode === 'lock' ? '#eadcff' : '#b99bd8';
+          ctx.lineWidth = s.mode === 'lock' ? 3 : 2; ctx.setLineDash(s.mode === 'lock' ? [3, 5] : [10, 9]);
+          ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(s.aim) * Math.hypot(W, H), s.y + Math.sin(s.aim) * Math.hypot(W, H)); ctx.stroke();
+          ctx.restore();
+        }
+        if (s.kind === 'boss' && options.veteran && s.mode === 'aim') {
+          const aim = Math.atan2(head.y - s.y, head.x - s.x);
+          ctx.save(); ctx.globalAlpha = .38; ctx.strokeStyle = '#c4a7e7'; ctx.lineWidth = 2; ctx.setLineDash([4, 10]);
+          for (let spoke = 0; spoke < 3; spoke++) {
+            const a = aim + spoke * TAU / 3;
+            ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(a) * Math.hypot(W, H), s.y + Math.sin(a) * Math.hypot(W, H)); ctx.stroke();
+          }
+          ctx.restore();
+        }
         ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.a);
         ctx.beginPath();
-        const points = s.kind === 'boss' ? 12 : 8;
+        const points = s.kind === 'boss' ? 12 : s.kind === 'warden' ? 6 : 8;
         for (let i = 0; i < points; i++) {
           const a = i / points * TAU, w = s.r * (0.82 + Math.sin(i * 2.7 + s.r) * .2);
           i ? ctx.lineTo(Math.cos(a) * w, Math.sin(a) * w) : ctx.moveTo(Math.cos(a) * w, Math.sin(a) * w);
         }
         ctx.closePath();
-        ctx.fillStyle = s.kind === 'boss' ? '#2c2530' : '#33302a'; ctx.fill();
-        ctx.strokeStyle = s.slow > 0 ? '#9ec7d4' : s.kind === 'elite' ? '#c9846a' : s.kind === 'boss' ? '#a88950' : s.hp < 2 ? '#f58e9b' : '#8d7f5c';
+        ctx.fillStyle = s.kind === 'boss' ? '#2c2530' : s.kind === 'warden' ? '#282338' : '#33302a'; ctx.fill();
+        ctx.strokeStyle = s.slow > 0 ? '#9ec7d4' : s.kind === 'elite' ? '#c9846a' : s.kind === 'warden' ? '#c4a7e7' : s.kind === 'boss' ? '#a88950' : s.hp < 2 ? '#f58e9b' : '#8d7f5c';
         ctx.lineWidth = 2; ctx.stroke();
+        if (s.kind === 'warden') {
+          ctx.fillStyle = s.mode === 'rest' ? '#f2d38a' : s.mode === 'lock' || s.mode === 'channel' ? '#eadcff' : '#826b9e';
+          ctx.beginPath(); ctx.arc(0, 0, s.mode === 'rest' ? 8 : 5, 0, TAU); ctx.fill();
+          if (s.mode === 'rest') { ctx.strokeStyle = '#f2d38a88'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.stroke(); }
+        }
         if (s.hp < 2 && s.kind === 'drift') {
           ctx.strokeStyle = '#f58e9b88'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.moveTo(-s.r * .5, -s.r * .3); ctx.lineTo(s.r * .2, s.r * .1); ctx.lineTo(-s.r * .1, s.r * .55); ctx.stroke();
@@ -648,6 +805,13 @@
       // HUD
       ctx.fillStyle = '#e9dcae'; ctx.font = HUD; ctx.textAlign = 'left';
       ctx.fillText(`SCORE ${score()} · CHAIN ${links.length}`, 20, 28);
+      if (level('relay') || level('lodestar')) {
+        ctx.fillStyle = level('relay') && relayTime <= 0 || attuned ? '#9ed7c6' : '#b7bda4'; ctx.font = SMALL;
+        const arts = [];
+        if (level('relay')) arts.push(`COUNTERPOINT ${relayTime > 0 ? `${Math.ceil(relayTime)}s` : 'READY'}`);
+        if (level('lodestar')) arts.push(attuned ? `${FORMATIONS[formation].name.toUpperCase()} ATTUNED` : `ATTUNE ${Math.round(clamp(attune / (4 - .5 * level('lodestar')), 0, 1) * 100)}%`);
+        ctx.fillText(arts.join(' · '), 20, 48); ctx.font = HUD;
+      }
       ctx.textAlign = 'right';
       ctx.fillText(over ? (over > 0 ? 'THE CHAIN HOLDS' : 'THE CHAIN BREAKS') : `${circuit > 1 ? `CIRCUIT ${circuit} · ` : ''}${encounter + 1}/${ROUTE.length} · ${ROUTE[encounter].name.toUpperCase()}`, W - 20, 28);
       const boss = shards.find(s => s.kind === 'boss');
@@ -706,18 +870,26 @@
   // The skiff flies itself; hold to dive, release to climb, and thread the
   // golden rings as the tail sweeps past faster and faster.
   function perihelionGame(container, options = {}) {
-    const W = 900, H = 560, WIN = 60, TOP = 64, BOT = H - 64, R = 132, SK = 9;
+    const W = 900, H = 560, WIN = 60, TOP = 64, BOT = H - 64, R = 132, SK = 9, PAIR_GAP = 330;
     const verbs = options.verbs || new Set();
     const scale = options.speedScale || 1;
     const onEnd = options.onEnd || (() => {});
+    const veteran = !!options.veteran;
     const gapHalf = verbs.has('gyro') ? 62 : 54;
     const alpha = Math.asin(gapHalf / R);
     const ENDS = [alpha, Math.PI - alpha, Math.PI + alpha, TAU - alpha];
     const skiff = { x: 200, y: (TOP + BOT) / 2, vy: 0 };
     let gates = [], passed = 0, over = 0, invuln = 0, forgiven = false, shake = 0, gateTimer = 0, pointerHeld = false;
+    let gateIndex = 0, patternCounts = {}, tickN = 0;
+    // Classic keeps its original random stream. Veteran uses a separate,
+    // seeded stream for its authored gate grammar and daily determinism.
+    let seed = 307;
+    for (const c of String(options.seed ?? (options.daily ? new Date().toISOString().slice(0, 10) : 307))) seed = Math.imul(seed ^ c.charCodeAt(0), 16777619) >>> 0;
+    const rand = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    const random = () => veteran ? rand() : Math.random();
     const keys = new Set();
     const g = frame(container, W, H, {
-      label: 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
+      label: veteran ? 'Perihelion Run Veteran Sky. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Teal rails mark drifting gates and numbered golden rings arrive in pairs. Survive sixty seconds. Press P to pause.' : 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -726,15 +898,55 @@
     try { canvas.focus({ preventScroll: true }); } catch { canvas.focus(); }
 
     const speed = () => (230 + g.clock * 3.2) * scale;
-
-    function spawnGate() {
-      gates.push({ x: W + R + 40, y: TOP + 95 + Math.random() * (BOT - TOP - 190), scored: false, prevDx: null });
+    const routeName = () => !veteran ? 'classic' : g.clock < 18 ? 'Wayward tail' : g.clock < 40 ? 'Braided tail' : 'Solar crown';
+    function syncDataset() {
+      canvas.dataset.perihelionVeteran = String(veteran);
+      canvas.dataset.perihelionRoute = routeName();
+      canvas.dataset.perihelionPassed = String(passed);
+      canvas.dataset.perihelionGateCount = String(gateIndex);
+      canvas.dataset.perihelionPatterns = Object.keys(patternCounts).join(',');
+      canvas.dataset.perihelionPhase = over ? (over > 0 ? 'won' : 'lost') : 'running';
+      canvas.dataset.perihelionSpeedScale = String(scale);
     }
-    spawnGate();
-    gateTimer = (520 + Math.random() * 90) / speed();
+    Object.defineProperty(g, 'state', { get: () => ({
+      veteran, route: routeName(), passed, over, gateTimer, gateIndex, patternCounts: { ...patternCounts },
+      clock: g.clock, speed: speed(), skiff: { ...skiff },
+      gates: gates.map(gt => ({ x: gt.x, y: gt.y, baseY: gt.baseY, age: gt.age, pattern: gt.pattern, pairOrder: gt.pairOrder, scored: gt.scored })),
+    }) });
+
+    function addGate(x, y, pattern = 'ring', pairOrder = 0) {
+      gates.push({ x, y, baseY: y, age: 0, driftPhase: veteran ? rand() * TAU : 0, pattern, pairOrder, scored: false, prevDx: null });
+      patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
+    }
+    function spawnGate() {
+      if (!veteran) {
+        addGate(W + R + 40, TOP + 95 + Math.random() * (BOT - TOP - 190));
+        gateIndex++; syncDataset(); return 'ring';
+      }
+      const sequences = {
+        'Wayward tail': ['drift', 'pair', 'ring'],
+        'Braided tail': ['pair', 'drift', 'pair'],
+        'Solar crown': ['drift', 'pair', 'drift'],
+      };
+      const sequence = sequences[routeName()], pattern = sequence[gateIndex % sequence.length];
+      const x = W + R + 40, y = TOP + 95 + rand() * (BOT - TOP - 190);
+      addGate(x, y, pattern);
+      if (pattern === 'pair') {
+        // The echo follows far enough behind for a full climb/dive reversal.
+        // Cap its opposite offset at 140 so veteran speed never makes the
+        // second gap geometrically impossible after threading the first.
+        const echoY = clamp(clamp(TOP + BOT - y, y - 140, y + 140), TOP + 95, BOT - 95);
+        addGate(x + PAIR_GAP, echoY, 'pair', 1);
+      }
+      gateIndex++; syncDataset(); return pattern;
+    }
+    const firstPattern = spawnGate();
+    gateTimer = (520 + random() * 90 + (firstPattern === 'pair' ? PAIR_GAP : 0)) / speed();
+    syncDataset();
 
     function end(won) {
       if (over) return; over = won ? 1 : -1;
+      syncDataset();
       if (won) { burst(skiff.x, skiff.y, '#f2d38a', 30, 240); tone(660, .3, 'sine', .06); tone(990, .45, 'sine', .05); }
       g.after(() => { g.destroy(); onEnd({ won, score: passed * 120 }); }, 850);
     }
@@ -756,6 +968,7 @@
     function step(dt) {
       if (over) return;
       if (g.clock >= WIN) return end(true);
+      if ((++tickN & 7) === 0) syncDataset();
       shake = Math.max(0, shake - dt * 16);
       invuln = Math.max(0, invuln - dt);
       // Hold dives, release climbs; the tail's pull is patient.
@@ -764,9 +977,14 @@
       skiff.y += skiff.vy * dt;
       const sp = speed();
       gateTimer -= dt;
-      if (gateTimer <= 0) { spawnGate(); gateTimer = (520 + Math.random() * 90) / sp; }
+      if (gateTimer <= 0) {
+        const pattern = spawnGate();
+        gateTimer = (520 + random() * 90 + (veteran && pattern === 'pair' ? PAIR_GAP : 0)) / sp;
+      }
       for (let i = gates.length - 1; i >= 0; i--) {
         const gt = gates[i];
+        gt.age += dt;
+        if (gt.pattern === 'drift') gt.y = clamp(gt.baseY + Math.sin(gt.age * 1.25 + gt.driftPhase) * 58, TOP + 95, BOT - 95);
         gt.x -= sp * dt;
         if (gt.x < -R - 60) { gates.splice(i, 1); continue; }
         const dx = gt.x - skiff.x, dy = skiff.y - gt.y, d = Math.hypot(dx, dy) || 1;
@@ -817,8 +1035,23 @@
           ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 46, sy); ctx.stroke();
         }
       }
-      // The golden gates: two arcs with a gap fore and aft.
+      // The golden gates: two arcs with a gap fore and aft. Veteran drift
+      // gates carry a teal travel rail; paired gates are numbered I and II.
       for (const gt of gates) {
+        if (gt.pattern === 'drift') {
+          ctx.save(); ctx.strokeStyle = '#9ed7c65c'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 7]);
+          ctx.beginPath(); ctx.moveTo(gt.x, gt.baseY - 68); ctx.lineTo(gt.x, gt.baseY + 68); ctx.stroke();
+          ctx.setLineDash([]); ctx.fillStyle = '#9ed7c6';
+          for (const dir of [-1, 1]) {
+            const y = gt.baseY + dir * 70;
+            ctx.beginPath(); ctx.moveTo(gt.x, y + dir * 5); ctx.lineTo(gt.x - 5, y - dir * 3); ctx.lineTo(gt.x + 5, y - dir * 3); ctx.closePath(); ctx.fill();
+          }
+          ctx.restore();
+        }
+        if (gt.pattern === 'pair') {
+          ctx.fillStyle = '#9ed7c6'; ctx.font = SMALL; ctx.textAlign = 'center';
+          ctx.fillText(gt.pairOrder ? 'II' : 'I', gt.x - R - 18, gt.y + 4);
+        }
         ctx.strokeStyle = '#c4ac7926'; ctx.lineWidth = 10;
         ctx.beginPath(); ctx.arc(gt.x, gt.y, R, alpha, Math.PI - alpha); ctx.stroke();
         ctx.beginPath(); ctx.arc(gt.x, gt.y, R, Math.PI + alpha, TAU - alpha); ctx.stroke();
@@ -844,14 +1077,18 @@
       ctx.fillText(`GATES ${passed} · ${passed * 120}`, 20, 28);
       ctx.textAlign = 'right';
       ctx.fillText(over ? (over > 0 ? 'PERIHELION REACHED' : 'LOST TO THE LIGHT') : `${Math.ceil(WIN - g.clock)}s`, W - 20, 28);
+      if (veteran) {
+        ctx.fillStyle = '#9ed7c6'; ctx.textAlign = 'center'; ctx.font = SMALL;
+        ctx.fillText(`VETERAN · ${routeName().toUpperCase()}`, W / 2, 28); ctx.font = HUD;
+      }
       if (g.clock < 4.2 && !over) {
         ctx.globalAlpha = clamp((4.2 - g.clock) / 1.2, 0, 1);
         ctx.fillStyle = '#e9dcae'; ctx.font = SERIF; ctx.textAlign = 'center';
-        ctx.fillText('Perihelion Run', W / 2, 120);
+        ctx.fillText(veteran ? `Perihelion · ${routeName()}` : 'Perihelion Run', W / 2, 120);
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText('Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
+      ctx.fillText(veteran ? 'Hold to dive · teal rails mark drifting gates · paired rings demand quick reversals' : 'Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set([' ', 'w', 'arrowup']);

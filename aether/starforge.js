@@ -26,6 +26,7 @@ window.AetherStarforge = (() => {
     { name: 'The Dying Clock', brief: 'Every quarter turn seals a machine type. Vent once, then finish the star.', target: 18, seconds: 62, cap: 86, boss: true, freeze: ['splitter', 'capacitor', 'rail'], tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
     { name: 'The Astral Crucible', brief: 'Two eclipses in one cycle. Store charge between the dark pulses and keep the furnace below its brass limit.', target: 21, seconds: 64, cap: 78, required: ['splitter', 'capacitor', 'rail'], eclipse: true, tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
     { name: 'The Last Orrery', brief: 'The mirror and regulator take turns being sealed. Build for the recovery windows, not for a single perfect pulse.', target: 26, seconds: 70, cap: 76, boss: true, required: ['splitter', 'capacitor', 'rail'], eclipse: true, freeze: ['mirror', 'regulator'], tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
+    { name: 'The Ember Covenant', brief: 'A wide resonance window banks light instead of delivering it. Vent at 24+ heat for the full capacitor; early vents halve the yield. Two vents only.', target: 20, seconds: 68, cap: 88, pressure: 24, vents: 2, required: ['splitter', 'capacitor', 'rail'], tools: ['mirror', 'conductor', 'splitter', 'furnace', 'capacitor', 'regulator', 'rail'] },
   ];
 
   function readSave() {
@@ -42,7 +43,7 @@ window.AetherStarforge = (() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const available = options.veteran ? scenarios : scenarios.slice(0, 6);
     let scenarioIndex = clamp(Number.isInteger(options.scenario) ? options.scenario : stored.completed, 0, available.length - 1);
-    let selected = 'mirror', modules = [], motes = [], phase = 0, pulse = 0, pulseCount = 0, energy = 0, heat = 0, vents = 1;
+    let selected = 'mirror', modules = [], motes = [], phase = 0, pulse = 0, pulseCount = 0, energy = 0, heat = 0, charge = 0, discharges = 0, vents = available[scenarioIndex].vents || 1;
     let remaining = available[scenarioIndex].seconds, running = false, ended = false, paused = false, destroyed = false, frame = 0, last = 0, endTimer = 0;
     let renderedTools = '', renderedScenarios = '';
     const controller = new AbortController();
@@ -75,6 +76,10 @@ window.AetherStarforge = (() => {
         const next = missing[0];
         title = `NEXT: ${devices[next].name.toUpperCase()} → ${next === 'mirror' ? 'TOP' : next === 'conductor' ? 'RIGHT' : next === 'furnace' ? 'BOTTOM' : 'ITS NAMED GATE'}`;
         detail = next === 'mirror' ? 'The Mirror catches the ray from the CENTER only when it passes the TOP gate. Put it in socket 1 to start.' : `Place the ${devices[next].name} on its colored, named gate. A ray flows only when all required devices pass their gates together.`;
+      } else if (scenario().pressure) {
+        const resonant = active('mirror') && active('conductor') && active('furnace');
+        title = !running ? 'PRESSURE CIRCUIT ALIGNED · IGNITE TO BANK' : heat >= scenario().pressure ? 'CAPACITOR PRIMED · VENT FOR FULL DELIVERY' : resonant ? `BANKING LIGHT · PRIME TO ${scenario().pressure} HEAT` : 'RESONANCE WINDOW CLOSED · BANK HELD';
+        detail = `${charge} units banked; ${energy} delivered. Vent at ${scenario().pressure}+ heat to deliver the whole bank. An early vent delivers only half and still spends one of ${vents} remaining vent${vents === 1 ? '' : 's'}.`;
       } else if (running && (!active('mirror') || !active('conductor') || !active('furnace'))) {
         title = 'CIRCUIT SET · WAITING FOR GATE WINDOW';
         detail = 'The fixed gates do not move: the Mirror at top catches the core ray while Conductor at right and Furnace at bottom pass their gates at the same instant.';
@@ -98,12 +103,16 @@ window.AetherStarforge = (() => {
       canvas.dataset.heat = String(Math.round(heat));
       canvas.dataset.running = String(running);
       canvas.dataset.paused = String(paused);
+      canvas.dataset.charge = String(charge); canvas.dataset.vents = String(vents); canvas.dataset.discharges = String(discharges);
+      canvas.dataset.mechanic = level.pressure ? 'capacitor-discharge' : level.freeze ? 'clock-seals' : level.eclipse ? 'eclipse' : 'direct-flow';
+      canvas.dataset.pressure = String(level.pressure || 0); canvas.dataset.ended = String(ended);
       timeLabel.textContent = `${Math.floor(remaining / 60)}:${String(Math.ceil(remaining % 60)).padStart(2, '0')}`;
       const frozen = frozenDevice();
-      stateLabel.textContent = ended ? (energy >= level.target ? 'CONTRACT SEALED' : heat >= level.cap ? 'FOUNDRY OVERPRESSURE' : 'STAR EXTINGUISHED') : frozen ? `CLOCK SEALS ${devices[frozen].name.toUpperCase()}` : running ? (level.eclipse ? 'ECLIPSE: EVERY THIRD PULSE LOST' : 'ORBITAL CYCLE LIVE') : 'BUILD BEFORE IGNITION';
+      const pressureState = level.pressure && running ? `BANK ${charge} · ${heat >= level.pressure ? 'VENT FOR FULL DELIVERY' : `PRIME TO ${level.pressure} HEAT`}` : '';
+      stateLabel.textContent = ended ? (energy >= level.target ? 'CONTRACT SEALED' : heat >= level.cap ? 'FOUNDRY OVERPRESSURE' : 'STAR EXTINGUISHED') : frozen ? `CLOCK SEALS ${devices[frozen].name.toUpperCase()}` : pressureState || (running ? (level.eclipse ? 'ECLIPSE: EVERY THIRD PULSE LOST' : 'ORBITAL CYCLE LIVE') : 'BUILD BEFORE IGNITION');
       runButton.textContent = running ? 'PAUSE CYCLE' : 'IGNITE CYCLE';
-      ventButton.textContent = `VENT HEAT · ${vents}`;
-      ventButton.disabled = vents < 1 || ended;
+      ventButton.textContent = level.pressure ? `VENT / DELIVER ${charge} · ${vents}` : `VENT HEAT · ${vents}`;
+      ventButton.disabled = vents < 1 || ended || (Boolean(level.pressure) && charge < 1);
       const nextTools = level.tools.map(id => `<button type="button" data-star-tool="${id}" aria-pressed="${selected === id}"><b style="color:${devices[id].tone}">${devices[id].glyph}</b>${devices[id].name}</button>`).join('');
       const nextScenarios = available.map((item, index) => `<button type="button" data-star-scenario="${index}" ${(index < 6 && index > stored.completed) || (index >= 6 && stored.completed < 6) ? 'disabled' : ''} aria-pressed="${scenarioIndex === index}"><span>${index < stored.completed ? '✦' : index + 1}</span>${item.name}</button>`).join('');
       if (nextTools !== renderedTools) { tools.innerHTML = nextTools; renderedTools = nextTools; }
@@ -111,7 +120,7 @@ window.AetherStarforge = (() => {
       explainPath();
     }
     function reset() {
-      modules = []; motes = []; phase = 0; pulse = 0; pulseCount = 0; energy = 0; heat = 0; vents = 1; remaining = scenario().seconds; running = false; ended = false;
+      modules = []; motes = []; phase = 0; pulse = 0; pulseCount = 0; energy = 0; heat = 0; charge = 0; discharges = 0; vents = scenario().vents || 1; remaining = scenario().seconds; running = false; ended = false;
       if (endTimer) { clearTimeout(endTimer); endTimer = 0; }
       renderNow();
     }
@@ -121,10 +130,11 @@ window.AetherStarforge = (() => {
       if (!running || !cycle) return null;
       return cycle[Math.floor((scenario().seconds - remaining) / 8) % cycle.length];
     }
+    function gateTolerance() { return scenario().pressure ? .95 : .24; }
     function active(id) {
       if (frozenDevice() === id) return null;
       const device = devices[id];
-      return modules.find(module => module.id === id && angleGap(position(module.slot).angle, device.gate) < .24);
+      return modules.find(module => module.id === id && angleGap(position(module.slot).angle, device.gate) < gateTolerance());
     }
     function pulseFlow() {
       const mirror = active('mirror'), conductor = active('conductor'), furnace = active('furnace'), regulator = active('regulator');
@@ -136,8 +146,18 @@ window.AetherStarforge = (() => {
       emit(core, mirrorPos, devices.mirror.tone); emit(mirrorPos, conductorPos, devices.conductor.tone); emit(conductorPos, furnacePos, devices.furnace.tone);
       const bonus = active('splitter') ? 1 : 0;
       const storedCharge = active('capacitor') ? 1 : 0;
-      energy += 1 + bonus + storedCharge;
+      const output = 1 + bonus + storedCharge;
+      if (scenario().pressure) charge += output; else energy += output;
       heat += devices.furnace.heat + (bonus ? devices.splitter.heat : 0) + (storedCharge ? devices.capacitor.heat : 0) + (regulator ? devices.regulator.heat : 0) + (active('rail') ? -4 : 0);
+    }
+    function vent() {
+      const level = scenario();
+      if (vents < 1 || ended || (level.pressure && charge < 1)) return;
+      const fullDelivery = level.pressure && heat >= level.pressure;
+      const released = level.pressure ? (fullDelivery ? charge : Math.max(1, Math.floor(charge / 2))) : 0;
+      vents--; heat = Math.max(0, heat - 24);
+      if (level.pressure) { charge = 0; discharges++; energy += released; }
+      if (energy >= level.target) finish(true); else renderNow();
     }
     function finish(won) {
       if (ended) return;
@@ -176,14 +196,15 @@ window.AetherStarforge = (() => {
       const cx = W * .5, cy = H * .5;
       [112, 182, 252].forEach((radius, index) => { ctx.strokeStyle = index === 1 ? 'rgba(228,189,122,.42)' : 'rgba(185,198,184,.18)'; ctx.lineWidth = index === 1 ? 2 : 1; circle(cx, cy, radius); ctx.stroke(); });
        Object.values(devices).forEach(device => { const x = cx + Math.cos(device.gate) * 225, y = cy + Math.sin(device.gate) * 225; ctx.fillStyle = device.tone; ctx.globalAlpha = .72; circle(x, y, 4); ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = '#ddd4b9'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(device.name.toUpperCase(), x, y - 10); });
-       modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < .24; const gate = { x: cx + Math.cos(device.gate) * 225, y: cy + Math.sin(device.gate) * 225 }; ctx.save(); ctx.strokeStyle = aligned ? device.tone : '#a99b8055'; ctx.setLineDash(aligned ? [] : [3, 5]); ctx.lineWidth = aligned ? 3 : 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(gate.x, gate.y); ctx.stroke(); ctx.restore(); });
+       modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < gateTolerance(); const gate = { x: cx + Math.cos(device.gate) * 225, y: cy + Math.sin(device.gate) * 225 }; ctx.save(); ctx.strokeStyle = aligned ? device.tone : '#a99b8055'; ctx.setLineDash(aligned ? [] : [3, 5]); ctx.lineWidth = aligned ? 3 : 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(gate.x, gate.y); ctx.stroke(); ctx.restore(); });
        const sun = ctx.createRadialGradient(cx, cy, 4, cx, cy, 48); sun.addColorStop(0, '#fff4c9'); sun.addColorStop(.32, '#f3ae68'); sun.addColorStop(1, 'rgba(142,54,31,0)'); ctx.fillStyle = sun; circle(cx, cy, 48); ctx.fill(); ctx.fillStyle = '#f8e8b6'; circle(cx, cy, 10); ctx.fill();
+       if (scenario().pressure && charge) { ctx.strokeStyle = devices.capacitor.tone; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(cx, cy, 58, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, charge / scenario().target)); ctx.stroke(); }
        const caught = active('mirror');
        if (caught) { const p = position(caught.slot); ctx.save(); ctx.strokeStyle = '#f6d695'; ctx.lineWidth = 3; ctx.shadowColor = '#f6d695'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.restore(); }
       for (let slot = 0; slot < 8; slot++) { const p = position(slot); ctx.strokeStyle = 'rgba(229,204,151,.65)'; ctx.lineWidth = 2; circle(p.x, p.y, 23); ctx.stroke(); ctx.fillStyle = '#d8caa7'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(slot + 1), p.x, p.y + 39); }
-       modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < .24; ctx.fillStyle = '#101820'; circle(p.x, p.y, 19); ctx.fill(); ctx.strokeStyle = device.tone; ctx.lineWidth = aligned ? 3 : 2; circle(p.x, p.y, 19); ctx.stroke(); ctx.fillStyle = device.tone; ctx.font = 'bold 21px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(device.glyph, p.x, p.y + 7); if (aligned) { ctx.font = 'bold 13px "DM Sans", sans-serif'; ctx.fillText('✓', p.x + 23, p.y - 16); } });
+       modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < gateTolerance(); ctx.fillStyle = '#101820'; circle(p.x, p.y, 19); ctx.fill(); ctx.strokeStyle = device.tone; ctx.lineWidth = aligned ? 3 : 2; circle(p.x, p.y, 19); ctx.stroke(); ctx.fillStyle = device.tone; ctx.font = 'bold 21px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(device.glyph, p.x, p.y + 7); if (aligned) { ctx.font = 'bold 13px "DM Sans", sans-serif'; ctx.fillText('✓', p.x + 23, p.y - 16); } });
       motes.forEach(mote => { const progress = 1 - mote.life / mote.max, x = mote.x + (mote.tx - mote.x) * progress, y = mote.y + (mote.ty - mote.y) * progress; ctx.fillStyle = mote.tone; circle(x, y, 5); ctx.fill(); });
-      ctx.fillStyle = 'rgba(8,14,18,.72)'; ctx.fillRect(24, H - 96, 360, 70); ctx.fillStyle = '#f0d9a1'; ctx.font = '600 13px "DM Sans", sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SELECTED: ${devices[selected].name.toUpperCase()}`, 40, H - 67); ctx.fillStyle = '#b5c9bf'; ctx.font = '12px "DM Sans", sans-serif'; ctx.fillText('Align each device with its named gate as the rail turns.', 40, H - 43); ctx.fillText(frozenDevice() ? `THE DYING CLOCK HAS SEALED ${devices[frozenDevice()].name.toUpperCase()}.` : 'A complete path flashes only when all gates coincide.', 40, H - 25);
+      ctx.fillStyle = 'rgba(8,14,18,.72)'; ctx.fillRect(24, H - 96, 360, 70); ctx.fillStyle = '#f0d9a1'; ctx.font = '600 13px "DM Sans", sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SELECTED: ${devices[selected].name.toUpperCase()}`, 40, H - 67); ctx.fillStyle = '#b5c9bf'; ctx.font = '12px "DM Sans", sans-serif'; ctx.fillText('Align each device with its named gate as the rail turns.', 40, H - 43); ctx.fillText(scenario().pressure ? `BANK ${charge} · ${heat >= scenario().pressure ? 'VENT NOW FOR FULL DELIVERY' : `PRIME TO ${scenario().pressure} HEAT BEFORE VENTING`}` : frozenDevice() ? `THE DYING CLOCK HAS SEALED ${devices[frozenDevice()].name.toUpperCase()}.` : 'A complete path flashes only when all gates coincide.', 40, H - 25);
       if (ended) { ctx.fillStyle = 'rgba(4,8,12,.72)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = energy >= scenario().target ? '#f7d68f' : '#ef9a82'; ctx.font = '46px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(energy >= scenario().target ? 'CONTRACT SEALED' : 'THE FOUNDRY FALLS SILENT', cx, cy - 12); ctx.fillStyle = '#d9d1bc'; ctx.font = '16px "DM Sans", sans-serif'; ctx.fillText(energy >= scenario().target ? 'A new star blueprint enters the observatory ledger.' : 'Rebuild the schematic and try another rhythm.', cx, cy + 24); }
     }
     function renderNow() { draw(); refreshUi(); }
@@ -230,7 +251,7 @@ window.AetherStarforge = (() => {
       const level = event.target.closest('[data-star-scenario]'); if (level) { scenarioIndex = Number(level.dataset.starScenario); reset(); return; }
       const action = event.target.closest('[data-starforge]')?.dataset.starforge;
       if (action === 'run' && !ended) { running = !running; last = 0; renderNow(); schedule(); }
-      if (action === 'vent' && vents && !ended) { vents--; heat = Math.max(0, heat - 24); renderNow(); }
+      if (action === 'vent') vent();
       if (action === 'reset') reset();
     }, { signal });
     // Never schedule frames in a hidden tab; pick up cleanly on return.
@@ -267,7 +288,7 @@ window.AetherStarforge = (() => {
     }
     renderNow();
     canvas.focus({ preventScroll: true });
-    return { destroy, pause, resume, get state() { return { scenario: scenarioIndex, energy, heat, paused, modules: modules.slice() }; } };
+    return { destroy, pause, resume, get state() { return { scenario: scenarioIndex, energy, heat, charge, vents, discharges, remaining, running, ended, paused, modules: modules.slice() }; } };
   }
   return { create, scenarios };
 })();

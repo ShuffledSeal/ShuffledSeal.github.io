@@ -9,6 +9,7 @@ window.AetherDeepField = (() => {
     navigator: Object.freeze({ name: 'Navigator', subtitle: 'The cartographer’s chart', cols: 12, rows: 10, mines: 22, hints: 2 }),
     eclipse: Object.freeze({ name: 'Eclipse', subtitle: 'A crowded occultation', cols: 16, rows: 12, mines: 42, hints: 1 }),
     cathedral: Object.freeze({ name: 'Cathedral', subtitle: 'The long night of glass', cols: 18, rows: 12, mines: 52, hints: 1 }),
+    meridian: Object.freeze({ name: 'Meridian', subtitle: 'The flag-bearer’s reckoning', cols: 20, rows: 12, mines: 58, hints: 1, veteran: true, flagLimit: 12, scoreMultiplier: 1.35 }),
   });
   const CAMPAIGN = ['apprentice', 'navigator', 'eclipse'];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -58,29 +59,31 @@ window.AetherDeepField = (() => {
     return result;
   }
 
-  function readSettings() {
+  function readSettings(allowVeteran = false) {
     try {
       const value = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
-      return { sound: value.sound !== false, preset: Object.hasOwn(PRESETS, value.preset) ? value.preset : 'navigator', zoom: clamp(Number(value.zoom) || 1, 1, 1.75) };
+      const preset = Object.hasOwn(PRESETS, value.preset) && (allowVeteran || !PRESETS[value.preset].veteran) ? value.preset : 'navigator';
+      return { sound: value.sound !== false, preset, zoom: clamp(Number(value.zoom) || 1, 1, 1.75) };
     } catch { return { sound: true, preset: 'navigator', zoom: 1 }; }
   }
 
   function create(container, options = {}) {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const abort = new AbortController(), timers = new Set(), holds = new Set();
-    const settings = readSettings(), reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mode = options.campaign ? 'campaign' : options.daily ? 'daily' : options.endless ? 'endless' : 'trial', veteran = options.veteran === true;
-    const campaign = veteran ? [...CAMPAIGN, 'cathedral'] : CAMPAIGN;
+    const settings = readSettings(veteran);
+    const campaign = veteran ? [...CAMPAIGN, 'cathedral'] : [...CAMPAIGN];
     const verbs = options.verbs || new Set(), onEnd = typeof options.onEnd === 'function' ? options.onEnd : () => {};
     let soundOn = options.sound === false ? false : settings.sound;
     let audio = null, audioGain = null, destroyed = false, callbackFired = false;
     let presetId = mode === 'trial' ? 'apprentice' : mode === 'daily' ? 'navigator' : settings.preset;
     let runSeed = Number.isInteger(options.seed) ? options.seed >>> 0 : freshSeed();
     let gameplayRandom = random(runSeed ^ 0x9e3779b9), fxRandom = random(runSeed ^ 0x51f15e);
-    let stage = 0, chartsCleared = 0, runScore = 0, totalElapsed = 0, totalHints = 0, hintBonus = 0, aegis = 0, echoOpen = false;
+    let stage = 0, chartsCleared = 0, runScore = 0, totalElapsed = 0, totalHints = 0, hintBonus = 0, aegis = 0, echoOpen = false, stillpoint = false;
     let config, grid = null, roundSeed, initialSafe = -1, revealed, flagged, questioned, cells = [];
     let started = false, paused = false, roundOver = false, runEnded = false, won = false, elapsedBefore = 0, startedAt = 0;
-    let hintsLeft = 0, hintsUsed = 0, shieldsUsed = 0, inputMode = 'reveal', cursor = 0, zoom = settings.zoom, intermissionDrafted = false, roundGeneration = 0;
+    let hintsLeft = 0, hintsUsed = 0, shieldsUsed = 0, stillpointReady = false, inputMode = 'reveal', cursor = 0, zoom = settings.zoom, intermissionDrafted = false, roundGeneration = 0;
     let board, status, effectLayer, pauseBadge, intermission = null, longPress = null, suppressClick = { index: -1, until: 0 };
 
     const after = (callback, delay) => {
@@ -142,7 +145,7 @@ window.AetherDeepField = (() => {
       <p class="df-status" data-df-status role="status" aria-live="polite"></p>
       <div class="df-board-frame"><div class="df-board-scroll"><div class="deepfield-grid" tabindex="0" role="group"></div></div><div class="df-effects" aria-hidden="true"></div><div class="df-paused" data-df-paused hidden><span>❚❚</span><strong>The instruments are covered.</strong><small>Press P or choose Resume.</small></div></div>
       <div class="df-round-actions"><button type="button" class="df-text-button" data-df-action="retry">↶ Retry this chart <kbd>R</kbd></button><button type="button" class="df-text-button" data-df-action="fresh">✦ New expedition</button></div>
-      <details class="df-manual"><summary>Field manual &amp; controls</summary><div><p><b>Reveal</b> every safe sector. A number counts novae in the eight neighbouring sectors. Your first reveal and its neighbours are always safe.</p><p><b>Chord:</b> when a revealed number has that many flags around it, activate the number again to reveal its other neighbours. Incorrect flags can still cost the run.</p><p><b>Mouse:</b> click reveal · right-click flag / question / clear · click a number to chord.<br><b>Touch:</b> tap reveal · hold to flag · or use the Reveal / Flag mode buttons.<br><b>Keyboard:</b> arrows move · Enter / Space reveal · F flag · Q question · C chord · H oracle · T input mode · P pause · R retry.</p><p>The Oracle reveals a safe sector but lowers your score bonus. Campaign relics persist for the current expedition. Zoom never changes the underlying chart.</p></div></details>
+      <details class="df-manual"><summary>Field manual &amp; controls</summary><div><p><b>Reveal</b> every safe sector. A number counts novae in the eight neighbouring sectors. Your first reveal and its neighbours are always safe.</p><p><b>Chord:</b> when a revealed number has that many flags around it, activate the number again to reveal its other neighbours. Incorrect flags can still cost the run. The veteran Stillpoint Seal cancels one such false chord on each later chart.</p><p><b>Mouse:</b> click reveal · right-click flag / question / clear · click a number to chord.<br><b>Touch:</b> tap reveal · hold to flag · or use the Reveal / Flag mode buttons.<br><b>Keyboard:</b> arrows move · Enter / Space reveal · F flag · Q question · C chord · H oracle · T input mode · P pause · R retry.</p><p>The Oracle reveals a safe sector but lowers your score bonus. Campaign relics persist for the current expedition. Meridian permits only twelve hand-placed flags at once; recall one before moving it. Zoom never changes the underlying chart.</p></div></details>
       <p class="df-accessible-help" id="df-help">Deep Field Minesweeper. Reveal every safe sector and mark the novae. Use arrow keys to move between sectors; the field manual lists every command.</p>
     </section>`;
     board = container.querySelector('.deepfield-grid'); status = container.querySelector('[data-df-status]');
@@ -153,10 +156,12 @@ window.AetherDeepField = (() => {
       const strip = container.querySelector('.df-presets');
       if (mode === 'trial') { strip.hidden = true; return; }
       strip.hidden = false;
+      const summary = preset => `${preset.cols} × ${preset.rows} · ${preset.mines} novae${preset.flagLimit ? ` · ${preset.flagLimit} hand flags · ×${preset.scoreMultiplier} score` : ''}`;
       if (mode === 'campaign' || mode === 'daily') {
-        strip.innerHTML = `<span class="df-route-label">${mode === 'daily' ? 'DAILY VIGIL · FIXED NAVIGATOR CHART' : veteran ? 'THE FOUR OCCULTATIONS' : 'THE THREE OCCULTATIONS'}</span><div class="df-route">${(mode === 'campaign' ? CAMPAIGN : ['navigator']).map((id, i) => `<span class="${i === stage ? 'current' : i < stage ? 'passed' : ''}">${i < stage ? '✓' : ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]} ${PRESETS[id].name}<small>${PRESETS[id].cols} × ${PRESETS[id].rows} · ${PRESETS[id].mines} novae</small></span>`).join('')}</div>`;
+        strip.innerHTML = `<span class="df-route-label">${mode === 'daily' ? 'DAILY VIGIL · FIXED NAVIGATOR CHART' : veteran ? 'THE FOUR OCCULTATIONS · CHOOSE THE LAST FIRMAMENT' : 'THE THREE OCCULTATIONS'}</span><div class="df-route">${(mode === 'campaign' ? campaign : ['navigator']).map((id, i) => `<span class="${i === stage ? 'current' : i < stage ? 'passed' : ''}">${i < stage ? '✓' : ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]} ${PRESETS[id].name}<small>${summary(PRESETS[id])}</small></span>`).join('')}</div>`;
       } else {
-        strip.innerHTML = `<span class="df-route-label">CHOOSE A BOARD CLASS · CHANGING IT STARTS A NEW EXPEDITION</span><div class="df-preset-buttons">${Object.entries(PRESETS).map(([id, preset]) => `<button type="button" data-df-preset="${id}" aria-pressed="${id === presetId}"><strong>${preset.name}</strong><small>${preset.cols} × ${preset.rows} · ${preset.mines} novae</small></button>`).join('')}</div>`;
+        const presets = Object.entries(PRESETS).filter(([, preset]) => veteran || !preset.veteran);
+        strip.innerHTML = `<span class="df-route-label">CHOOSE A BOARD CLASS · CHANGING IT STARTS A NEW EXPEDITION</span><div class="df-preset-buttons">${presets.map(([id, preset]) => `<button type="button" data-df-preset="${id}" aria-pressed="${id === presetId}"><strong>${preset.name}</strong><small>${summary(preset)}</small></button>`).join('')}</div>`;
       }
     }
     function describeCell(p) {
@@ -188,7 +193,8 @@ window.AetherDeepField = (() => {
       container.querySelector('.df-board-scroll').style.setProperty('--df-max', config.cols);
       board.dataset.deepField = 'true'; board.dataset.difficulty = presetId; board.dataset.stage = String(stage + 1); board.dataset.seed = String(roundSeed);
       board.dataset.mines = String(config.mines); board.dataset.gridSignature = signature(); board.dataset.mode = mode;
-      board.setAttribute('aria-label', `${config.name} Deep Field: ${config.cols} columns by ${config.rows} rows, ${config.mines} novae. Arrow keys move; Enter reveals; F flags.`);
+      board.dataset.modifier = config.flagLimit ? 'limited-flags' : 'standard'; board.dataset.flagLimit = String(config.flagLimit || 0); board.dataset.scoreMultiplier = String(config.scoreMultiplier || 1);
+      board.setAttribute('aria-label', `${config.name} Deep Field: ${config.cols} columns by ${config.rows} rows, ${config.mines} novae.${config.flagLimit ? ` Only ${config.flagLimit} hand-placed flags.` : ''} Arrow keys move; Enter reveals; F flags.`);
       board.setAttribute('aria-rowcount', config.rows); board.setAttribute('aria-colcount', config.cols);
       board.innerHTML = '';
       cells = Array.from({ length: config.cols * config.rows }, (_, p) => {
@@ -219,7 +225,7 @@ window.AetherDeepField = (() => {
       container.querySelector('[data-df-mode]').textContent = mode === 'campaign' ? `CAMPAIGN · CHART ${stage + 1} / ${campaign.length}` : mode === 'daily' ? 'DAILY VIGIL · ONE SHARED SKY' : mode === 'endless' ? `ENDLESS EXPEDITION · CHART ${stage + 1}` : 'GRAND TOUR · SINGLE SURVEY';
       container.querySelector('[data-df-seed]').textContent = `SEED ${String(roundSeed).padStart(10, '0')}`;
       board.dataset.revealed = String(charted); board.dataset.flags = String(flagged.size); board.dataset.questions = String(questioned.size);
-      board.dataset.hints = String(hintsUsed); board.dataset.aegis = String(aegis); board.dataset.score = String(Math.round(runScore));
+      board.dataset.hints = String(hintsUsed); board.dataset.aegis = String(aegis); board.dataset.stillpoint = String(stillpointReady); board.dataset.score = String(Math.round(runScore));
       board.dataset.started = String(started); board.dataset.over = String(roundOver); board.dataset.won = String(won);
       board.dataset.gridSignature = signature(); board.dataset.paused = String(paused); board.dataset.zoom = zoom.toFixed(2);
       if (message) status.textContent = message;
@@ -265,6 +271,9 @@ window.AetherDeepField = (() => {
     }
     function mark(p, cycle = true) {
       if (roundOver || paused || revealed.has(p)) return;
+      if (config.flagLimit && !flagged.has(p) && flagged.size >= config.flagLimit) {
+        announce(`Meridian’s ${config.flagLimit} flags are all in service. Recall a flag before placing another.`); tone(160, .07, 'triangle', .025); return;
+      }
       if (flagged.has(p)) { flagged.delete(p); if (cycle) questioned.add(p); }
       else if (questioned.has(p)) questioned.delete(p);
       else flagged.add(p);
@@ -328,6 +337,10 @@ window.AetherDeepField = (() => {
       if (marks !== grid[index]) { announce(`This ${grid[index]} needs ${grid[index]} adjacent flag${grid[index] === 1 ? '' : 's'}; ${marks} placed.`); tone(180, .06, 'triangle', .025); return; }
       const targets = around.filter(p => !flagged.has(p) && !revealed.has(p));
       if (!targets.length) return;
+      if (stillpointReady && around.some(p => flagged.has(p) && grid[p] >= 0)) {
+        stillpointReady = false; burstAt(index, 'aegis', 18); motif([220, 330, 440]);
+        updateHUD('The Stillpoint Seal holds time: a falsely flagged chord is cancelled. Its charge returns on the next chart.'); return;
+      }
       // Resolve the complete chord against the same committed flag state. A
       // wrong flag may detonate; later targets never reveal behind a dead run.
       for (const p of targets) { if (roundOver) break; reveal(p); }
@@ -348,7 +361,7 @@ window.AetherDeepField = (() => {
       const safe = config.cols * config.rows - config.mines;
       if (!success) return [...revealed].filter(p => grid[p] >= 0).length * 5;
       const timeBonus = Math.max(0, 2400 - seconds() * 12);
-      return safe * 9 + config.mines * 38 + timeBonus + hintsLeft * 140 + chartsCleared * 250 - hintsUsed * 60 - shieldsUsed * 100;
+      return Math.round((safe * 9 + config.mines * 38 + timeBonus + hintsLeft * 140 + chartsCleared * 250 - hintsUsed * 60 - shieldsUsed * 100) * (config.scoreMultiplier || 1));
     }
     function finishRound(success) {
       if (roundOver || runEnded) return;
@@ -365,9 +378,21 @@ window.AetherDeepField = (() => {
     }
     function showIntermission() {
       if (destroyed || runEnded || intermission) return;
+      const finalRoute = veteran && mode === 'campaign' && stage === campaign.length - 2;
       intermission = document.createElement('div'); intermission.className = 'df-intermission';
-      intermission.innerHTML = `<p class="df-kicker">CHART ${stage + 1} SEALED · ${runScore.toLocaleString()} POINTS</p><h3>Choose an instrument.</h3><p>One relic joins this expedition. Or continue with the instruments you already carry.</p><div class="df-relics"><button type="button" data-df-relic="lens"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('lens')}</span><strong>Mercator’s Lens</strong><small>+1 Oracle charge on every later chart</small></button><button type="button" data-df-relic="aegis"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('aegis')}</span><strong>Aegis of Umbra</strong><small>Negate one nova and mark it safely</small></button><button type="button" data-df-relic="echo" ${echoOpen ? 'disabled' : ''}><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('echo')}</span><strong>Echo Sounder</strong><small>Open a safe clearing on every later chart</small></button></div><p class="df-relic-choice" data-df-relic-choice>No new instrument selected.</p><button type="button" class="df-continue" data-df-action="continue">Chart ${stage + 2} →</button>`;
-      container.querySelector('.df-board-frame').appendChild(intermission); intermission.querySelector('[data-df-relic]:not(:disabled)')?.focus({ preventScroll: true });
+      if (finalRoute) {
+        intermission.innerHTML = `<p class="df-kicker">CHART ${stage + 1} SEALED · ${runScore.toLocaleString()} POINTS</p><h3>Choose the last firmament.</h3><p>Keep the Cathedral’s open instrument panel, or take the Meridian: only twelve hand-placed flags, a denser chart, and a ×1.35 score bonus.</p><div class="df-relics"><button type="button" data-df-route="cathedral" aria-pressed="${campaign.at(-1) === 'cathedral'}"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('aegis')}</span><strong>Cathedral</strong><small>18 × 12 · unrestricted flags · standard score</small></button><button type="button" data-df-route="meridian" aria-pressed="${campaign.at(-1) === 'meridian'}"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('compass')}</span><strong>Meridian</strong><small>20 × 12 · 12 hand flags · ×1.35 score</small></button></div><p class="df-relic-choice" data-df-route-choice>${PRESETS[campaign.at(-1)].name} is charted for the finale. You may change route before continuing.</p><button type="button" class="df-continue" data-df-action="continue">Chart ${stage + 2} →</button>`;
+      } else {
+        intermission.innerHTML = `<p class="df-kicker">CHART ${stage + 1} SEALED · ${runScore.toLocaleString()} POINTS</p><h3>Choose an instrument.</h3><p>One relic joins this expedition. Or continue with the instruments you already carry.</p><div class="df-relics"><button type="button" data-df-relic="lens"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('lens')}</span><strong>Mercator’s Lens</strong><small>+1 Oracle charge on every later chart</small></button><button type="button" data-df-relic="aegis"><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('aegis')}</span><strong>Aegis of Umbra</strong><small>Negate one nova and mark it safely</small></button><button type="button" data-df-relic="echo" ${echoOpen ? 'disabled' : ''}><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('echo')}</span><strong>Echo Sounder</strong><small>Open a safe clearing on every later chart</small></button>${veteran ? `<button type="button" data-df-relic="stillpoint" ${stillpoint ? 'disabled' : ''}><span class="upgrade-icon-wrap">${window.AetherIcons.upgrade('time')}</span><strong>Stillpoint Seal</strong><small>Cancel one falsely flagged chord on every later chart</small></button>` : ''}</div><p class="df-relic-choice" data-df-relic-choice>No new instrument selected.</p><button type="button" class="df-continue" data-df-action="continue">Chart ${stage + 2} →</button>`;
+      }
+      container.querySelector('.df-board-frame').appendChild(intermission); intermission.querySelector('[data-df-route][aria-pressed="true"], [data-df-relic]:not(:disabled)')?.focus({ preventScroll: true });
+    }
+    function chooseRoute(id) {
+      if (!intermission || !veteran || mode !== 'campaign' || stage !== campaign.length - 2 || !['cathedral', 'meridian'].includes(id)) return;
+      campaign[campaign.length - 1] = id;
+      intermission.querySelectorAll('[data-df-route]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.dfRoute === id)));
+      intermission.querySelector('[data-df-route-choice]').textContent = `${PRESETS[id].name} is charted for the finale. You may change route before continuing.`;
+      tone(id === 'meridian' ? 540 : 420, .12, 'triangle', .035); renderPresets();
     }
     function draftRelic(id, button) {
       if (intermissionDrafted || !intermission) return;
@@ -375,6 +400,7 @@ window.AetherDeepField = (() => {
       if (id === 'lens') hintBonus++;
       else if (id === 'aegis') aegis++;
       else if (id === 'echo') echoOpen = true;
+      else if (id === 'stillpoint') stillpoint = true;
       intermission.querySelectorAll('[data-df-relic]').forEach(element => { element.disabled = true; element.classList.toggle('selected', element === button); });
       intermission.querySelector('[data-df-relic-choice]').textContent = `${button.querySelector('strong').textContent} joins the expedition.`;
       tone(660, .18, 'triangle', .04); intermission.querySelector('[data-df-action="continue"]').focus({ preventScroll: true });
@@ -390,7 +416,8 @@ window.AetherDeepField = (() => {
       const generation = ++roundGeneration;
       clearHold(); container.querySelector('.df-intermission')?.remove();
       if (fresh) {
-        stage = 0; chartsCleared = 0; runScore = 0; totalElapsed = 0; totalHints = 0; hintBonus = 0; aegis = 0; echoOpen = false;
+        stage = 0; chartsCleared = 0; runScore = 0; totalElapsed = 0; totalHints = 0; hintBonus = 0; aegis = 0; echoOpen = false; stillpoint = false;
+        if (veteran && mode === 'campaign') campaign[campaign.length - 1] = 'cathedral';
         runSeed = mode === 'daily' && Number.isInteger(options.seed) ? options.seed >>> 0 : freshSeed();
       }
       if (!same && !fresh && stage > 0) runSeed = (runSeed + 0x9e3779b9 + stage * 977) >>> 0;
@@ -402,13 +429,13 @@ window.AetherDeepField = (() => {
       if (mode === 'campaign') presetId = campaign[Math.min(stage, campaign.length - 1)];
       if (!same) initialSafe = -1;
       grid = same && initialSafe >= 0 ? generate({ ...config, seed: roundSeed, safeIndex: initialSafe }).grid : null;
-      hintsLeft = config.hints; hintsUsed = 0; shieldsUsed = 0; started = false; paused = false; roundOver = false; won = false;
+      hintsLeft = config.hints; hintsUsed = 0; shieldsUsed = 0; stillpointReady = stillpoint; started = false; paused = false; roundOver = false; won = false;
       elapsedBefore = 0; startedAt = 0; intermission = null; intermissionDrafted = false; inputMode = 'reveal';
       container.querySelector('.df-board-frame').classList.remove('has-result');
       board.classList.remove('is-won'); pauseBadge.hidden = true; board.inert = false;
       container.querySelector('[data-df-action="pause"]').textContent = 'Ⅱ Pause'; container.querySelector('[data-df-action="pause"]').setAttribute('aria-pressed', 'false');
       renderPresets(); buildBoard(); setInputMode('reveal');
-      announce(`${config.name}: ${config.cols} × ${config.rows}, ${config.mines} novae. First reveal is protected. ${hintsLeft} Oracle charge${hintsLeft === 1 ? '' : 's'}.`);
+      announce(`${config.name}: ${config.cols} × ${config.rows}, ${config.mines} novae. First reveal is protected. ${hintsLeft} Oracle charge${hintsLeft === 1 ? '' : 's'}.${config.flagLimit ? ` Only ${config.flagLimit} hand-placed flags; recall one to move it.` : ''}${stillpointReady ? ' Stillpoint is charged.' : ''}`);
       updateHUD();
       if (echoOpen && chartsCleared > 0) after(() => {
         if (generation !== roundGeneration || roundOver || paused) return;
@@ -422,7 +449,7 @@ window.AetherDeepField = (() => {
       }, reduced() ? 0 : 260);
     }
     function startNewExpedition(id = presetId) {
-      if (mode === 'endless' && Object.hasOwn(PRESETS, id)) { presetId = id; saveSettings(); }
+      if (mode === 'endless' && Object.hasOwn(PRESETS, id) && (veteran || !PRESETS[id].veteran)) { presetId = id; saveSettings(); }
       setupRound(true);
     }
     function emitEnd(success) {
@@ -447,6 +474,7 @@ window.AetherDeepField = (() => {
         if ((performance.now() < suppressClick.until && Number(cell.dataset.cell) === suppressClick.index) || paused || roundOver) { event.preventDefault(); return; }
         setCursor(Number(cell.dataset.cell)); primary(cell); return;
       }
+      const route = event.target.closest('[data-df-route]'); if (route) { chooseRoute(route.dataset.dfRoute); return; }
       const relic = event.target.closest('[data-df-relic]'); if (relic) { draftRelic(relic.dataset.dfRelic, relic); return; }
       const preset = event.target.closest('[data-df-preset]'); if (preset && mode === 'endless' && !roundOver) { startNewExpedition(preset.dataset.dfPreset); return; }
       const action = event.target.closest('[data-df-action]')?.dataset.dfAction; if (!action) return;
@@ -516,7 +544,7 @@ window.AetherDeepField = (() => {
       canvas: board, pause, resume,
       get paused() { return paused; },
       get board() { return board; },
-      snapshot() { return { grid: grid?.slice() || null, config: { ...config }, revealed: [...revealed], flagged: [...flagged], questioned: [...questioned], seed: roundSeed, stage, chartsCleared, score: runScore, mode, signature: signature() }; },
+      snapshot() { return { grid: grid?.slice() || null, config: { ...config }, revealed: [...revealed], flagged: [...flagged], questioned: [...questioned], seed: roundSeed, stage, chartsCleared, score: runScore, mode, stillpointReady, route: campaign[Math.min(stage, campaign.length - 1)], signature: signature() }; },
       destroy() {
         if (destroyed) return;
         destroyed = true; clearHold(); abort.abort();

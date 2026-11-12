@@ -81,7 +81,7 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             page.goto(f'{base}/index.html?standalone=1&cartridge=starforge#voyage', wait_until='networkidle')
             assert page.locator('.starforge-scenarios button').count() == 6
             page.goto(f'{base}/index.html?standalone=1&cartridge=starforge&variant=veteran#voyage', wait_until='networkidle')
-            assert page.locator('.starforge-scenarios button').count() == 8
+            assert page.locator('.starforge-scenarios button').count() == 9
             assert page.locator('.starforge-canvas').get_attribute('data-scenario') == '7'
             assert page.locator('#starforge-energy').inner_text() == '0 / 27'
             assert page.locator('#starforge-heat').inner_text() == '0 / 70'
@@ -90,7 +90,7 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             assert page.locator('#starforge-energy').inner_text() == '0 / 33'
             assert page.locator('#starforge-heat').inner_text() == '0 / 68'
             assert page.evaluate('JSON.parse(localStorage.getItem("aether-starforge-v1")).completed') == 6
-            print('PASS: Astral Crucible and Last Orrery unlock with distinct targets and no standard progression changes')
+            print('PASS: three advanced contracts unlock without changing standard progression')
 
             # Complete the first advanced contract through its real device and cycle controls.
             page.goto(f'{base}/index.html?standalone=1&cartridge=starforge&variant=veteran#voyage', wait_until='networkidle')

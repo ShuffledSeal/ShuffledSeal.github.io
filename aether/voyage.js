@@ -46,12 +46,12 @@ window.AetherVoyage = (() => {
     deepfield: ['celestial-eagle-chart.webp', 'A double-headed eagle bearing an intricate map of the heavens'],
   };
   const VETERAN_RULES = {
-    shooter: 'Fourth act · Eclipse hulls and fire',
-    bastion: 'Two new sieges · enemy hulls +18%',
-    labyrinth: 'Two new chambers · patrols +18%',
-    starforge: 'Two advanced contracts · tighter heat',
-    chain: 'Alternate route · threats +18%',
-    deepfield: 'Fourth chart class · novae +20%',
+    shooter: 'Glass Cathedral · the Meridian Cantor and two new refits',
+    bastion: 'Two sapper sieges · the refinable Ward Loom',
+    labyrinth: 'Two scanner chambers · decoy counterplay and a null jammer',
+    starforge: 'Three advanced contracts · eclipses, clock seals and capacitor venting',
+    chain: 'Warden route · Counterpoint and Lodestar formation relics',
+    deepfield: 'Cathedral or Meridian finale · the Stillpoint Seal',
   };
   function hasVeteran(id) {
     if (cartridgeRecords.clears[id] > 0) return true;
@@ -368,7 +368,11 @@ window.AetherVoyage = (() => {
   function nodeBrief(node) {
     switch (node.kind) {
       case 'hunt': return 'Clear every wave. Stardust motes drift off what falls. Failure or aborting costs a hull.';
-      case 'trial': return window.AetherTrials.list.find(t => t.id === node.trial).brief + ' Win it for salvage; failure or aborting costs a hull.';
+      case 'trial': {
+        const trial = window.AetherTrials.list.find(t => t.id === node.trial);
+        const eclipseRoute = run.difficulty === 'eclipse' && node.trial === 'perihelion' ? ' Eclipse route: seeded drifting gates and numbered offset pairs.' : '';
+        return trial.brief + eclipseRoute + ' Win it for salvage; failure or aborting costs a hull.';
+      }
       case 'oddity': return 'A choice with consequences. Read the sky before you answer.';
       case 'chandlery': return 'Spend stardust on instruments and repairs. Leave when you are done.';
       case 'mutation': return 'One instrument, free of charge. Choose the rule you want to rewrite.';
@@ -526,6 +530,10 @@ window.AetherVoyage = (() => {
     stage.innerHTML = `<div class="trial-cabinet"><div class="trial-frame"></div></div>`;
     trialHandle = window.AetherTrials.create(node.trial, $('.trial-frame', stage), {
       speedScale: run.difficulty === 'eclipse' ? 1.18 : run.difficulty === 'explorer' ? .84 : 1,
+      // Eclipse Perihelion is an authored rules expansion, not only a speed multiplier.
+      // Other Tour trials retain their established standard encounter behaviour.
+      veteran: node.trial === 'perihelion' && run.difficulty === 'eclipse',
+      seed: node.trial === 'perihelion' ? run.seed + run.step * 977 : undefined,
       verbs: new Set(run.instruments.flatMap(id => I[id].verbs || [])),
       onEnd({ won, score }) {
         const gain = Math.round((score / 8 + (won ? 30 : 0)) * dustMul());

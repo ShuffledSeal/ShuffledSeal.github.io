@@ -7,7 +7,7 @@ window.AetherPlanets = (() => {
   let hostHooks = {};
   const progress={records:{},drafts:{},levels:{},endless:{}};
   const REPLAY_KEY='aether-planet-replays-v1', REPLAY_VERSION=1;
-  const replayProgress={daily:{},circuits:{},last:{}};
+  const replayProgress={daily:{},circuits:{},eclipse:{},last:{}};
   try {
     const raw=JSON.parse(localStorage.getItem(REPLAY_KEY));
     if(raw?.version===REPLAY_VERSION) {
@@ -18,7 +18,9 @@ window.AetherPlanets = (() => {
         if(daily&&/^\d{4}-\d{2}-\d{2}$/.test(daily.date)&&Number.isInteger(daily.seed)&&validActions(daily))replayProgress.daily[id]={date:daily.date,seed:daily.seed>>>0,actions:daily.actions,hints:Number.isInteger(daily.hints)?Math.max(0,Math.min(999,daily.hints)):0,result:result(daily.result)};
         const circuit=raw.circuits?.[id];
         if(circuit&&Number.isInteger(circuit.seed)&&Number.isInteger(circuit.stage)&&circuit.stage>=0&&circuit.stage<3&&validActions(circuit))replayProgress.circuits[id]={seed:circuit.seed>>>0,stage:circuit.stage,boards:Array.isArray(circuit.boards)?circuit.boards.slice(0,3).map(result).filter(Boolean):[],actions:circuit.actions,hints:Number.isInteger(circuit.hints)?Math.max(0,Math.min(999,circuit.hints)):0,result:result(circuit.result)};
-        if(['daily','circuit','crafted','endless'].includes(raw.last?.[id]))replayProgress.last[id]=raw.last[id];
+        const eclipse=raw.eclipse?.[id];
+        if(eclipse&&Number.isInteger(eclipse.seed)&&validActions(eclipse))replayProgress.eclipse[id]={seed:eclipse.seed>>>0,actions:eclipse.actions,hints:Number.isInteger(eclipse.hints)?Math.max(0,Math.min(999,eclipse.hints)):0,result:result(eclipse.result)};
+        if(['daily','circuit','eclipse','crafted','endless'].includes(raw.last?.[id]))replayProgress.last[id]=raw.last[id];
       }
     }
   } catch { /* Replay data is isolated from all crafted/endless progress. */ }
@@ -26,6 +28,14 @@ window.AetherPlanets = (() => {
     try { localStorage.setItem(REPLAY_KEY,JSON.stringify({version:REPLAY_VERSION,...replayProgress}));storageOK=true; }
     catch { storageOK=false; }
     const note=document.querySelector('#puzzle-save-note');if(note)note.textContent=storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.';
+  }
+  function circuitComplete(id) {return replayProgress.circuits[id]?.boards.filter(Boolean).length===3;}
+  function eclipseUnlocked(id) {return Boolean(replayProgress.eclipse[id])||circuitComplete(id);}
+  function unlockEclipse(id) {
+    if(replayProgress.eclipse[id])return true;
+    const circuit=replayProgress.circuits[id];if(!circuitComplete(id))return false;
+    replayProgress.eclipse[id]={seed:replaySeed(`${id}:eclipse:${circuit.seed}`),actions:[],hints:0,result:null};
+    return true;
   }
   let storageOK=true;
   try {
@@ -71,9 +81,9 @@ window.AetherPlanets = (() => {
   function replaySession(id,spec) {
     const mode=spec.mode,stage=spec.stage||0,seed=spec.seed>>>0,key=`${id}:${mode}:${seed}:${stage}`;
     if(sessions.has(key))return sessions.get(key);
-    const levelDef=spec.def,difficulty=spec.difficulty??(mode==='daily'?2:[1,3,5][stage]),board=P.initial(id,levelDef,difficulty);
+    const levelDef=spec.def,difficulty=spec.difficulty??(mode==='daily'?2:mode==='eclipse'?6:[1,3,5][stage]),board=P.initial(id,levelDef,difficulty);
     const s={id,index:0,key,mode,round:difficulty,def:levelDef,board,initial:structuredClone(board),par:P.par(id,levelDef,board),moves:0,hints:0,actions:[],history:[],future:[],selected:0,hintCell:-1,face:1,justDealt:true,plan:[],replay:{seed,stage,date:spec.date||null,difficulty}};
-    const draft=mode==='daily'?replayProgress.daily[id]:replayProgress.circuits[id];
+    const draft=mode==='daily'?replayProgress.daily[id]:mode==='eclipse'?replayProgress.eclipse[id]:replayProgress.circuits[id];
     if(draft) {
       s.hints=draft.hints||0;
       for(const action of draft.actions||[]) {
@@ -88,20 +98,22 @@ window.AetherPlanets = (() => {
   function sessionTitle(s) {
     if(s.mode==='daily')return `Daily chart · ${s.replay.date}`;
     if(s.mode==='circuit')return `Circuit ${s.replay.stage+1} / 3 · difficulty ${s.replay.difficulty}`;
+    if(s.mode==='eclipse')return `Eclipse masterwork · ${s.def.eclipse.name}`;
     if(s.mode==='endless')return `Endless · board ${s.round+1}`;
     return P.catalogue[s.id].levels[s.index];
   }
   function sessionLesson(s) {
     if(s.mode==='daily')return 'A fixed, solution-backed chart for this UTC date.';
     if(s.mode==='circuit')return `Seed ${s.replay.seed} · solution-backed generated board.`;
+    if(s.mode==='eclipse')return `Seed ${s.replay.seed} · verified solution · ${s.def.eclipse.budget} ${s.def.eclipse.unit} available.`;
     if(s.mode==='endless')return 'A fresh solver-checked board.';
     return P.lessons[s.id][s.index];
   }
   function stash(s) {
     replayProgress.last[s.id]=s.mode;
     if(s.mode==='endless'){saveReplay();return;}
-    if(s.mode==='daily'||s.mode==='circuit') {
-      const target=s.mode==='daily'?replayProgress.daily[s.id]:replayProgress.circuits[s.id];
+    if(s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse') {
+      const target=s.mode==='daily'?replayProgress.daily[s.id]:s.mode==='eclipse'?replayProgress.eclipse[s.id]:replayProgress.circuits[s.id];
       if(!target)return;
       target.actions=s.actions.slice(0,1500);target.hints=s.hints;
       saveReplay();return;
@@ -135,14 +147,26 @@ window.AetherPlanets = (() => {
   function renderIndex() {
     return `<section class="planet-atlas-index" aria-labelledby="atlas-index-title"><header class="atlas-section-heading"><p class="eyebrow">EIGHT PLANETS / EIGHT PUZZLE ROOMS</p><h2 id="atlas-index-title">Choose a world.</h2><p>Read its field notes, then try a puzzle built around something that makes it different.</p></header><div class="atlas-card-grid">${planets.map((p,i)=>`<a class="atlas-card" href="#planet/${p.id}" style="--planet-accent:${p.color}"><span class="atlas-card-number">0${i+1} <span>${p.distance}</span></span><span class="atlas-sphere planet-sphere ${p.id}" aria-hidden="true"></span><h3>${p.name}</h3><p>${notes[p.id].heading}</p><span class="atlas-card-game">${P.catalogue[p.id].title} <span>↗</span></span><small>${P.catalogue[p.id].genre} · ${solvedCount(p.id)}/5 solved${progress.endless[p.id]?.best?` · endless ×${progress.endless[p.id].best}`:''}</small></a>`).join('')}</div></section>`;
   }
+  function moveLimit(s) {
+    if(s.mode==='eclipse')return s.def.eclipse?.budget??Infinity;
+    return s.id==='neptune'?s.par+3:Infinity;
+  }
+  function reserveText(s) {
+    const limit=moveLimit(s),remaining=Math.max(0,limit-s.moves),queued=s.id==='jupiter'?(s.plan||[]).reduce((sum,n)=>sum+(n||0),0):0;
+    return `Reserve ${remaining} / ${limit} · ${s.def.eclipse.unit}${queued?` · ${queued} queued`:''}`;
+  }
+  function reserveSpent(s) {return s.mode==='eclipse'?'Eclipse reserve spent. Undo a move or restart to recover it.':'Out of fuel. Undo a leg or restart to plan a shorter route.';}
   function gameShell(s) {
     const game=P.catalogue[s.id];
     const tabs=game.levels.map((name,i)=>{const record=progress.records[`${s.id}:${i}`];return `<button data-puzzle-level="${i}" aria-pressed="${s.mode==='crafted'&&i===s.index}" aria-label="Level ${i+1}: ${name}${record?`, completed, ${record.stars} stars`:''}"><span>0${i+1}</span><span>${name}</span><small aria-hidden="true">${record?'✦'.repeat(record.stars):'—'}</small></button>`;}).join('')
       +`<button class="endless-tab" data-puzzle-level="endless" aria-pressed="${s.mode==='endless'}" aria-label="Endless mode${progress.endless[s.id]?.best?`, furthest: board ${progress.endless[s.id].best}`:''}"><span>∞</span><span>Endless</span><small aria-hidden="true">${progress.endless[s.id]?.best?'×'+progress.endless[s.id].best:'—'}</small></button>`;
-    const replayBar=`<nav class="puzzle-replay-modes" aria-label="Puzzle replay charts"><button data-replay="crafted" aria-pressed="${s.mode==='crafted'||s.mode==='endless'}">Crafted course</button><button data-replay="daily" aria-pressed="${s.mode==='daily'}">Daily chart</button><button data-replay="circuit" aria-pressed="${s.mode==='circuit'}">Three-board circuit</button>${s.mode==='circuit'?`<label class="replay-seed">Seed <input id="replay-seed" type="text" inputmode="numeric" pattern="[0-9]*" value="${s.replay.seed}" aria-label="Circuit seed" /></label><button data-replay-action="apply-seed">Deal seed</button>`:''}</nav>`;
+    const unlocked=eclipseUnlocked(s.id),seals=replayProgress.circuits[s.id]?.boards.filter(Boolean).length||0;
+    const eclipseLabel=unlocked?'Eclipse masterwork':'Eclipse masterwork, locked; seal all three circuit charts to unlock';
+    const replayBar=`<nav class="puzzle-replay-modes" aria-label="Puzzle replay charts"><button data-replay="crafted" aria-pressed="${s.mode==='crafted'||s.mode==='endless'}">Crafted course</button><button data-replay="daily" aria-pressed="${s.mode==='daily'}">Daily chart</button><button data-replay="circuit" aria-pressed="${s.mode==='circuit'}">Three-board circuit</button><button class="eclipse-tab" data-replay="eclipse" aria-pressed="${s.mode==='eclipse'}" aria-label="${eclipseLabel}" ${unlocked?'':'disabled'}><span>Eclipse</span><small>${unlocked?'Masterwork':`${seals} / 3 to unlock`}</small></button>${s.mode==='circuit'?`<label class="replay-seed">Seed <input id="replay-seed" type="text" inputmode="numeric" pattern="[0-9]*" value="${s.replay.seed}" aria-label="Circuit seed" /></label><button data-replay-action="apply-seed">Deal seed</button>`:''}</nav>`;
+    const charter=s.mode==='eclipse'?`<section class="eclipse-charter" aria-label="Eclipse modifier"><div><p class="eyebrow">ECLIPSE MODIFIER / ${s.def.eclipse.name.toUpperCase()}</p><p>${s.def.eclipse.rule}</p></div><strong id="eclipse-reserve">${reserveText(s)}</strong></section>`:'';
     return `${replayBar}<div class="puzzle-levels endless-strip" role="group" aria-label="Choose a puzzle level">${tabs}</div>
-      <div class="puzzle-layout"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${sessionTitle(s)} <small class="puzzle-lesson">${sessionLesson(s)}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p><div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
-      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${game.rules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${game.detail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Daily charts & circuits</summary><p>Daily charts use one fixed UTC date and one solution-backed board. A circuit deals three boards at difficulties 1, 3 and 5 from a shareable seed. Replays save separately from the five handcrafted levels and endless records.</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?'arrows move between moons · Enter or Space queues a burn · L launches the plan':['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
+      <div class="puzzle-layout"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${sessionTitle(s)} <small class="puzzle-lesson">${sessionLesson(s)}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p>${charter}<div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
+      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${game.rules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${game.detail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Daily charts & circuits</summary><p>Daily charts use one fixed UTC date and one solution-backed board. A circuit deals three boards at difficulties 1, 3 and 5 from a shareable seed. Replays save separately from the five handcrafted levels and endless records.</p></details><details ${s.mode==='eclipse'?'open':''}><summary>Eclipse masterwork</summary><p>Seal all three circuit charts on this planet to unlock its fixed Eclipse board. Eclipse has a verified solution, a genre-specific reserve, and a separate best record. It is optional and never replaces a circuit stage.</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?'arrows move between moons · Enter or Space queues a burn · L launches the plan':['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
   }
   function controls(s) {
     if(s.id==='venus')return `<button class="button rotation-toggle" data-puzzle="reverse" aria-pressed="${reverse}">${reverse?'↶ Turn anticlockwise':'↷ Turn clockwise'}</button>`;
@@ -155,7 +179,7 @@ window.AetherPlanets = (() => {
       return `<div class="burn-plan" role="group" aria-label="Queued burn plan"><span class="burn-plan-title">Burn plan</span>${chips}<button class="button button-primary" data-puzzle="launch" ${total?'':'disabled'}>Launch plan · ${total} burn${total===1?'':'s'}</button><button class="button" data-puzzle="clear-plan" ${total?'':'disabled'}>Clear plan</button></div>`;
     }
     if(!['mars','saturn','uranus','neptune'].includes(s.id))return '';
-    return `<div class="puzzle-direction-pad" role="group" aria-label="${s.id==='uranus'?'Tilt direction':'Movement controls'}">${[3,0,2,1].map(d=>`<button class="button" data-puzzle-direction="${d}" aria-label="${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[d]}">${['↑','→','↓','←'][d]}</button>`).join('')}<span>${s.id==='saturn'?`Selected: ${s.selected===0?'probe P':`block ${s.selected}`}`:s.id==='uranus'?'All capsules move together':s.id==='neptune'?`${Math.max(0,s.par+3-s.moves)} fuel charges`:'Move the rover'}</span></div>`;
+    return `<div class="puzzle-direction-pad" role="group" aria-label="${s.id==='uranus'?'Tilt direction':'Movement controls'}">${[3,0,2,1].map(d=>`<button class="button" data-puzzle-direction="${d}" aria-label="${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[d]}">${['↑','→','↓','←'][d]}</button>`).join('')}<span>${s.id==='saturn'?`Selected: ${s.selected===0?'probe P':`block ${s.selected}`}`:s.id==='uranus'?'All capsules move together':s.id==='neptune'?`${Math.max(0,moveLimit(s)-s.moves)} fuel charges`:'Move the rover'}</span></div>`;
   }
   function glidePiece(el,x,y,animate) {
     const oldX=Number(el.dataset.x??x),oldY=Number(el.dataset.y??y),moving=animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&(oldX!==x||oldY!==y);
@@ -224,32 +248,36 @@ window.AetherPlanets = (() => {
     s.justDealt=false;s.changed=null;s.motion=false;s.blocked=false;
     const guide=document.querySelector('#puzzle-instruction');if(guide)guide.textContent=P.instruction(s.id,s.def,s.board);
     document.querySelector('#puzzle-controls').innerHTML=controls(s);
+    const reserve=document.querySelector('#eclipse-reserve');if(reserve)reserve.textContent=reserveText(s);
+    const eclipseTab=document.querySelector('.eclipse-tab');if(eclipseTab){const open=eclipseUnlocked(s.id),seals=replayProgress.circuits[s.id]?.boards.filter(Boolean).length||0;eclipseTab.disabled=!open;eclipseTab.setAttribute('aria-label',open?'Eclipse masterwork':'Eclipse masterwork, locked; seal all three circuit charts to unlock');const small=eclipseTab.querySelector('small');if(small)small.textContent=open?'Masterwork':`${seals} / 3 to unlock`;}
     document.querySelector('#puzzle-moves').textContent=s.moves;
     document.querySelector('#puzzle-par').textContent=s.par===null?'':` / par ${s.par}`;
     document.querySelector('[data-puzzle="undo"]').disabled=!s.history.length;
     document.querySelector('[data-puzzle="redo"]').disabled=!s.future.length;
     document.querySelector('[data-puzzle="hint"]').disabled=won;
-    const replayRecord=s.mode==='daily'?replayProgress.daily[s.id]?.result:s.mode==='circuit'?replayProgress.circuits[s.id]?.result:null;
-    const record=s.mode==='endless'||s.mode==='daily'||s.mode==='circuit'?replayRecord:progress.records[s.key];
+    const replayRecord=s.mode==='daily'?replayProgress.daily[s.id]?.result:s.mode==='eclipse'?replayProgress.eclipse[s.id]?.result:s.mode==='circuit'?replayProgress.circuits[s.id]?.result:null;
+    const record=s.mode==='endless'||s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse'?replayRecord:progress.records[s.key];
     document.querySelector('#puzzle-best').textContent=s.mode==='endless'
       ? `Endless: ${progress.endless[s.id]?.best||0} boards cleared`
+      : s.mode==='eclipse'?`Eclipse: ${record?`${'✦'.repeat(record.stars)} · best ${record.moves} moves`:'not sealed yet'}`
       : s.mode==='circuit'?`Circuit: ${replayProgress.circuits[s.id]?.boards.length||0} / 3 charts sealed${record?` · this chart ${record.moves} moves`:''}`
       : record?`${'✦'.repeat(record.stars)} · Best: ${record.moves} moves`:'Not solved yet.';
     document.querySelector('#puzzle-status').textContent=message||P.progress(s.id,s.def,s.board);
     const result=document.querySelector('#puzzle-result');
     result.hidden=!won;
-    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='daily'||s.mode==='circuit'?'Chart sealed.':s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${resultHTML(s)}`;
+    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='daily'||s.mode==='circuit'?'Chart sealed.':s.mode==='eclipse'?'Eclipse sealed.':s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${resultHTML(s)}`;
     if(focus)document.querySelector(focus)?.focus({preventScroll:true});
   }
   function recordWin(s) {
-    if(s.mode==='daily'||s.mode==='circuit') {
+    if(s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse') {
       const stars=s.hints?1:s.moves<=(s.par??Infinity)?3:s.moves<=(s.par??Infinity)*2?2:1;
-      const target=s.mode==='daily'?replayProgress.daily[s.id]:replayProgress.circuits[s.id];if(!target)return;
+      const target=s.mode==='daily'?replayProgress.daily[s.id]:s.mode==='eclipse'?replayProgress.eclipse[s.id]:replayProgress.circuits[s.id];if(!target)return;
       const result={stars,moves:s.moves,hints:s.hints},previous=target.result;
       target.result={stars:Math.max(stars,previous?.stars||0),moves:Math.min(s.moves,previous?.moves??Infinity),hints:s.hints};
       if(s.mode==='circuit') {
         const old=target.boards[s.replay.stage];
         if(!old||s.moves<old.moves||stars>old.stars)target.boards[s.replay.stage]=result;
+        unlockEclipse(s.id);
       }
       saveReplay();return;
     }
@@ -271,22 +299,24 @@ window.AetherPlanets = (() => {
       const circuit=replayProgress.circuits[s.id],complete=circuit.boards.filter(Boolean).length===3;
       if(complete) {
         const moves=circuit.boards.reduce((sum,board)=>sum+board.moves,0),stars=circuit.boards.reduce((sum,board)=>sum+board.stars,0);
-        return `<p class="circuit-complete">Circuit sealed · ${moves} moves · ${stars} / 9 stars</p><div><button class="button button-primary" data-puzzle="new-circuit">Deal another circuit</button><button class="button" data-replay="crafted">Return to the course</button></div>`;
+        return `<p class="circuit-complete">Circuit sealed · ${moves} moves · ${stars} / 9 stars</p><p class="eclipse-unlocked">Eclipse masterwork unlocked · a fixed fourth board with a finite reserve.</p><div><button class="button button-primary" data-replay="eclipse">Play Eclipse board →</button><button class="button" data-puzzle="new-circuit">Deal another circuit</button><button class="button" data-replay="crafted">Return to the course</button></div>`;
       }
       return `<div><button class="button button-primary" data-puzzle="next-replay">Next circuit chart →</button><button class="button" data-puzzle="replay-this">Replay this chart</button></div>`;
     }
+    if(s.mode==='eclipse')return '<p class="eclipse-complete">Eclipse record saved separately from the circuit.</p><div><button class="button button-primary" data-puzzle="replay">Replay Eclipse board</button><button class="button" data-replay="circuit">Return to the circuit</button><button class="button" data-replay="crafted">Return to the course</button></div>';
     if(s.mode==='endless')return '<div><button class="button button-primary" data-puzzle="next-round">Next board →</button><a class="button" href="#planet/'+ids[(ids.indexOf(s.id)+1)%8]+'">Try '+planets[(ids.indexOf(s.id)+1)%8].name+'’s puzzle ↗</a></div>';
     return `<div><button class="button button-primary" data-puzzle="${s.index<4?'next':'replay'}">${s.index<4?'Next level →':'Replay this level'}</button><a class="button" href="#planet/${ids[(ids.indexOf(s.id)+1)%8]}">Try ${planets[(ids.indexOf(s.id)+1)%8].name}’s puzzle ↗</a></div>`;
   }
   function act(action) {
     const s=current;if(!s||P.won(s.id,s.def,s.board))return;
     if(s.actions.length>=1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
-    if(s.id==='neptune'&&s.moves>=s.par+3) {paint('Out of fuel. Undo a leg or restart to plan a shorter route.');return;}
+    if(s.moves>=moveLimit(s)) {paint(reserveSpent(s));return;}
     const before=s.board, next=P.transition(s.id,s.def,s.board,action);
     if(!next) {s.blocked=true;paint(action.type==='move'||action.type==='block'?'That direction is blocked. Try another direction or undo.':'That piece is fixed in this configuration. Try another instrument.');return;}
+    const cost=P.actionCost(s.id,before,next);if(s.moves+cost>moveLimit(s)){paint(reserveSpent(s));return;}
     hintController?.abort();s.hintCell=-1;
     s.history.push({board:before,moves:s.moves,action});s.actions.push(action);s.future=[];
-    s.moves+=P.actionCost(s.id,before,next);s.board=next;s.motion=true;
+    s.moves+=cost;s.board=next;s.motion=true;
     if(action.type==='move')s.face=action.value;
     if(s.id==='mercury')s.changed=new Set(s.board.lights.flatMap((v,i)=>v!==before.lights[i]?[i]:[]));
     else if(s.id==='venus')s.changed=new Set([action.value]);
@@ -295,13 +325,15 @@ window.AetherPlanets = (() => {
     if(won) { recordWin(s); if(s.hosted) hostHooks.onSolve?.({moves:s.moves,hints:s.hints,par:s.par}); }
     stash(s);
     let message=won?null:P.explainAction(s.id,s.def,before,action,s.board);
-    if(s.id==='neptune' && !won && s.moves>=s.par+3)message='Out of fuel. Undo a leg or restart to try a shorter route.';
+    if(!won && s.moves>=moveLimit(s))message=s.mode==='eclipse'?reserveSpent(s):'Out of fuel. Undo a leg or restart to try a shorter route.';
     if(s.id==='mars' && s.board.crates.some(p=>!s.def.goals.includes(p) && [0,2].some(d=>s.def.walls.includes(P.neighbour(p,d,s.def.n))) && [1,3].some(d=>s.def.walls.includes(P.neighbour(p,d,s.def.n)))))message='A canister is trapped in a corner. Undo to recover it.';
     paint(won?'Puzzle solved. Your record has been saved.':message);
     if(won){painting=false;document.querySelector('#puzzle-result-title')?.focus({preventScroll:true});}
   }
   function queueBurn(i) {
     const s=current;if(!s||s.id!=='jupiter'||P.won(s.id,s.def,s.board))return;
+    const queued=(s.plan||[]).reduce((sum,n)=>sum+(n||0),0),remaining=moveLimit(s)-s.moves;
+    if(queued>=remaining){paint(remaining>0?`Only ${remaining} burns remain in this Eclipse reserve.` :reserveSpent(s));return;}
     s.plan[i]=(s.plan[i]||0)+1;s.changed=new Set([i]);
     paint();
   }
@@ -310,6 +342,7 @@ window.AetherPlanets = (() => {
     const counts=s.plan||[],total=counts.reduce((a,c)=>a+(c||0),0);
     if(P.won(s.id,s.def,s.board))return;
     if(!total) {paint('Queue at least one burn first: tap a moon dial to add one.');return;}
+    if(total>moveLimit(s)-s.moves){paint(`That plan needs ${total} burns, but only ${Math.max(0,moveLimit(s)-s.moves)} remain. Remove a burn or undo an earlier plan.`);return;}
     if(s.actions.length+total>1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
     // Each queued burn is committed as its own action, so undo steps back one
     // burn at a time and saved drafts keep the same plain action format.
@@ -337,6 +370,7 @@ window.AetherPlanets = (() => {
   }
   async function chooseLevel(index,focus=true) {
     genController?.abort();hintController?.abort();painting=false;gesture=null;reverse=false;
+    const host=document.querySelector('#planet-game');if(host)host.inert=false;
     if(index==='endless') {
       genController?.abort();genController=new AbortController();const signal=genController.signal;
       const id=current.id,round=progress.endless[id]?.best||0;
@@ -364,6 +398,9 @@ window.AetherPlanets = (() => {
       const date=new Date().toISOString().slice(0,10),old=replayProgress.daily[id];
       spec={mode,date,seed:old?.date===date?old.seed:replaySeed(`${id}:${date}`),stage:0,difficulty:2};
       replayProgress.daily[id]=old?.date===date?old:{date,seed:spec.seed,actions:[],hints:0,result:null};
+    } else if(mode==='eclipse') {
+      if(!unlockEclipse(id)){paint('Seal all three circuit charts to unlock this planet’s Eclipse masterwork.');return;}
+      spec={mode,seed:replayProgress.eclipse[id].seed,stage:0,difficulty:6};
     } else {
       const old=replayProgress.circuits[id];
       if(seed!==null)spec={mode,seed:seed>>>0,stage:0,difficulty:1};
@@ -374,8 +411,8 @@ window.AetherPlanets = (() => {
     }
     replayProgress.last[id]=mode;saveReplay();
     const host=document.querySelector('#planet-game');if(host)host.inert=true;
-    const board=document.querySelector('#puzzle-board');if(board)board.innerHTML=`<p class="puzzle-loading" role="status">Charting ${mode==='daily'?'today’s firmament':`circuit seed ${spec.seed}`}…</p>`;
-    const def=await P.replay(id,spec.seed,spec.difficulty,signal);
+    const board=document.querySelector('#puzzle-board');if(board)board.innerHTML=`<p class="puzzle-loading" role="status">Charting ${mode==='daily'?'today’s firmament':mode==='eclipse'?'the Eclipse masterwork':`circuit seed ${spec.seed}`}…</p>`;
+    const def=mode==='eclipse'?await P.eclipse(id,spec.seed,signal):await P.replay(id,spec.seed,spec.difficulty,signal);
     if(signal.aborted||!current||current.id!==id)return;
     if(host)host.inert=false;
     if(!def) {
@@ -413,7 +450,7 @@ window.AetherPlanets = (() => {
       if(action.type==='cell'){cell=action.value;message=`Switch the highlighted crater: row ${Math.floor(cell/s.def.n)+1}, column ${cell%s.def.n+1}. ${path.length} switches remain on a shortest solution.`;}
       if(action.type==='moon'){cell=action.value;message=`Queue a burn on ${P.moonNames[cell]} next. ${path.length} burns remain on a shortest solution.`;}
       if(action.type==='block'){cell=action.value[0];const axis=s.def.blocks[cell].axis;message=`Move ${cell===0?'probe P':`block ${cell}`} one square ${axis==='h'?(action.value[1]>0?'right':'left'):(action.value[1]>0?'down':'up')}. ${path.length} moves remain.`;s.selected=cell;}
-      if(action.type==='move')message=`${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[action.value]} next. ${path.length} moves remain on a shortest route.${s.id==='neptune'&&path.length>s.par+3-s.moves?' That exceeds your remaining fuel; undo or restart.':''}`;
+      if(action.type==='move')message=`${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[action.value]} next. ${path.length} moves remain on a shortest route.${path.length>moveLimit(s)-s.moves?` That exceeds your remaining ${s.mode==='eclipse'?'reserve':'fuel'}; undo or restart.`:''}`;
     }
     s.hints++;s.hintCell=cell;stash(s);paint(message);
   }
@@ -488,7 +525,7 @@ window.AetherPlanets = (() => {
     const savedMode=progress.levels[id]===undefined?0:progress.levels[id];
     current=session(id,savedMode);
     const last=replayProgress.last[id];
-    if((last==='daily'&&replayProgress.daily[id])||(last==='circuit'&&replayProgress.circuits[id]))chooseReplay(last,null,false);
+    if((last==='daily'&&replayProgress.daily[id])||(last==='circuit'&&replayProgress.circuits[id])||(last==='eclipse'&&eclipseUnlocked(id)))chooseReplay(last,null,false);
     else chooseLevel(savedMode,false);
     attachInput(signal);
   // Gentle plate parallax on fine pointers only.

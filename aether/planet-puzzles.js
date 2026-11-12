@@ -39,7 +39,8 @@ window.AetherPuzzles = (() => {
     return {board:projected,actions};
   }
   function coupling(def,i) {
-    return `${moonNames[i]} +1, ${moonNames[(i+1)%def.count]} +2${def.double?`, ${moonNames[mod(i-1,def.count)]} +1`:''}`;
+    const step=def.retrograde?-1:1,next=mod(i+step,def.count),previous=mod(i-step,def.count);
+    return `${moonNames[i]} +1, ${moonNames[next]} +2${def.double?`, ${moonNames[previous]} +1`:''}`;
   }
   function instruction(id,def,board) {
     if(won(id,def,board))return 'Survey complete. Replay for a shorter route, or continue your survey.';
@@ -121,9 +122,9 @@ window.AetherPuzzles = (() => {
   }
   function advance(board,def,i) {
     board.phases[i]=mod(board.phases[i]+1,def.divisions);
-    const next=(i+1)%def.count;
+    const step=def.retrograde?-1:1,next=mod(i+step,def.count);
     board.phases[next]=mod(board.phases[next]+2,def.divisions);
-    if(def.double) { const prev=mod(i-1,def.count); board.phases[prev]=mod(board.phases[prev]+1,def.divisions); }
+    if(def.double) { const prev=mod(i-step,def.count); board.phases[prev]=mod(board.phases[prev]+1,def.divisions); }
   }
   function slide(balls,d,def) {
     const occupied=new Set(balls), [dx,dy]=DIRS[d];
@@ -457,5 +458,68 @@ window.AetherPuzzles = (() => {
     if(def){if(endlessCache.size>=120)endlessCache.delete(endlessCache.keys().next().value);endlessCache.set(key,structuredClone(def));}return def;
   }
   async function replay(id,seed,difficulty=2,signal){return endless(id,difficulty,{seed:seed>>>0,difficulty,signal});}
-  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames};
+  // Eclipse is an optional fourth chart, not a fourth circuit stage. Its seed
+  // namespace and cache are separate so existing daily/circuit deals cannot move.
+  const eclipseRules={
+    mercury:{name:'Totality',unit:'switches',allowance:2,rule:'A finite switch reserve: par + 2. Every cross-shaped switch costs one; undo and restart restore it.'},
+    venus:{name:'Sealed valves',unit:'rotations',allowance:4,rule:'A finite rotation reserve: par + 4. Clockwise and anticlockwise turns each cost one; pinned fittings remain fixed.'},
+    earth:{name:'Surveyor’s ink',unit:'survey moves',allowance:2,rule:'A finite ink reserve: par + 2. Only extending a route spends ink; selecting or shortening a route is free.'},
+    mars:{name:'Reserve power',unit:'rover steps',allowance:6,rule:'A finite rover charge: par + 6 steps. Walking and pushing both cost one, so plan the approach before committing.'},
+    jupiter:{name:'Retrograde resonance',unit:'burns',allowance:2,rule:'Coupling reverses: a burn advances the selected moon by 1, the previous moon by 2, and the next moon by 1. The reserve is par + 2 burns.'},
+    saturn:{name:'Reaction wheels',unit:'slides',allowance:4,rule:'A finite slide reserve: par + 4. Every one-square block slide costs one, including moves away from the exit.'},
+    uranus:{name:'Gyroscopic reserve',unit:'tilts',allowance:2,rule:'A finite tilt reserve: par + 2. Every tilt moves every capsule and costs one, even when the docking count does not improve.'},
+    neptune:{name:'Last transmission',unit:'fuel charges',allowance:1,rule:'Only par + 1 fuel charges (two fewer than a normal chart). Every wind-riding leg costs one; undo restores a charge.'},
+  };
+  const eclipseCache=new Map();
+  function eclipseSolution(id,def,board) {
+    if(id==='mercury')return lightSolution(def,board).map(value=>({type:'cell',value}));
+    if(id==='venus') {
+      const actions=[];
+      for(let p=0;p<board.pipes.length;p++) {
+        let mask=board.pipes[p],turns=0;while(mask!==def.target[p]&&turns<4){mask=rotate(mask);turns++;}
+        const reverse=turns===3,count=reverse?1:turns;
+        for(let i=0;i<count;i++)actions.push({type:'cell',value:p,reverse});
+      }
+      return actions;
+    }
+    if(id==='earth')return def.paths.flatMap(path=>path.map((value,i)=>({type:'cell',value,continuation:i>0})));
+    const type=id==='jupiter'?'moon':id==='saturn'?'block':'move';
+    return (def.solution||[]).map(value=>({type,value}));
+  }
+  async function eclipse(id,seed,signal) {
+    if(!eclipseRules[id])return null;
+    seed>>>=0;const cacheKey=`${id}:${seed}`;if(eclipseCache.has(cacheKey))return clone(eclipseCache.get(cacheKey));
+    let def;
+    if(id==='jupiter') {
+      // Generate under the Eclipse coupling itself; reusing a normal orbital
+      // solution would make the reversed dial board merely cosmetically harder.
+      const base=(seed^0xec11a53e)>>>0;
+      for(let salt=0;!def&&salt<80;salt++) {
+        if(signal?.aborted)return null;
+        const cand={count:4,divisions:9,double:true,retrograde:true},board={phases:[0,0,0,0]},random=rng(base+salt);
+        for(let j=0;j<17;j++)advance(board,cand,Math.floor(random()*4));
+        if(board.phases.every(v=>v===0))advance(board,cand,0);
+        const solution=await solve(id,cand,board,signal);
+        if(solution&&solution.length>=8)def={...cand,startPhases:board.phases,solution:solution.map(a=>a.value)};
+      }
+    } else {
+      // The reserve supplies the masterwork constraint on the two search-heavy
+      // engines; difficulty five avoids long first-deal solver searches.
+      const round=['mars','saturn'].includes(id)?5:6;
+      def=await endless(id,round,{seed:(seed^0xec11a53e)>>>0,difficulty:round,signal});
+    }
+    if(!def||signal?.aborted)return null;
+    const board=initial(id,def,6),solution=eclipseSolution(id,def,board),reference=par(id,def,board),rule=eclipseRules[id];
+    let checked=clone(board),moves=0;
+    for(const action of solution) {
+      const next=transition(id,def,checked,action);if(!next)return null;
+      moves+=actionCost(id,checked,next);checked=next;
+    }
+    if(!won(id,def,checked)||!Number.isInteger(reference))return null;
+    def.eclipse={...rule,budget:reference+rule.allowance,solution};
+    if(moves>def.eclipse.budget)return null;
+    if(eclipseCache.size>=40)eclipseCache.delete(eclipseCache.keys().next().value);
+    eclipseCache.set(cacheKey,clone(def));return clone(def);
+  }
+  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,eclipse,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames};
 })();
