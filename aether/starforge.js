@@ -43,18 +43,18 @@ window.AetherStarforge = (() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const available = options.veteran ? scenarios : scenarios.slice(0, 6);
     let scenarioIndex = clamp(Number.isInteger(options.scenario) ? options.scenario : stored.completed, 0, available.length - 1);
-    let selected = 'mirror', modules = [], motes = [], phase = 0, pulse = 0, pulseCount = 0, energy = 0, heat = 0, charge = 0, discharges = 0, vents = available[scenarioIndex].vents || 1;
+    let selected = 'mirror', modules = [], motes = [], phase = 0, pulse = 0, pulseCount = 0, energy = 0, heat = 0, charge = 0, discharges = 0, route = 'forge', divertedPulses = 0, shuntedCharge = 0, vents = available[scenarioIndex].vents || 1;
     let remaining = available[scenarioIndex].seconds, running = false, ended = false, paused = false, destroyed = false, frame = 0, last = 0, endTimer = 0;
     let renderedTools = '', renderedScenarios = '';
     const controller = new AbortController();
     const { signal } = controller;
-    container.innerHTML = `<section class="starforge-shell" aria-label="Starforge workshop"><header class="starforge-status"><div><span>CONTRACT</span><strong id="starforge-contract"></strong><small id="starforge-brief"></small></div><div><span>DELIVERED</span><strong id="starforge-energy">0 / 0</strong><small>EMBER UNITS</small></div><div><span>FOUNDRY HEAT</span><strong id="starforge-heat">0 / 0</strong><meter id="starforge-meter" min="0" max="1" value="0"></meter></div><div><span>CYCLE</span><strong id="starforge-time">0:00</strong><small id="starforge-state">BUILD BEFORE IGNITION</small></div></header><div class="starforge-guide" aria-live="polite"><strong id="starforge-guide-title">BUILD A LIGHT PATH</strong><span id="starforge-guide-detail">The Mirror catches the core ray at the TOP gate; the Conductor carries it to the RIGHT gate; the Furnace forges it at the BOTTOM gate. Fit each device in its matching socket before ignition.</span></div><canvas class="starforge-canvas" width="900" height="560" tabindex="0" role="application" aria-label="Starforge workshop. Place the mirror at the top socket to catch light from the core, conductor at right, and furnace at bottom. The colored named gates stay still; installed sockets orbit on ignition. Space starts or pauses the cycle. Right click removes a device."></canvas><div class="starforge-tools" role="group" aria-label="Foundry devices"></div><footer class="starforge-actions"><button type="button" class="button button-primary" data-starforge="run">IGNITE CYCLE</button><button type="button" class="button" data-starforge="vent">VENT HEAT · 1</button><button type="button" class="button" data-starforge="reset">CLEAR SCHEMATIC</button><span>Click a device, then a socket. Right click removes. <kbd>Space</kbd> starts or pauses.</span></footer><div class="starforge-scenarios" role="group" aria-label="Starforge contracts"></div></section>`;
+    container.innerHTML = `<section class="starforge-shell" aria-label="Starforge workshop"><header class="starforge-status"><div><span>CONTRACT</span><strong id="starforge-contract"></strong><small id="starforge-brief"></small></div><div><span>DELIVERED</span><strong id="starforge-energy">0 / 0</strong><small>EMBER UNITS</small></div><div><span>FOUNDRY HEAT</span><strong id="starforge-heat">0 / 0</strong><meter id="starforge-meter" min="0" max="1" value="0"></meter></div><div><span>CYCLE</span><strong id="starforge-time">0:00</strong><small id="starforge-state">BUILD BEFORE IGNITION</small></div></header><div class="starforge-guide" aria-live="polite"><strong id="starforge-guide-title">BUILD A LIGHT PATH</strong><span id="starforge-guide-detail">The Mirror catches the core ray at the TOP gate; the Conductor carries it to the RIGHT gate; the Furnace forges it at the BOTTOM gate. Fit each device in its matching socket before ignition.</span></div><canvas class="starforge-canvas" width="900" height="560" tabindex="0" role="application" aria-label="Starforge workshop. Place the mirror at the top socket to catch light from the core, conductor at right, and furnace at bottom. The colored named gates stay still; installed sockets orbit on ignition. Space starts or pauses the cycle. Right click removes a device."></canvas><div class="starforge-tools" role="group" aria-label="Foundry devices"></div><footer class="starforge-actions"><button type="button" class="button button-primary" data-starforge="run">IGNITE CYCLE</button><button type="button" class="button" data-starforge="vent">VENT HEAT · 1</button>${options.veteran ? '<button type="button" class="button" data-starforge="route" aria-pressed="false">DIVERT TO COOLING · D</button>' : ''}<button type="button" class="button" data-starforge="reset">CLEAR SCHEMATIC</button><span>Click a device, then a socket. Right click removes. <kbd>Space</kbd> starts or pauses.</span></footer><div class="starforge-scenarios" role="group" aria-label="Starforge contracts"></div></section>`;
     const canvas = container.querySelector('canvas'), ctx = canvas.getContext('2d');
     const tools = container.querySelector('.starforge-tools'), scenarioList = container.querySelector('.starforge-scenarios');
     const contract = container.querySelector('#starforge-contract'), brief = container.querySelector('#starforge-brief');
     const energyLabel = container.querySelector('#starforge-energy'), heatLabel = container.querySelector('#starforge-heat');
     const meter = container.querySelector('#starforge-meter'), timeLabel = container.querySelector('#starforge-time');
-    const stateLabel = container.querySelector('#starforge-state'), runButton = container.querySelector('[data-starforge="run"]'), ventButton = container.querySelector('[data-starforge="vent"]');
+    const stateLabel = container.querySelector('#starforge-state'), runButton = container.querySelector('[data-starforge="run"]'), ventButton = container.querySelector('[data-starforge="vent"]'), routeButton = container.querySelector('[data-starforge="route"]');
     const guideTitle = container.querySelector('#starforge-guide-title'), guideDetail = container.querySelector('#starforge-guide-detail');
     canvas.style.touchAction = 'none';
 
@@ -76,6 +76,9 @@ window.AetherStarforge = (() => {
         const next = missing[0];
         title = `NEXT: ${devices[next].name.toUpperCase()} → ${next === 'mirror' ? 'TOP' : next === 'conductor' ? 'RIGHT' : next === 'furnace' ? 'BOTTOM' : 'ITS NAMED GATE'}`;
         detail = next === 'mirror' ? 'The Mirror catches the ray from the CENTER only when it passes the TOP gate. Put it in socket 1 to start.' : `Place the ${devices[next].name} on its colored, named gate. A ray flows only when all required devices pass their gates together.`;
+      } else if (options.veteran && route === 'cooling') {
+        title = running ? 'COOLING BUS · OUTPUT HELD' : 'COOLING BUS ROUTED · IGNITE TO COOL';
+        detail = `No units forged while diverted; cycle time continues. Every fifth live cooling pulse shunts 1 banked unit for −6 heat. ${charge} banked · ${shuntedCharge} shunted.`;
       } else if (scenario().pressure) {
         const resonant = active('mirror') && active('conductor') && active('furnace');
         title = !running ? 'PRESSURE CIRCUIT ALIGNED · IGNITE TO BANK' : heat >= scenario().pressure ? 'CAPACITOR PRIMED · VENT FOR FULL DELIVERY' : resonant ? `BANKING LIGHT · PRIME TO ${scenario().pressure} HEAT` : 'RESONANCE WINDOW CLOSED · BANK HELD';
@@ -104,15 +107,18 @@ window.AetherStarforge = (() => {
       canvas.dataset.running = String(running);
       canvas.dataset.paused = String(paused);
       canvas.dataset.charge = String(charge); canvas.dataset.vents = String(vents); canvas.dataset.discharges = String(discharges);
+      canvas.dataset.route = options.veteran ? route : 'standard'; canvas.dataset.divertedPulses = String(divertedPulses); canvas.dataset.shuntedCharge = String(shuntedCharge); canvas.dataset.veteran = String(Boolean(options.veteran));
       canvas.dataset.mechanic = level.pressure ? 'capacitor-discharge' : level.freeze ? 'clock-seals' : level.eclipse ? 'eclipse' : 'direct-flow';
       canvas.dataset.pressure = String(level.pressure || 0); canvas.dataset.ended = String(ended);
       timeLabel.textContent = `${Math.floor(remaining / 60)}:${String(Math.ceil(remaining % 60)).padStart(2, '0')}`;
       const frozen = frozenDevice();
       const pressureState = level.pressure && running ? `BANK ${charge} · ${heat >= level.pressure ? 'VENT FOR FULL DELIVERY' : `PRIME TO ${level.pressure} HEAT`}` : '';
-      stateLabel.textContent = ended ? (energy >= level.target ? 'CONTRACT SEALED' : heat >= level.cap ? 'FOUNDRY OVERPRESSURE' : 'STAR EXTINGUISHED') : frozen ? `CLOCK SEALS ${devices[frozen].name.toUpperCase()}` : pressureState || (running ? (level.eclipse ? 'ECLIPSE: EVERY THIRD PULSE LOST' : 'ORBITAL CYCLE LIVE') : 'BUILD BEFORE IGNITION');
+      const routeState = options.veteran && route === 'cooling' && running ? 'COOLING BUS · OUTPUT HELD' : '';
+      stateLabel.textContent = ended ? (energy >= level.target ? 'CONTRACT SEALED' : heat >= level.cap ? 'FOUNDRY OVERPRESSURE' : 'STAR EXTINGUISHED') : frozen ? `CLOCK SEALS ${devices[frozen].name.toUpperCase()}` : routeState || pressureState || (running ? (level.eclipse ? 'ECLIPSE: EVERY THIRD PULSE LOST' : 'ORBITAL CYCLE LIVE') : 'BUILD BEFORE IGNITION');
       runButton.textContent = running ? 'PAUSE CYCLE' : 'IGNITE CYCLE';
       ventButton.textContent = level.pressure ? `VENT / DELIVER ${charge} · ${vents}` : `VENT HEAT · ${vents}`;
       ventButton.disabled = vents < 1 || ended || (Boolean(level.pressure) && charge < 1);
+      if (routeButton) { routeButton.textContent = route === 'cooling' ? 'RETURN TO FORGE · D' : 'DIVERT TO COOLING · D'; routeButton.setAttribute('aria-pressed', String(route === 'cooling')); routeButton.disabled = ended; }
       const nextTools = level.tools.map(id => `<button type="button" data-star-tool="${id}" aria-pressed="${selected === id}"><b style="color:${devices[id].tone}">${devices[id].glyph}</b>${devices[id].name}</button>`).join('');
       const nextScenarios = available.map((item, index) => `<button type="button" data-star-scenario="${index}" ${(index < 6 && index > stored.completed) || (index >= 6 && stored.completed < 6) ? 'disabled' : ''} aria-pressed="${scenarioIndex === index}"><span>${index < stored.completed ? '✦' : index + 1}</span>${item.name}</button>`).join('');
       if (nextTools !== renderedTools) { tools.innerHTML = nextTools; renderedTools = nextTools; }
@@ -120,7 +126,7 @@ window.AetherStarforge = (() => {
       explainPath();
     }
     function reset() {
-      modules = []; motes = []; phase = 0; pulse = 0; pulseCount = 0; energy = 0; heat = 0; charge = 0; discharges = 0; vents = scenario().vents || 1; remaining = scenario().seconds; running = false; ended = false;
+      modules = []; motes = []; phase = 0; pulse = 0; pulseCount = 0; energy = 0; heat = 0; charge = 0; discharges = 0; route = 'forge'; divertedPulses = 0; shuntedCharge = 0; vents = scenario().vents || 1; remaining = scenario().seconds; running = false; ended = false;
       if (endTimer) { clearTimeout(endTimer); endTimer = 0; }
       renderNow();
     }
@@ -143,12 +149,25 @@ window.AetherStarforge = (() => {
       if (scenario().eclipse && pulseCount % 3 === 0) return;
       const core = { x: W * .5, y: H * .5 };
       const mirrorPos = position(mirror.slot), conductorPos = position(conductor.slot), furnacePos = position(furnace.slot);
+      if (options.veteran && route === 'cooling') {
+        const sink = regulator ? position(regulator.slot) : furnacePos;
+        emit(core, mirrorPos, devices.mirror.tone); emit(mirrorPos, conductorPos, devices.conductor.tone); emit(conductorPos, sink, devices.regulator.tone);
+        heat = Math.max(0, heat - 5 - (regulator ? 5 : 0) - (active('rail') ? 2 : 0)); divertedPulses++;
+        // Banked light is a finite coolant in Ember Covenant: diverting buys
+        // time and heat headroom by sacrificing units that could be delivered.
+        if (charge > 0 && divertedPulses % 5 === 0) { charge--; shuntedCharge++; heat = Math.max(0, heat - 6); }
+        return;
+      }
       emit(core, mirrorPos, devices.mirror.tone); emit(mirrorPos, conductorPos, devices.conductor.tone); emit(conductorPos, furnacePos, devices.furnace.tone);
       const bonus = active('splitter') ? 1 : 0;
       const storedCharge = active('capacitor') ? 1 : 0;
       const output = 1 + bonus + storedCharge;
       if (scenario().pressure) charge += output; else energy += output;
       heat += devices.furnace.heat + (bonus ? devices.splitter.heat : 0) + (storedCharge ? devices.capacitor.heat : 0) + (regulator ? devices.regulator.heat : 0) + (active('rail') ? -4 : 0);
+    }
+    function toggleRoute() {
+      if (!options.veteran || ended) return;
+      route = route === 'cooling' ? 'forge' : 'cooling'; renderNow();
     }
     function vent() {
       const level = scenario();
@@ -204,7 +223,7 @@ window.AetherStarforge = (() => {
       for (let slot = 0; slot < 8; slot++) { const p = position(slot); ctx.strokeStyle = 'rgba(229,204,151,.65)'; ctx.lineWidth = 2; circle(p.x, p.y, 23); ctx.stroke(); ctx.fillStyle = '#d8caa7'; ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(slot + 1), p.x, p.y + 39); }
        modules.forEach(module => { const p = position(module.slot), device = devices[module.id], aligned = angleGap(p.angle, device.gate) < gateTolerance(); ctx.fillStyle = '#101820'; circle(p.x, p.y, 19); ctx.fill(); ctx.strokeStyle = device.tone; ctx.lineWidth = aligned ? 3 : 2; circle(p.x, p.y, 19); ctx.stroke(); ctx.fillStyle = device.tone; ctx.font = 'bold 21px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(device.glyph, p.x, p.y + 7); if (aligned) { ctx.font = 'bold 13px "DM Sans", sans-serif'; ctx.fillText('✓', p.x + 23, p.y - 16); } });
       motes.forEach(mote => { const progress = 1 - mote.life / mote.max, x = mote.x + (mote.tx - mote.x) * progress, y = mote.y + (mote.ty - mote.y) * progress; ctx.fillStyle = mote.tone; circle(x, y, 5); ctx.fill(); });
-      ctx.fillStyle = 'rgba(8,14,18,.72)'; ctx.fillRect(24, H - 96, 360, 70); ctx.fillStyle = '#f0d9a1'; ctx.font = '600 13px "DM Sans", sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SELECTED: ${devices[selected].name.toUpperCase()}`, 40, H - 67); ctx.fillStyle = '#b5c9bf'; ctx.font = '12px "DM Sans", sans-serif'; ctx.fillText('Align each device with its named gate as the rail turns.', 40, H - 43); ctx.fillText(scenario().pressure ? `BANK ${charge} · ${heat >= scenario().pressure ? 'VENT NOW FOR FULL DELIVERY' : `PRIME TO ${scenario().pressure} HEAT BEFORE VENTING`}` : frozenDevice() ? `THE DYING CLOCK HAS SEALED ${devices[frozenDevice()].name.toUpperCase()}.` : 'A complete path flashes only when all gates coincide.', 40, H - 25);
+      ctx.fillStyle = 'rgba(8,14,18,.72)'; ctx.fillRect(24, H - 96, 360, 70); ctx.fillStyle = '#f0d9a1'; ctx.font = '600 13px "DM Sans", sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SELECTED: ${devices[selected].name.toUpperCase()}`, 40, H - 67); ctx.fillStyle = '#b5c9bf'; ctx.font = '12px "DM Sans", sans-serif'; ctx.fillText('Align each device with its named gate as the rail turns.', 40, H - 43); ctx.fillText(options.veteran && route === 'cooling' ? `COOLING BUS · NO OUTPUT · ${shuntedCharge} BANKED UNITS SHUNTED` : scenario().pressure ? `BANK ${charge} · ${heat >= scenario().pressure ? 'VENT NOW FOR FULL DELIVERY' : `PRIME TO ${scenario().pressure} HEAT BEFORE VENTING`}` : frozenDevice() ? `THE DYING CLOCK HAS SEALED ${devices[frozenDevice()].name.toUpperCase()}.` : 'A complete path flashes only when all gates coincide.', 40, H - 25);
       if (ended) { ctx.fillStyle = 'rgba(4,8,12,.72)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = energy >= scenario().target ? '#f7d68f' : '#ef9a82'; ctx.font = '46px "IM Fell English", Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(energy >= scenario().target ? 'CONTRACT SEALED' : 'THE FOUNDRY FALLS SILENT', cx, cy - 12); ctx.fillStyle = '#d9d1bc'; ctx.font = '16px "DM Sans", sans-serif'; ctx.fillText(energy >= scenario().target ? 'A new star blueprint enters the observatory ledger.' : 'Rebuild the schematic and try another rhythm.', cx, cy + 24); }
     }
     function renderNow() { draw(); refreshUi(); }
@@ -233,6 +252,10 @@ window.AetherStarforge = (() => {
     }
     canvas.addEventListener('pointerdown', pointer, { signal });
     canvas.addEventListener('contextmenu', event => event.preventDefault(), { signal });
+    canvas.addEventListener('keydown', event => {
+      if (!options.veteran || event.code !== 'KeyD' || event.repeat || ended || paused) return;
+      event.preventDefault(); toggleRoute();
+    }, { signal });
     // Space only drives the cycle when the canvas itself is focused — never
     // while a real control or an open dialog owns the interaction.
     window.addEventListener('keydown', event => {
@@ -252,6 +275,7 @@ window.AetherStarforge = (() => {
       const action = event.target.closest('[data-starforge]')?.dataset.starforge;
       if (action === 'run' && !ended) { running = !running; last = 0; renderNow(); schedule(); }
       if (action === 'vent') vent();
+      if (action === 'route') toggleRoute();
       if (action === 'reset') reset();
     }, { signal });
     // Never schedule frames in a hidden tab; pick up cleanly on return.
@@ -288,7 +312,7 @@ window.AetherStarforge = (() => {
     }
     renderNow();
     canvas.focus({ preventScroll: true });
-    return { destroy, pause, resume, get state() { return { scenario: scenarioIndex, energy, heat, charge, vents, discharges, remaining, running, ended, paused, modules: modules.slice() }; } };
+    return { destroy, pause, resume, get state() { return { scenario: scenarioIndex, energy, heat, charge, vents, discharges, route, divertedPulses, shuntedCharge, remaining, running, ended, paused, modules: modules.slice() }; } };
   }
   return { create, scenarios };
 })();

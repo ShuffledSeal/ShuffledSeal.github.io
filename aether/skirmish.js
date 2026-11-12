@@ -28,6 +28,9 @@ window.AetherSkirmish = (() => {
     // than the Umbral Maw's state machine; votives are destructible mirror wards.
     cantor: { name: 'The Meridian Cantor', hp: 520, speed: 52, accel: 180, radius: 40, damage: 14, kb: 360, resist: .9, motes: 12 },
     votive: { name: 'Mirror Votive', hp: 30, speed: 0, accel: 0, radius: 14, damage: 6, kb: 120, resist: .7, orbCd: 3.1, orbSpeed: 185, motes: 3 },
+    // Veteran duellist: its directional ward follows until the salvo locks.
+    // Flank the locked facing, punish recovery, or use an omni-directional Mortar.
+    aegis: { name: 'Aegis Lancer', hp: 48, speed: 62, accel: 270, radius: 21, damage: 10, kb: 190, resist: .65, keepAway: 285, orbCd: 3.8, orbSpeed: 250, motes: 5 },
   };
 
   // Instruments are rule changes, not stat boosts. Verbs travel into trials too.
@@ -94,7 +97,7 @@ window.AetherSkirmish = (() => {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H; canvas.tabIndex = 0;
     canvas.setAttribute('role', 'application');
-    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. 1–4 select weapons. Space or right-click to dash. P pauses.');
+    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. 1–4 select weapons. Space or right-click to dash.' + (options.veteran ? ' E raises a timed Reversal guard that reflects one hostile bolt; guarding slows flight and pauses firing. ' : ' ') + 'P pauses.');
     container.appendChild(canvas);
     const weaponBar = document.createElement('div');
     // NB: deliberately NOT .skirmish-draft — tests assert that selector is a single
@@ -107,6 +110,12 @@ window.AetherSkirmish = (() => {
     const weaponHelp = document.createElement('span');
     weaponHelp.style.cssText = 'flex:1 0 100%;text-align:center;line-height:1.6';
     weaponBar.appendChild(weaponHelp);
+    const guardButton = document.createElement('button');
+    guardButton.type = 'button'; guardButton.dataset.skirmishGuard = '';
+    guardButton.style.cssText = armoryButtonStyle;
+    guardButton.title = 'Veteran Reversal: for 0.38s, reflect one nearby hostile bolt. A hit refreshes dash and empowers two shots; a miss still spends the full cooldown. Guarding slows movement and interrupts firing.';
+    guardButton.hidden = !options.veteran;
+    if (options.veteran) weaponBar.appendChild(guardButton);
     container.appendChild(weaponBar);
     const missionStatus = document.createElement('p');
     missionStatus.dataset.skirmishObjective = '';
@@ -153,6 +162,8 @@ window.AetherSkirmish = (() => {
     let weapon = (() => { try { const id = options.weapon || localStorage.getItem('aether-hunt-weapon'); return WEAPONS[id] ? id : 'pulse'; } catch { return 'pulse'; } })();
     let charge = 0, pending = [], waveTime = 0, draftChoices = [], objectiveText = '';
     let blasts = [], cantorMarks = [], sanctuaries = [];
+    let guardTime = 0, guardCooldown = 0, guardCount = 0, guardWhiffs = 0, reversalCount = 0, reversalHits = 0;
+    let aegisBlocks = 0, aegisBreaches = 0, aegisMortars = 0, aegisReversals = 0, aegisSeen = false;
     const fieldRelics = [];
     let notice = { text: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER: FIRE · RIGHT CLICK: DASH · P: PAUSE', ttl: 6 };
     let bossEnt = null, bossPhase = 1;
@@ -162,6 +173,8 @@ window.AetherSkirmish = (() => {
       enemies = []; bolts = []; orbs = []; motes = []; wells = []; trails = []; freezes = []; parts = []; popups = [];
       wave = startingAct - 1; waveIntro = 1.6; phase = 'intro'; refit = null; dust = 0; kills = 0; boltCount = 0; ended = false;
       charge = 0; pending = []; waveTime = 0; blasts = []; cantorMarks = []; sanctuaries = [];
+      guardTime = 0; guardCooldown = 0; guardCount = 0; guardWhiffs = 0; reversalCount = 0; reversalHits = 0;
+      aegisBlocks = 0; aegisBreaches = 0; aegisMortars = 0; aegisReversals = 0; aegisSeen = false;
       streak = 0; streakTime = 0; bestStreak = 0; score = 0; supercharge = 0; hazardTimer = 6; hazard = null; echoQueue = [];
       bossEnt = boss ? { id: 'boss', kind: 'maw', name: 'The Umbral Maw', x: W / 2, y: 150, vx: 0, vy: 0, hp: Math.round(620 * mode.hp), maxHp: Math.round(620 * mode.hp), radius: 46, state: 'chase', t: 0, cd: 2, beam: null, hurt: 0, spawnCd: 5 } : null;
     }
@@ -192,10 +205,15 @@ window.AetherSkirmish = (() => {
         for (let i = 0; i < n; i++) spawnEnemy(pool[Math.floor(rand() * pool.length)]);
       } else {
         // Authored roles, two readable packets rather than one random pile.
-        const roster = wave === 1 ? ['drifter', 'drifter', 'drifter', 'weaver']
+        const standardRoster = wave === 1 ? ['drifter', 'drifter', 'drifter', 'weaver']
           : wave === 2 ? ['shard', 'shard', 'drifter', 'lancer', 'weaver', 'shard']
           : wave === 3 ? ['maw', 'drifter', 'drifter', 'lancer', 'shard', 'shard', 'weaver']
           : ['maw', 'maw', 'lancer', 'lancer', 'blossom', 'shard', 'weaver'];
+        const veteranRoster = wave === 1 ? ['drifter', 'aegis', 'drifter', 'weaver']
+          : wave === 2 ? ['shard', 'aegis', 'drifter', 'lancer', 'weaver', 'aegis']
+          : wave === 3 ? ['maw', 'aegis', 'drifter', 'lancer', 'shard', 'aegis', 'weaver']
+          : standardRoster;
+        const roster = options.veteran ? veteranRoster : standardRoster;
         const firstPacket = Math.ceil(n * .55);
         for (let i = 0; i < n; i++) scheduleEnemy(roster[i % roster.length], i < firstPacket ? 0 : 4.5);
         if (refit === 'pursuit') scheduleEnemy('lancer', 4.5, true);
@@ -222,15 +240,25 @@ window.AetherSkirmish = (() => {
       const side = rand() * TAU;
       return { x: W / 2 + Math.cos(side) * (W / 2 - 60), y: H / 2 + Math.sin(side) * (H / 2 - 60) };
     }
-    function scheduleEnemy(kind, at, gilded = false) { pending.push({ kind, at, gilded, ...entryPoint(), warning: .9 }); }
+    function scheduleEnemy(kind, at, gilded = false) {
+      const entry = entryPoint();
+      // Aegis wards extend beyond their hull; keep the entire tell on-canvas.
+      if (kind === 'aegis') { entry.x = clamp(entry.x, 40, W - 40); entry.y = clamp(entry.y, 40, H - 40); }
+      pending.push({ kind, at, gilded, ...entry, warning: .9 });
+    }
     function spawnEnemy(kind, gilded = false, entry = null) {
       const def = ENEMIES[kind];
       const pos = entry || entryPoint();
       enemies.push({
-        kind, gilded, x: pos.x, y: pos.y,
+        kind, gilded, x: pos.x, y: pos.y, spawnX: pos.x, spawnY: pos.y,
         vx: 0, vy: 0, hp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp, maxHp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp,
-        state: 'chase', t: 0, cd: def.cd || def.orbCd || def.beamCd || 2, hurt: 0, frozen: 0, slow: 0, born: 0,
+        state: kind === 'aegis' ? 'guard' : 'chase', t: 0, cd: def.cd || def.orbCd || def.beamCd || 2, hurt: 0, frozen: 0, slow: 0, born: 0,
+        guardAngle: kind === 'aegis' ? Math.atan2(player.y - pos.y, player.x - pos.x) : 0,
       });
+      if (kind === 'aegis' && !aegisSeen) {
+        aegisSeen = true;
+        notice = { text: 'AEGIS LANCER · FLANK ITS LOCKED WARD, USE MORTAR, OR PUNISH RECOVERY', ttl: 3.4 };
+      }
       burst(pos.x, pos.y, sector.accent, 8, 120);
     }
 
@@ -271,7 +299,7 @@ window.AetherSkirmish = (() => {
       if (pointerMoving) {
         const dx = aim.x - p.x, dy = aim.y - p.y, d = Math.hypot(dx, dy);
         // Arrival steering gives immediate follow while preventing jitter at the cursor.
-        const desiredSpeed = Math.min(SWIM.maxSpeed * hull.speed, d * 7);
+        const desiredSpeed = Math.min(SWIM.maxSpeed * hull.speed * (guardTime > 0 ? .55 : 1), d * 7);
         const blend = Math.min(1, 17 * dt);
         p.vx += ((d > 3 ? dx / d * desiredSpeed : 0) - p.vx) * blend;
         p.vy += ((d > 3 ? dy / d * desiredSpeed : 0) - p.vy) * blend;
@@ -282,10 +310,11 @@ window.AetherSkirmish = (() => {
         if (verbs.has('trail')) trails.push({ x: p.x, y: p.y, life: 1 });
       } else if (!pointerMoving) {
         const len = Math.hypot(mx, my) || 1;
-        p.vx += mx / len * SWIM.accel * dt; p.vy += my / len * SWIM.accel * dt;
+        const guardMove = guardTime > 0 ? .55 : 1;
+        p.vx += mx / len * SWIM.accel * guardMove * dt; p.vy += my / len * SWIM.accel * guardMove * dt;
         const damp = Math.exp(-SWIM.damping * dt);
         p.vx *= damp; p.vy *= damp;
-        const sp = Math.hypot(p.vx, p.vy), max = SWIM.maxSpeed * hull.speed;
+        const sp = Math.hypot(p.vx, p.vy), max = SWIM.maxSpeed * hull.speed * guardMove;
         if (sp > max) { p.vx *= max / sp; p.vy *= max / sp; }
       }
       p.x = clamp(p.x + p.vx * dt, 24, W - 24); p.y = clamp(p.y + p.vy * dt, 24, H - 24);
@@ -293,6 +322,14 @@ window.AetherSkirmish = (() => {
       p.trail.unshift({ x: p.x, y: p.y }); if (p.trail.length > 14) p.trail.pop();
       p.burstCd = Math.max(0, p.burstCd - dt); p.invuln = Math.max(0, p.invuln - dt); p.hurtInvuln = Math.max(0, p.hurtInvuln - dt);
       p.boltCd = Math.max(0, p.boltCd - dt);
+      guardCooldown = Math.max(0, guardCooldown - dt);
+      if (guardTime > 0) {
+        guardTime = Math.max(0, guardTime - dt);
+        if (!guardTime) {
+          guardWhiffs++;
+          notice = { text: 'REVERSAL WHIFFED · WEAPONS RECOVER; GUARD RECHARGING', ttl: 1.1 };
+        }
+      }
 
       // The mouse pilots the ship, while the targeting computer leads the closest threat.
       // WASD pilots can still freely aim using the cursor as a traditional twin-stick.
@@ -309,7 +346,7 @@ window.AetherSkirmish = (() => {
         targetAngle = Math.atan2(ey - p.y, ex - p.x);
       } else targetAngle = Math.atan2(aim.y - p.y, aim.x - p.x);
       const wantsFire = firing || keys.has('j') || keys.has('z') || keys.has('Enter');
-      if (wantsFire && p.boltCd <= 0 && phase === 'combat') {
+      if (wantsFire && p.boltCd <= 0 && phase === 'combat' && guardTime <= 0) {
         const def = WEAPONS[weapon];
         charge += dt;
         if (!def.charge || charge >= def.charge) {
@@ -373,7 +410,7 @@ window.AetherSkirmish = (() => {
         if (e.hp <= 0) continue;
         const def = ENEMIES[e.kind];
         e.born = (e.born ?? 1) + dt;
-        e.hurt = Math.max(0, e.hurt - dt); e.frozen = Math.max(0, e.frozen - dt); e.slow = Math.max(0, e.slow - dt);
+        e.hurt = Math.max(0, e.hurt - dt); e.frozen = Math.max(0, e.frozen - dt); e.slow = Math.max(0, e.slow - dt); e.guardFlash = Math.max(0, (e.guardFlash || 0) - dt);
         if (e.frozen > 0) { e.vx *= .9; e.vy *= .9; e.x += e.vx * dt; e.y += e.vy * dt; continue; }
         const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
         const slowMul = e.slow > 0 ? .45 : 1;
@@ -414,6 +451,35 @@ window.AetherSkirmish = (() => {
           } else if (e.state === 'lunge') {
             e.t -= dt;
             if (e.t <= 0) { e.state = 'chase'; e.cd = def.cd; }
+          }
+        } else if (e.kind === 'aegis') {
+          // The ward turns slowly while tracking, then locks with the salvo.
+          // Its owner is fully open during recovery; the firing line and ward
+          // share a facing so the player can read one shape and make two plans.
+          if (e.state === 'recover') {
+            e.t -= dt; e.vx *= .96; e.vy *= .96; e.markAngle = 0;
+            if (e.t <= 0) { e.state = 'guard'; e.cd = def.orbCd; }
+          } else {
+            const keep = d < 250 ? -1 : d > 330 ? 1 : 0;
+            e.vx += (dx / d * keep - dy / d * .28) * def.accel * dt;
+            e.vy += (dy / d * keep + dx / d * .28) * def.accel * dt;
+            const sp = Math.hypot(e.vx, e.vy) || 1, max = def.speed * slowMul * mode.velocity;
+            if (sp > max) { e.vx *= max / sp; e.vy *= max / sp; }
+            e.cd -= dt;
+            const wanted = Math.atan2(dy, dx);
+            if (e.cd > .75) {
+              const turn = Math.atan2(Math.sin(wanted - e.guardAngle), Math.cos(wanted - e.guardAngle));
+              e.guardAngle += clamp(turn, -2.2 * dt, 2.2 * dt);
+              e.markAngle = 0;
+            } else e.markAngle = e.guardAngle || .00001;
+            if (e.cd <= 0 && phase === 'combat') {
+              if (orbs.length < 69) for (const spread of [-.13, 0, .13]) orbs.push({
+                x: e.x, y: e.y, vx: Math.cos(e.guardAngle + spread) * def.orbSpeed,
+                vy: Math.sin(e.guardAngle + spread) * def.orbSpeed, life: 3.5, hostile: true, aegis: true,
+              });
+              e.state = 'recover'; e.t = 1.5; e.markAngle = 0;
+              tone(175, .16, 'square', .04);
+            }
           }
         } else if (e.kind === 'lancer') {
           const keep = d < 270 ? -1 : d > 345 ? 1 : 0;
@@ -471,7 +537,8 @@ window.AetherSkirmish = (() => {
           }
         }
         e.x += e.vx * dt; e.y += e.vy * dt;
-        e.x = clamp(e.x, 14, W - 14); e.y = clamp(e.y, 14, H - 14);
+        const edge = e.kind === 'aegis' ? 40 : 14;
+        e.x = clamp(e.x, edge, W - edge); e.y = clamp(e.y, edge, H - edge);
         const speed = Math.hypot(e.vx, e.vy);
         if (speed > 8) {
           const desiredFacing = Math.atan2(e.vy, e.vx);
@@ -488,14 +555,36 @@ window.AetherSkirmish = (() => {
       }
       // Boss logic
       if (bossEnt && bossEnt.hp > 0) bossStep(bossEnt, dt);
-      // Orbs
+      // Orbs: Veteran Reversal turns one hostile projectile into a seeking
+      // friendly bolt. It then shares the ordinary damage/instrument rules.
       for (let i = orbs.length - 1; i >= 0; i--) {
         const o = orbs[i];
+        if (o.friendly && o.target?.hp > 0) {
+          const want = Math.atan2(o.target.y - o.y, o.target.x - o.x), cur = Math.atan2(o.vy, o.vx);
+          const turn = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+          const angle = cur + clamp(turn, -9 * dt, 9 * dt), velocity = Math.hypot(o.vx, o.vy);
+          o.vx = Math.cos(angle) * velocity; o.vy = Math.sin(angle) * velocity;
+        }
         o.x += o.vx * dt; o.y += o.vy * dt; o.life -= dt;
         if (o.life <= 0 || o.x < -10 || o.x > W + 10 || o.y < -10 || o.y > H + 10) { orbs.splice(i, 1); continue; }
-        const ward = stillwakeAt(o.x, o.y);
-        if (ward) { ward.erased++; orbs.splice(i, 1); burst(o.x, o.y, '#a7ebde', 3, 55); continue; }
-        if (Math.hypot(o.x - p.x, o.y - p.y) < 16 && p.hurtInvuln <= 0 && p.invuln <= 0) { orbs.splice(i, 1); hurtPlayer(8, null); }
+        if (o.friendly) {
+          const targets = bossEnt && bossEnt.hp > 0 ? [...enemies, bossEnt] : enemies;
+          let struck = false;
+          for (const e of targets) {
+            if (e.hp <= 0) continue;
+            const radius = e.radius ?? ENEMIES[e.kind].radius;
+            if (Math.hypot(o.x - e.x, o.y - e.y) >= radius + 6) continue;
+            reversalHits++;
+            damageEnemy(e, o.damage, { weapon: 'reversal', reversal: true, vx: o.vx, vy: o.vy });
+            orbs.splice(i, 1); struck = true; burst(o.x, o.y, '#a7ebde', 7, 110); break;
+          }
+          if (struck) continue;
+        } else {
+          if (guardTime > 0 && Math.hypot(o.x - p.x, o.y - p.y) < 58) { reverseOrb(o); continue; }
+          const ward = stillwakeAt(o.x, o.y);
+          if (ward) { ward.erased++; orbs.splice(i, 1); burst(o.x, o.y, '#a7ebde', 3, 55); continue; }
+          if (Math.hypot(o.x - p.x, o.y - p.y) < 16 && p.hurtInvuln <= 0 && p.invuln <= 0) { orbs.splice(i, 1); hurtPlayer(8, null); }
+        }
       }
       // Wells/trails/freezes decay; trails burn enemies.
       wells.forEach(w => w.life -= dt); wells = wells.filter(w => w.life > 0);
@@ -570,6 +659,9 @@ window.AetherSkirmish = (() => {
         INSTRUMENTS[choice].verbs.forEach(verb => verbs.add(verb));
       }
       draftBar.hidden = true; phase = 'intro'; waveIntro = 1.8;
+      // Selection is a state transition, not a presentation-only event. Mirror
+      // it immediately rather than waiting for the 16-frame HUD diagnostic cadence.
+      canvas.dataset.refit = refit; canvas.dataset.phase = phase; canvas.dataset.draft = '';
       notice = { text: INSTRUMENTS[choice] ? `${INSTRUMENTS[choice].name.toUpperCase()} · ONLINE FOR THIS HUNT` : draftChoices.find(c => c.id === choice).text.toUpperCase(), ttl: 3 };
       tone(choice === 'guard' ? 540 : 840, .18, 'triangle', .05);
       canvas.focus({ preventScroll: true });
@@ -578,6 +670,12 @@ window.AetherSkirmish = (() => {
       for (const button of weaponBar.querySelectorAll('[data-skirmish-weapon]')) button.setAttribute('aria-pressed', String(button.dataset.skirmishWeapon === weapon));
       weaponHelp.textContent = `${WEAPONS[weapon].name} — ${WEAPONS[weapon].note}`;
       canvas.dataset.weapon = weapon;
+    }
+    function syncGuard() {
+      if (!options.veteran) return;
+      guardButton.disabled = paused || ended || phase !== 'combat' || guardCooldown > 0 || guardTime > 0;
+      guardButton.setAttribute('aria-pressed', String(guardTime > 0));
+      guardButton.textContent = guardTime > 0 ? 'E · REVERSING' : guardCooldown > 0 ? `E · REVERSAL ${guardCooldown.toFixed(1)}s` : 'E · REVERSAL READY';
     }
     function setWeapon(id, quiet = false) {
       if (!WEAPONS[id] || destroyed) return;
@@ -592,12 +690,15 @@ window.AetherSkirmish = (() => {
       syncArmory();
     }
     listen(weaponBar, 'click', e => {
+      if (e.target.closest('[data-skirmish-guard]')) {
+        tryGuard(); canvas.focus({ preventScroll: true }); return;
+      }
       const id = e.target.closest('[data-skirmish-weapon]')?.dataset.skirmishWeapon;
       if (!id) return;
       setWeapon(id);
       canvas.focus({ preventScroll: true });
     });
-    syncArmory();
+    syncArmory(); syncGuard();
     listen(draftBar, 'click', e => chooseRefit(e.target.closest('[data-skirmish-refit]')?.dataset.skirmishRefit));
     function bossStep(b, dt) {
       if (b.kind === 'cantor') { cantorStep(b, dt); return; }
@@ -854,6 +955,17 @@ window.AetherSkirmish = (() => {
       else tone(700 + (boltCount % 4) * 60, .05, 'triangle', .028);
     }
     function damageEnemy(e, dmg, bolt, quiet = false) {
+      if (e.kind === 'aegis' && e.state !== 'recover' && bolt && bolt.weapon !== 'mortar' && !bolt.reversal) {
+        const sourceAngle = Math.atan2(-(bolt.vy || 0), -(bolt.vx || 0));
+        const diff = Math.abs(Math.atan2(Math.sin(sourceAngle - e.guardAngle), Math.cos(sourceAngle - e.guardAngle)));
+        if (diff < 1.12) {
+          dmg *= .12; aegisBlocks++; e.guardBlocks = (e.guardBlocks || 0) + 1; e.guardFlash = .18;
+        } else { aegisBreaches++; e.guardBreaches = (e.guardBreaches || 0) + 1; }
+      } else if (e.kind === 'aegis' && bolt && (bolt.weapon === 'mortar' || bolt.reversal || e.state === 'recover')) {
+        aegisBreaches++; e.guardBreaches = (e.guardBreaches || 0) + 1;
+        if (bolt.weapon === 'mortar') { aegisMortars++; e.mortarBreaches = (e.mortarBreaches || 0) + 1; }
+        if (bolt.reversal) { aegisReversals++; e.reversalBreaches = (e.reversalBreaches || 0) + 1; }
+      }
       if (e.kind === 'votive' && refit === 'severance') dmg *= 1.55;
       if (e.kind === 'cantor') {
         if (e.warded && livingVotives().length) {
@@ -961,8 +1073,31 @@ window.AetherSkirmish = (() => {
       if (player.hp <= 0) end(false);
       streak = 0; streakTime = 0;
     }
+    function reverseOrb(o) {
+      const pool = (bossEnt ? [...enemies, bossEnt] : enemies).filter(e => e.hp > 0);
+      const target = pool.reduce((best, e) => {
+        const d = Math.hypot(e.x - o.x, e.y - o.y);
+        return !best || d < best.d ? { e, d } : best;
+      }, null)?.e || null;
+      const angle = target ? Math.atan2(target.y - o.y, target.x - o.x) : Math.atan2(-o.vy, -o.vx);
+      o.friendly = true; o.hostile = false; o.votive = false; o.ring = false; o.aegis = false;
+      o.target = target; o.damage = 22; o.life = 1.8;
+      o.vx = Math.cos(angle) * 560; o.vy = Math.sin(angle) * 560;
+      guardTime = 0; guardCooldown = Math.min(guardCooldown, 1.4); reversalCount++;
+      player.burstCd = 0; player.invuln = Math.max(player.invuln, .2); supercharge = Math.max(supercharge, 2);
+      notice = { text: 'REVERSAL · BOLT RETURNED · DASH READY · TWO SHOTS EMPOWERED', ttl: 1.5 };
+      popup(player.x, player.y - 30, 'REVERSAL', '#a7ebde');
+      burst(player.x, player.y, '#a7ebde', 18, 190); tone(760, .16, 'triangle', .05);
+    }
+    function tryGuard() {
+      if (!options.veteran || paused || destroyed || ended || phase !== 'combat' || guardCooldown > 0 || guardTime > 0 || player.burstT > 0) return;
+      guardTime = .38; guardCooldown = 3.4; guardCount++;
+      charge = 0; player.boltCd = Math.max(player.boltCd, .52);
+      notice = { text: 'REVERSAL GUARD · CATCH ONE BOLT · FLIGHT AND FIRE SLOWED', ttl: .8 };
+      tone(410, .1, 'sine', .035); syncGuard();
+    }
     function tryBurst() {
-      if(paused)return;
+      if(paused || guardTime > 0)return;
       const p = player;
       const cdMul = (verbs.has('gyro') ? .65 : 1) * (refit === 'guard' ? .75 : 1) * (refit === 'stillwake' ? 1.25 : 1);
       if (p.burstCd > 0 || p.burstT > 0 || phase !== 'combat') return;
@@ -1095,6 +1230,29 @@ window.AetherSkirmish = (() => {
         ctx.restore();
         return;
       }
+      if (e.kind === 'aegis') {
+        const bornIn = Math.min(1, (e.born ?? 1) / .45);
+        if (bornIn < 1) { ctx.globalAlpha = bornIn; const sc = .45 + bornIn * .55; ctx.scale(sc, sc); }
+        ctx.rotate(e.guardAngle || 0);
+        ctx.beginPath(); ctx.moveTo(r, 0); ctx.lineTo(0, -r * .78); ctx.lineTo(-r * .8, 0); ctx.lineTo(0, r * .78); ctx.closePath();
+        ctx.fillStyle = e.hurt > 0 ? '#fff' : e.state === 'recover' ? '#665b3e' : '#293c50'; ctx.fill();
+        ctx.strokeStyle = e.state === 'recover' ? '#f2d38a' : '#b9e8ef'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = e.state === 'recover' ? '#f2d38a' : '#101d2b'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, TAU); ctx.fill();
+        ctx.strokeStyle = e.guardFlash > 0 ? '#ffffff' : '#b9e8ef'; ctx.lineWidth = e.guardFlash > 0 ? 7 : 4;
+        ctx.setLineDash(e.state === 'guard' && e.cd > .75 ? [9, 6] : []);
+        ctx.beginPath();
+        if (e.state === 'recover') {
+          ctx.arc(0, 0, r + 10, -.45, .45); ctx.moveTo(Math.cos(Math.PI - .45) * (r + 10), Math.sin(Math.PI - .45) * (r + 10));
+          ctx.arc(0, 0, r + 10, Math.PI - .45, Math.PI + .45);
+        } else ctx.arc(0, 0, r + 10, -1.12, 1.12);
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.rotate(-(e.guardAngle || 0));
+        if (e.hp < e.maxHp) {
+          ctx.strokeStyle = e.state === 'recover' ? '#f2d38a' : '#b9e8ef'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, 0, r + 4, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, e.hp / e.maxHp)); ctx.stroke();
+        }
+        ctx.restore(); return;
+      }
       if (window.AetherBattleArt) {
         window.AetherBattleArt.enemy(ctx, e, sector, clock, heading);
         ctx.restore();
@@ -1217,9 +1375,10 @@ window.AetherSkirmish = (() => {
       ctx.globalAlpha = 1;
       // Orbs
       for (const o of orbs) {
-        ctx.fillStyle = o.ring ? '#e8a0a8' : '#b3a0d8';
+        ctx.fillStyle = o.friendly ? '#a7ebde' : o.ring ? '#e8a0a8' : '#b3a0d8';
         ctx.beginPath(); ctx.arc(o.x, o.y, o.ring ? 7 : 6, 0, TAU); ctx.fill();
-        ctx.strokeStyle = sector.bg; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = o.friendly ? '#effff8' : sector.bg; ctx.lineWidth = 2; ctx.stroke();
+        if (o.friendly) { ctx.beginPath(); ctx.moveTo(o.x - o.vx * .025, o.y - o.vy * .025); ctx.lineTo(o.x, o.y); ctx.stroke(); }
       }
       // Blasts bloom and fade where mortar shells land.
       for (const b of blasts) {
@@ -1269,8 +1428,8 @@ window.AetherSkirmish = (() => {
         ctx.restore();
       }
       // Lancers and mirror votives telegraph an exact firing angle.
-      for (const e of enemies) if ((e.kind === 'lancer' || e.kind === 'votive') && e.markAngle) {
-        ctx.strokeStyle = e.kind === 'votive' ? '#b9e8ef' : '#ffbcb8'; ctx.lineWidth = 1.8; ctx.setLineDash([9, 7]);
+      for (const e of enemies) if ((e.kind === 'lancer' || e.kind === 'votive' || e.kind === 'aegis') && e.markAngle) {
+        ctx.strokeStyle = e.kind === 'votive' || e.kind === 'aegis' ? '#b9e8ef' : '#ffbcb8'; ctx.lineWidth = e.kind === 'aegis' ? 2.5 : 1.8; ctx.setLineDash([9, 7]);
         ctx.beginPath(); ctx.moveTo(e.x, e.y);
         ctx.lineTo(e.x + Math.cos(e.markAngle) * 1050, e.y + Math.sin(e.markAngle) * 1050); ctx.stroke(); ctx.setLineDash([]);
       }
@@ -1306,6 +1465,11 @@ window.AetherSkirmish = (() => {
       }
       // Player kite and thruster trails
       const p = player;
+      if (guardTime > 0) {
+        ctx.strokeStyle = '#a7ebde'; ctx.lineWidth = 3; ctx.setLineDash([7, 5]);
+        ctx.beginPath(); ctx.arc(p.x, p.y, 58, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 20, -Math.PI / 2, -Math.PI / 2 + TAU * guardTime / .38); ctx.stroke();
+      }
       for (let i = p.trail.length - 1; i >= 0; i--) {
         ctx.globalAlpha = (1 - i / p.trail.length) * .3;
         ctx.fillStyle = sector.mote;
@@ -1383,6 +1547,10 @@ window.AetherSkirmish = (() => {
       if (refit && phase !== 'draft') {
         const refitLabel = refit === 'guard' ? 'REFIT: PLATING + QUICK DASH' : refit === 'power' ? 'REFIT: DAMAGE +35%' : refit === 'pursuit' ? 'REFIT: PURSUIT SIGNAL' : refit === 'shelter' ? 'REFIT: STORM GROUNDED' : refit === 'severance' ? 'REFIT: SEVERING ROUNDS' : refit === 'stillwake' ? 'REFIT: STILLWAKE VEIL' : INSTRUMENTS[refit] ? `FIELD: ${INSTRUMENTS[refit].name.toUpperCase()}` : '';
         if (refitLabel) { ctx.fillStyle = '#efd39c'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"'; ctx.fillText(refitLabel, W - 18, 96); }
+      }
+      if (options.veteran) {
+        ctx.fillStyle = guardTime > 0 || guardCooldown <= 0 ? '#a7ebde' : '#879d9b'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"';
+        ctx.fillText(guardTime > 0 ? 'E · REVERSING' : guardCooldown > 0 ? `E · REVERSAL ${guardCooldown.toFixed(1)}s` : 'E · REVERSAL READY', W - 18, 120);
       }
       if (bossEnt) {
         const cantor = bossEnt.kind === 'cantor';
@@ -1464,6 +1632,13 @@ window.AetherSkirmish = (() => {
         canvas.dataset.act = endless ? '' : clamp(Math.max(1, wave), 1, ACTS.length);
         canvas.dataset.draft = phase === 'draft' ? draftChoices.map(c => c.id).join(',') : '';
         canvas.dataset.boltsLive = bolts.length;
+        canvas.dataset.guard = guardTime > 0 ? 'active' : guardCooldown > 0 ? 'cooldown' : 'ready';
+        canvas.dataset.guardTime = guardTime.toFixed(3); canvas.dataset.guardCooldown = guardCooldown.toFixed(3);
+        canvas.dataset.guardCount = guardCount; canvas.dataset.guardWhiffs = guardWhiffs;
+        canvas.dataset.reversals = reversalCount; canvas.dataset.reversalHits = reversalHits; canvas.dataset.friendlyOrbs = orbs.filter(o => o.friendly).length;
+        canvas.dataset.aegisBlocks = aegisBlocks; canvas.dataset.aegisBreaches = aegisBreaches;
+        canvas.dataset.aegisMortars = aegisMortars; canvas.dataset.aegisReversals = aegisReversals;
+        syncGuard();
       }
     }
     function tick(now) {
@@ -1563,9 +1738,10 @@ window.AetherSkirmish = (() => {
         e.preventDefault();
         setWeapon(WEAPON_IDS[Number(k) - 1]);
       }
-      if (['w', 'a', 's', 'd', 'j', 'z', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) && document.activeElement === canvas) e.preventDefault();
+      if ((['w', 'a', 's', 'd', 'j', 'z', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) || (options.veteran && k === 'e')) && document.activeElement === canvas) e.preventDefault();
       keys.add(k);
       if (k === ' ' && !e.repeat && document.activeElement === canvas && !paused) tryBurst();
+      if (k === 'e' && !e.repeat && document.activeElement === canvas && !paused) tryGuard();
       if (k === 'p' && !e.repeat) paused ? resume() : pause();
       if (k === 'f' && !e.repeat && document.activeElement === canvas) {
         if (document.fullscreenElement === canvas) document.exitFullscreen?.().catch?.(()=>{});
@@ -1597,7 +1773,14 @@ window.AetherSkirmish = (() => {
       srStatus.remove();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     }
-    return { destroy, pause, resume, get state() { return { hp: player.hp, wave, dust, kills, phase, paused, score, boltsFired: boltCount, weapon, charge, pending: pending.length, act: endless ? null : clamp(Math.max(1, wave), 1, ACTS.length) }; } };
+    return { destroy, pause, resume, get state() { return {
+      hp: player.hp, wave, dust, kills, phase, paused, score, boltsFired: boltCount, weapon, charge, pending: pending.length,
+      act: endless ? null : clamp(Math.max(1, wave), 1, ACTS.length), veteran: !!options.veteran,
+      player: { x: player.x, y: player.y, burstCd: player.burstCd, supercharge },
+      guardTime, guardCooldown, guardCount, guardWhiffs, reversalCount, reversalHits, aegisBlocks, aegisBreaches, aegisMortars, aegisReversals,
+      enemies: enemies.filter(e => e.hp > 0).map(e => ({ kind: e.kind, x: e.x, y: e.y, spawnX: e.spawnX, spawnY: e.spawnY, hp: e.hp, maxHp: e.maxHp, state: e.state, guardAngle: e.guardAngle, guardBlocks: e.guardBlocks || 0, guardBreaches: e.guardBreaches || 0, mortarBreaches: e.mortarBreaches || 0, reversalBreaches: e.reversalBreaches || 0, cd: e.cd })),
+      orbs: orbs.map(o => ({ x: o.x, y: o.y, friendly: !!o.friendly, damage: o.damage || 0 })),
+    }; } };
   }
   return { create, INSTRUMENTS, HULLS, SECTORS, ENEMIES };
 })();

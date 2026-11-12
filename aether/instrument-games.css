@@ -15,13 +15,13 @@
 .skirmish-draft strong,.chain-draft strong,.bastion-orders strong{color:#e2c48d}.labyrinth-draft{background:#171b2c!important;color:#e2cda4!important}.labyrinth-draft button{background:#20283e!important}
 
 /* Illustrated upgrade controls and readable instruction type. */
-.upgrade-icon-wrap{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border:1px solid #c8a46155;background:#0a1729;color:#e0bd79;clip-path:polygon(22% 0,78% 0,100% 22%,100% 78%,78% 100%,22% 100%,0 78%,0 22%)}.upgrade-icon{width:31px;height:31px}.upgrade-copy{min-width:0;font:13px/1.5 'DM Sans',sans-serif;letter-spacing:0}.upgrade-copy strong{color:#f0d7a5;font-size:15px;font-weight:500}.upgrade-copy small{display:block;margin-top:2px;color:#c0c6b9;font-size:11px;line-height:1.45}
+.upgrade-icon-wrap{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border:1px solid #c8a46155;background:#0a1729;color:#e0bd79;clip-path:polygon(22% 0,78% 0,100% 22%,100% 78%,78% 100%,22% 100%,0 78%,0 22%)}.upgrade-icon{width:31px;height:31px}.upgrade-copy{min-width:0;font:16px/1.6 'DM Sans',sans-serif;letter-spacing:0;overflow-wrap:anywhere}.upgrade-copy strong{color:#f0d7a5;font-size:18px;line-height:1.4;font-weight:500}.upgrade-copy small{display:block;margin-top:4px;color:#c0c6b9;font-size:16px;line-height:1.55;overflow-wrap:anywhere}
 .bastion-loadout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px;border:1px solid #c8a46150;background:#0a192b}.bastion-loadout button{display:flex;align-items:center;gap:9px;min-height:66px;padding:9px;border:1px solid #c8a46140;background:#11243a;color:#e2cda4;text-align:left;transition:background .2s,border-color .2s,transform .15s}.bastion-loadout button[aria-pressed=true]{border-color:#e0bd79;background:#3b3528;box-shadow:inset 0 -2px #d0ad68}.bastion-loadout button:hover:not(:disabled){background:#26352f;transform:translateY(-1px)}.bastion-loadout button:disabled{opacity:.45}
-.bastion-controls [data-bastion-selection]{display:block;flex:1 0 100%;padding:10px 12px;border-left:2px solid #d0ad68;background:#0a192b;color:#e0cba6!important;font:13px/1.55 'DM Sans',sans-serif!important;letter-spacing:0}.bastion-controls{gap:7px!important}.bastion-controls button{font:13px/1.45 'DM Sans',sans-serif!important}
-:is(.skirmish-draft,.chain-draft,.labyrinth-draft) button{display:flex;align-items:center;gap:10px;max-width:340px;text-align:left}.skirmish-draft strong,.chain-draft strong,.labyrinth-draft strong{font:15px 'DM Sans',sans-serif;letter-spacing:.4px}.chain-formations button{display:flex;align-items:center;gap:9px;flex:1 1 240px;text-align:left}.chain-formations button .upgrade-copy{font-size:12px}.chain-formations button[aria-pressed=true] .upgrade-icon-wrap{background:#4c3c24;color:#ffe0a0}
-.df-relics button>span.upgrade-icon-wrap{width:44px;height:44px}.df-relics button>span .upgrade-icon{width:34px;height:34px}.df-relics small{color:#c1c8ba;font-size:12px;line-height:1.5}.df-relic-choice{font-size:12px}.relic-choice-art .upgrade-icon{width:42px;height:42px}.relic-choice-effect{font-size:14px;line-height:1.65}.relic-choice-pair{font-size:12px;line-height:1.55}.tour-draft-card small{font-size:12px;line-height:1.6;color:#c0c6b8}
+.bastion-controls [data-bastion-selection]{display:block;flex:1 0 100%;padding:10px 12px;border-left:2px solid #d0ad68;background:#0a192b;color:#e0cba6!important;font:16px/1.6 'DM Sans',sans-serif!important;letter-spacing:0;overflow-wrap:anywhere}.bastion-controls{gap:7px!important}.bastion-controls button,.bastion-orders button{font:16px/1.5 'DM Sans',sans-serif!important}
+:is(.skirmish-draft,.chain-draft,.labyrinth-draft) button{display:flex;align-items:center;gap:10px;flex:1 1 280px;min-width:0;max-width:420px;text-align:left}.skirmish-draft strong,.chain-draft strong,.labyrinth-draft strong{font:16px/1.5 'DM Sans',sans-serif;letter-spacing:.4px}.chain-formations button{display:flex;align-items:center;gap:9px;flex:1 1 240px;min-width:0;text-align:left}.chain-formations button .upgrade-copy{font-size:16px}.chain-formations button[aria-pressed=true] .upgrade-icon-wrap{background:#4c3c24;color:#ffe0a0}
+.df-relics button>span.upgrade-icon-wrap{width:44px;height:44px}.df-relics button>span .upgrade-icon{width:34px;height:34px}.df-relics small{color:#c1c8ba;font-size:16px;line-height:1.6}.df-relic-choice{font-size:14px;line-height:1.6}.relic-choice-art .upgrade-icon{width:42px;height:42px}.relic-choice-effect{font-size:16px;line-height:1.65}.relic-choice-pair{font-size:14px;line-height:1.6}.tour-draft-card small{font-size:16px;line-height:1.6;color:#c0c6b8}
 @media(max-width:1050px){.bastion-loadout{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.bastion-loadout{grid-template-columns:1fr}.upgrade-icon-wrap{width:35px;height:35px}.upgrade-icon{width:27px;height:27px}.upgrade-copy{font-size:12px}}
+@media(max-width:560px){.bastion-loadout{grid-template-columns:1fr}.upgrade-icon-wrap{width:35px;height:35px}.upgrade-icon{width:27px;height:27px}.upgrade-copy{font-size:16px}.df-relics button>span.upgrade-icon-wrap{width:44px;height:44px}.df-relics button>span .upgrade-icon{width:34px;height:34px}}
 
 /* Deep Field: blue-black glass instead of the former green console. */
 .df-console{border-color:#c9aa6755;background:radial-gradient(ellipse at 85% 0,#88652716,transparent 37%),repeating-linear-gradient(0deg,transparent 0 27px,#c7ae6a04 27px 28px),#0a1727}
@@ -42,3 +42,34 @@
 .tour-run-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin:14px 0 4px}.tour-run-actions .text-link{min-height:36px}.tour-node-actions-top{justify-content:space-between;align-items:center;gap:12px}.tour-node-actions-top .tour-run-actions{margin:0}.tour-run-actions .button{min-height:40px}
 @media(max-width:620px){.tour-node-actions-top{align-items:flex-start;flex-direction:column}.tour-run-actions{gap:8px 12px}}
 @media(prefers-reduced-motion:reduce){:is(.skirmish-armory,.skirmish-draft,.chain-controls,.bastion-controls,.bastion-orders,.labyrinth-abilities,.labyrinth-draft,.starforge-tools,.starforge-scenarios,.df-tools,.df-relics) button,#hunt-armory button{transition:none}}
+
+/* Relic reading layer: preserve the parchment and engravings with legible ink. */
+.relic-dialog{background-color:#d8c6a1;color:#30271b}
+.relic-dialog .eyebrow,.relic-choice-tag,.relic-choice-number,.relic-choice-art{color:#60461f}
+.relic-dialog-heading>p:last-child,.relic-dialog-footer,.relic-choice-pair{color:#58482f}
+.relic-choice-effect{color:#40362a}
+.relic-choice-pair.ready,.relic-choice-pair.ready::before{color:#214f3c}
+.arcade-aside .instrument-panel{background-color:#d8c6a1}
+.arcade-aside .instrument-panel .eyebrow{color:#60461f}
+.arcade-aside .relic-field-guide summary,.arcade-aside .relic-field-guide summary>span{color:#40362a}
+.arcade-aside .relic-entry strong{color:#30271b}
+.arcade-aside .relic-entry p{color:#40362a}
+.arcade-aside .relic-entry small{color:#58482f}
+.arcade-aside .relic-entry.catalogued small{color:#214f3c}
+.arcade-aside .expedition-guide ol{color:#40362a;font-size:16px;line-height:1.6}
+.arcade-aside .instrument-panel .tiny-note{color:#58482f}
+.chain-draft>p{margin:0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.chain-controls>button{font-size:16px!important;line-height:1.5!important}
+.bastion-loadout button{min-width:0}
+
+/* Keyboard focus remains visible against both enamel and parchment. */
+:is(.skirmish-draft,.chain-draft,.chain-formations,.labyrinth-draft,.bastion-loadout,.bastion-controls,.bastion-orders,.df-relics) button:focus-visible,:is(.df-continue,.tour-cache-card,.tour-draft-card):focus-visible{outline:3px solid #f6d58f!important;outline-offset:3px}
+.relic-choice:focus-visible,.relic-field-guide summary:focus-visible{outline:3px solid #49331c;outline-offset:4px}
+.relic-choice:focus-visible{box-shadow:0 0 0 7px #f0dfba}
+.relic-dialog-footer .button:focus-visible{outline:3px solid #49331c;outline-offset:3px}
+.chain-draft h3{margin:0;line-height:1.25}
+
+@media(prefers-reduced-motion:reduce){
+  :is(.skirmish-draft,.chain-draft,.chain-formations,.labyrinth-draft,.bastion-loadout,.bastion-controls,.bastion-orders,.df-relics) button,:is(.df-continue,.tour-cache-card,.tour-draft-card){animation:none!important;transition:none!important}
+  :is(.skirmish-draft,.chain-draft,.chain-formations,.labyrinth-draft,.bastion-loadout,.bastion-controls,.bastion-orders,.df-relics) button:hover,:is(.df-continue,.tour-cache-card,.tour-draft-card):hover{transform:none!important}
+}

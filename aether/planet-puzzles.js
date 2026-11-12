@@ -44,6 +44,11 @@ window.AetherPuzzles = (() => {
   }
   function instruction(id,def,board) {
     if(won(id,def,board))return 'Survey complete. Replay for a shorter route, or continue your survey.';
+    if(def.masterwork) {
+      if(id==='neptune') { const goal=def.goals[board.collected];return `Wind rides to a barrier; Pulse moves exactly one square. Next: ${board.collected===def.goals.length-1?'relay R':'buoy '+(board.collected+1)} at row ${Math.floor(goal/def.n)+1}, column ${goal%def.n+1}.`; }
+      if(id==='mars')return `Push normally, or select Winch and step away from a touching sample to pull it. ${board.winches} winch pull${board.winches===1?'':'s'} remain.`;
+      return def.masterwork.instruction;
+    }
     if(id==='mercury')return 'Tap a crater: it and its orthogonal neighbours toggle. Darken the entire board; fewer lights is not always a better move.';
     if(id==='venus')return 'Turn an unpinned pipe to join its open sides to its neighbours. Supplied pipes glow; every pipe must connect to P.';
     if(id==='earth')return board.active<0?'Select a numbered station, then drag or tap adjoining squares toward its matching number.':`Drawing route ${board.active+1}. Extend from its last square; select an earlier segment to shorten it.`;
@@ -55,6 +60,16 @@ window.AetherPuzzles = (() => {
     return `Next: ${board.collected===def.goals.length-1?'relay R':'buoy '+(board.collected+1)} at row ${Math.floor(goal/def.n)+1}, column ${goal%def.n+1}. Stop on it; passing over does not collect it.`;
   }
   function explainAction(id,def,before,action,after) {
+    if(def.masterwork) {
+      if(id==='mercury'&&action.instrument==='diagonal')return 'Prism pulse: only the diagonal neighbours toggled; the selected crater stayed unchanged.';
+      if(id==='venus'&&action.instrument==='mirror')return 'Mirror wrench: left and right openings exchanged without rotating the pipe.';
+      if(id==='earth'&&action.continuation) { const path=before.paths[before.active],from=path?.at(-1);if(gateLink(def,from,action.value))return 'Gate transfer: the route crossed between the paired ⇄ gates without using an adjoining square.'; }
+      if(id==='mars'&&action.instrument==='winch')return `The winch pulled one sample into the rover’s old square. ${after.winches} winch pull${after.winches===1?'':'s'} remain.`;
+      if(id==='jupiter'&&action.instrument==='swap')return `${moonNames[action.value]} and ${moonNames[mod(action.value+1,def.count)]} exchanged phases. Their positions did not advance.`;
+      if(id==='saturn'&&action.instrument==='rotate')return 'The three-square block rotated 90° about its centre cell. Its centre stayed fixed.';
+      if(id==='uranus'&&Number.isInteger(action.anchor))return `The capsule at row ${Math.floor(action.anchor/def.n)+1}, column ${action.anchor%def.n+1} stayed anchored; every other capsule slid.`;
+      if(id==='neptune'&&action.instrument==='pulse')return after.collected>before.collected?'Pulse stopped on the next beacon: signal recorded.':'Pulse moved exactly one square. Use wind for longer legs and pulse for precise stops.';
+    }
     if(id==='jupiter')return `${coupling(def,action.value)}. Positions wrap at ${def.divisions}; linked moons may leave zero so the whole loop can align later.`;
     if(id==='mercury') {
       const cells=toggles(action.value,def.n),dark=cells.filter(p=>before.lights[p]).length;
@@ -73,7 +88,18 @@ window.AetherPuzzles = (() => {
   }
   function direction(a,b,n) { return DIRS.findIndex((_,d)=>neighbour(a,d,n)===b); }
   function rotate(mask, amount=1) { return amount===1 ? ((mask<<1)&15)|(mask>>3) : (mask>>1)|((mask&1)<<3); }
+  function mirrorPipe(mask) { return (mask&5)|((mask&2)<<2)|((mask&8)>>2); }
   function toggles(p,n) { return [p,...DIRS.map((_,d)=>neighbour(p,d,n)).filter(v=>v>=0)]; }
+  function lensToggles(def,p,instrument) {
+    if(instrument!=='diagonal')return toggles(p,def.n);
+    const x=p%def.n,y=Math.floor(p/def.n),cells=[];
+    for(const [dx,dy] of [[-1,-1],[1,-1],[1,1],[-1,1]]) {
+      const nx=x+dx,ny=y+dy;if(nx>=0&&nx<def.n&&ny>=0&&ny<def.n)cells.push(ny*def.n+nx);
+    }
+    return cells;
+  }
+  function gateLink(def,a,b) { return Boolean(def.gates&&((def.gates[0]===a&&def.gates[1]===b)||(def.gates[1]===a&&def.gates[0]===b))); }
+  function blockAxis(def,board,i) { return board.axes?.[i]||def.blocks[i].axis; }
   function pipeTargets(def) {
     const masks=Array(def.n*def.n).fill(0);
     def.path.forEach((p,i)=>{ for (const q of [def.path[i-1],def.path[i+1]]) if(q!==undefined) masks[p]|=1<<direction(p,q,def.n); });
@@ -99,19 +125,23 @@ window.AetherPuzzles = (() => {
   function initial(id,def,index) {
     if(id==='mercury') {
       const lights=Array(def.n*def.n).fill(0);
+      if(def.masterwork?.mechanic==='lenses') {
+        for(const action of def.scramble)lensToggles(def,action.value,action.instrument).forEach(p=>lights[p]^=1);
+        return {lights};
+      }
       let seed=def.seed;
       for(let i=0;i<def.n*def.n;i++) { seed=(Math.imul(seed,1664525)+1013904223)>>>0; if(seed%5<2) toggles(i,def.n).forEach(p=>lights[p]^=1); }
       if(!lights.some(Boolean)) toggles(0,def.n).forEach(p=>lights[p]^=1);
       return {lights};
     }
-    if(id==='venus') return {pipes:def.target.map((mask,p)=>{
+    if(id==='venus') return {pipes:def.startPipes?[...def.startPipes]:def.target.map((mask,p)=>{
       if(def.fixed.includes(p))return mask;
       for(let i=0;i<1+(p*7+index)%3;i++)mask=rotate(mask);
       return mask;
     })};
     if(id==='earth') return {paths:def.paths.map(()=>[]),active:-1};
-    if(id==='mars')return {player:def.player,crates:def.crates};
-    if(id==='saturn')return {positions:def.blocks.map(b=>b.axis==='h'?b.x:b.y)};
+    if(id==='mars')return {player:def.player,crates:def.crates,...(def.masterwork?.mechanic==='winch'?{winches:def.winchCount}: {})};
+    if(id==='saturn')return {positions:def.blocks.map(b=>b.axis==='h'?b.x:b.y),...(def.masterwork?.mechanic==='rotation'?{axes:def.blocks.map(b=>b.axis),lanes:def.blocks.map(b=>b.axis==='h'?b.y:b.x)}:{})};
     if(id==='uranus')return {balls:def.balls};
     if(id==='neptune')return {player:def.player,collected:0};
     if(def.startPhases)return {phases:[...def.startPhases]};
@@ -126,32 +156,56 @@ window.AetherPuzzles = (() => {
     board.phases[next]=mod(board.phases[next]+2,def.divisions);
     if(def.double) { const prev=mod(i-step,def.count); board.phases[prev]=mod(board.phases[prev]+1,def.divisions); }
   }
-  function slide(balls,d,def) {
+  function slide(balls,d,def,anchor=-1) {
     const occupied=new Set(balls), [dx,dy]=DIRS[d];
     const order=[...balls].sort((a,b)=>(b%def.n)*dx+Math.floor(b/def.n)*dy-(a%def.n)*dx-Math.floor(a/def.n)*dy);
     for(let p of order) {
+      if(p===anchor)continue;
       occupied.delete(p);
       while(true) { const to=neighbour(p,d,def.n); if(to<0||def.walls.includes(to)||occupied.has(to))break; p=to; }
       occupied.add(p);
     }
     return [...occupied].sort((a,b)=>a-b);
   }
-  function blockCells(def,positions,i) {
-    const b=def.blocks[i],p=positions[i];
-    return Array.from({length:b.len},(_,j)=>(b.axis==='h'?b.y:p+j)*6+(b.axis==='h'?p+j:b.x));
+  function blockGeometry(def,board,i) {
+    const b=def.blocks[i],axis=blockAxis(def,board,i),p=board.positions[i];
+    if(!board.axes)return {axis,x:axis==='h'?p:b.x,y:axis==='v'?p:b.y};
+    return {axis,x:axis==='h'?p:board.lanes[i],y:axis==='h'?board.lanes[i]:p};
+  }
+  function blockCells(def,positions,i,axes=null,lanes=null) {
+    const b=def.blocks[i],p=positions[i],axis=axes?.[i]||b.axis,lane=axes?lanes[i]:(axis==='h'?b.y:b.x);
+    return Array.from({length:b.len},(_,j)=>(axis==='h'?lane:p+j)*6+(axis==='h'?p+j:lane));
+  }
+  function rotatedBlock(def,board,i) {
+    const axis=blockAxis(def,board,i),positions=[...board.positions],axes=[...board.axes],lanes=[...board.lanes],p=positions[i];
+    if(axis==='v') { lanes[i]=p+1;positions[i]=blockGeometry(def,board,i).x-1;axes[i]='h'; }
+    else { lanes[i]=p+1;positions[i]=blockGeometry(def,board,i).y-1;axes[i]='v'; }
+    return {positions,axes,lanes};
   }
   // The same pure transition function powers play, saved-game replay, and hints.
   function transition(id,def,current,action) {
     if(!action || !['cell','move','moon','block'].includes(action.type))return null;
     const board=clone(current), v=action.value;
-    if(id==='mercury' && action.type==='cell' && Number.isInteger(v) && v>=0 && v<def.n**2) toggles(v,def.n).forEach(p=>board.lights[p]^=1);
-    else if(id==='venus' && action.type==='cell' && Number.isInteger(v) && v>=0 && v<def.n**2 && !def.fixed.includes(v)) board.pipes[v]=rotate(board.pipes[v],action.reverse?-1:1);
-    else if(id==='jupiter' && action.type==='moon' && Number.isInteger(v) && v>=0 && v<def.count) advance(board,def,v);
+    if(id==='mercury' && action.type==='cell' && Number.isInteger(v) && v>=0 && v<def.n**2) {
+      if(action.instrument==='diagonal'&&def.masterwork?.mechanic!=='lenses')return null;
+      lensToggles(def,v,action.instrument).forEach(p=>board.lights[p]^=1);
+    }
+    else if(id==='venus' && action.type==='cell' && Number.isInteger(v) && v>=0 && v<def.n**2 && !def.fixed.includes(v)) {
+      if(action.instrument==='mirror') { if(def.masterwork?.mechanic!=='mirror')return null;board.pipes[v]=mirrorPipe(board.pipes[v]); }
+      else board.pipes[v]=rotate(board.pipes[v],action.reverse?-1:1);
+    }
+    else if(id==='jupiter' && action.type==='moon' && Number.isInteger(v) && v>=0 && v<def.count) {
+      if(action.instrument==='swap') {
+        if(def.masterwork?.mechanic!=='swap')return null;
+        const next=mod(v+1,def.count);[board.phases[v],board.phases[next]]=[board.phases[next],board.phases[v]];
+      } else advance(board,def,v);
+    }
     else if(id==='earth' && action.type==='cell' && Number.isInteger(v) && v>=0 && v<def.n**2) {
       const owner=def.paths.findIndex(p=>p[0]===v || p.at(-1)===v), active=board.active, path=board.paths[active];
       const occupied=board.paths.findIndex(p=>p.includes(v));
       if(action.continuation && (active<0 || (owner>=0 && owner!==active) || (occupied>=0 && occupied!==active)))return null;
-      if(active>=0 && path?.length && direction(path.at(-1),v,def.n)>=0 && (owner===-1 || (owner===active && v!==path[0])) && (occupied===-1 || occupied===active)) {
+      const linked=active>=0&&path?.length&&(direction(path.at(-1),v,def.n)>=0||gateLink(def,path.at(-1),v));
+      if(linked && (owner===-1 || (owner===active && v!==path[0])) && (occupied===-1 || occupied===active)) {
         const earlier=path.indexOf(v);
         if(earlier>=0)board.paths[active]=path.slice(0,earlier+1);
         else path.push(v);
@@ -159,27 +213,46 @@ window.AetherPuzzles = (() => {
       } else if(owner>=0) { board.paths[owner]=[v]; board.active=owner; }
       else if(occupied>=0) { board.paths[occupied]=board.paths[occupied].slice(0,board.paths[occupied].indexOf(v)+1); board.active=occupied; }
       else return null;
+    } else if(id==='saturn' && action.type==='block' && action.instrument==='rotate' && Array.isArray(v) && Number.isInteger(v[0]) && v[0]>0 && def.blocks[v[0]]?.len===3 && v[1]===0) {
+      if(def.masterwork?.mechanic!=='rotation'||!board.axes)return null;
+      const i=v[0],rotated=rotatedBlock(def,board,i),candidate={...board,...rotated},{axis,x,y}=blockGeometry(def,candidate,i),b=def.blocks[i];
+      if(x<0||y<0||(axis==='h'?x+b.len>6:y+b.len>6))return null;
+      const cells=blockCells(def,rotated.positions,i,rotated.axes,rotated.lanes);
+      if(def.blocks.some((_,j)=>j!==i&&blockCells(def,board.positions,j,board.axes,board.lanes).some(p=>cells.includes(p))))return null;
+      Object.assign(board,rotated);
     } else if(id==='saturn' && action.type==='block' && Array.isArray(v) && Number.isInteger(v[0]) && def.blocks[v[0]] && [-1,1].includes(v[1])) {
-      const [i,sign]=v, b=def.blocks[i], pos=board.positions[i], end=sign<0?pos-1:pos+b.len;
+      const [i,sign]=v,b=def.blocks[i],pos=board.positions[i],end=sign<0?pos-1:pos+b.len,{axis,x,y}=blockGeometry(def,board,i);
       if(end<0||end>=6)return null;
-      const cell=b.axis==='h'?b.y*6+end:end*6+b.x;
-      if(def.blocks.some((_,j)=>j!==i && blockCells(def,board.positions,j).includes(cell)))return null;
+      const cell=axis==='h'?y*6+end:end*6+x;
+      if(def.blocks.some((_,j)=>j!==i && blockCells(def,board.positions,j,board.axes,board.lanes).includes(cell)))return null;
       board.positions[i]+=sign;
     } else if(['mars','uranus','neptune'].includes(id) && action.type==='move' && Number.isInteger(v) && v>=0 && v<4) {
-      if(id==='uranus')board.balls=slide(board.balls,v,def);
-      else if(id==='neptune') {
-        board.player=slide([board.player],v,def)[0];
+      if(id==='uranus') {
+        const anchor=action.anchor??-1;
+        if(anchor>=0&&(def.masterwork?.mechanic!=='anchor'||!board.balls.includes(anchor)))return null;
+        board.balls=slide(board.balls,v,def,anchor);
+      } else if(id==='neptune') {
+        if(action.instrument==='pulse') {
+          if(def.masterwork?.mechanic!=='pulse')return null;
+          const to=neighbour(board.player,v,def.n);if(to<0||def.walls.includes(to))return null;board.player=to;
+        } else board.player=slide([board.player],v,def)[0];
         if(board.player===current.player)return null;
         if(board.player===def.goals[board.collected])board.collected++;
       } else {
-        const to=neighbour(board.player,v,def.n);
+        const to=neighbour(board.player,v,def.n),winch=action.instrument==='winch';
         if(to<0||def.walls.includes(to))return null;
-        if(board.crates.includes(to)) {
-          const beyond=neighbour(to,v,def.n);
-          if(beyond<0||def.walls.includes(beyond)||board.crates.includes(beyond))return null;
-          board.crates=board.crates.map(p=>p===to?beyond:p).sort((a,b)=>a-b);
+        if(winch) {
+          if(def.masterwork?.mechanic!=='winch'||!board.winches||board.crates.includes(to))return null;
+          const behind=neighbour(board.player,(v+2)%4,def.n);if(behind<0||!board.crates.includes(behind))return null;
+          board.crates=board.crates.map(p=>p===behind?board.player:p).sort((a,b)=>a-b);board.player=to;board.winches--;
+        } else {
+          if(board.crates.includes(to)) {
+            const beyond=neighbour(to,v,def.n);
+            if(beyond<0||def.walls.includes(beyond)||board.crates.includes(beyond))return null;
+            board.crates=board.crates.map(p=>p===to?beyond:p).sort((a,b)=>a-b);
+          }
+          board.player=to;
         }
-        board.player=to;
       }
     } else return null;
     return same(board,current)?null:board;
@@ -220,22 +293,63 @@ window.AetherPuzzles = (() => {
     }
     return best;
   }
-  function actionsFor(id,def) {
-    if(id==='jupiter')return Array.from({length:def.count},(_,value)=>({type:'moon',value}));
-    if(id==='saturn')return def.blocks.flatMap((_,i)=>[-1,1].map(sign=>({type:'block',value:[i,sign]})));
-    return DIRS.map((_,value)=>({type:'move',value}));
+  function lensSolution(def,board) {
+    const actions=Array.from({length:def.n**2},(_,value)=>[{type:'cell',value},{type:'cell',value,instrument:'diagonal'}]).flat();
+    const rows=Array.from({length:def.n**2},(_,cell)=>[...actions.map(action=>Number(lensToggles(def,action.value,action.instrument).includes(cell))),board.lights[cell]]),pivots=[];
+    let row=0;
+    for(let col=0;col<actions.length;col++) {
+      const found=rows.findIndex((r,i)=>i>=row&&r[col]);if(found<0)continue;
+      [rows[row],rows[found]]=[rows[found],rows[row]];
+      for(let i=0;i<rows.length;i++)if(i!==row&&rows[i][col])for(let j=col;j<=actions.length;j++)rows[i][j]^=rows[row][j];
+      pivots.push(col);row++;
+    }
+    if(rows.some(r=>r.slice(0,-1).every(v=>!v)&&r.at(-1)))return null;
+    const values=Array(actions.length).fill(0);pivots.forEach((p,i)=>values[p]=rows[i][actions.length]);
+    return actions.filter((_,i)=>values[i]);
+  }
+  function mirrorSolution(def,board) {
+    const result=[];
+    for(let p=0;p<board.pipes.length;p++) {
+      if(def.fixed.includes(p)){if(board.pipes[p]!==def.target[p])return null;continue;}
+      const nodes=[{mask:board.pipes[p],parent:-1,action:null}],seen=new Set([board.pipes[p]]);let found=-1;
+      for(let head=0;head<nodes.length;head++) {
+        if(nodes[head].mask===def.target[p]){found=head;break;}
+        for(const action of [{type:'cell',value:p},{type:'cell',value:p,instrument:'mirror'}]) {
+          const mask=action.instrument?mirrorPipe(nodes[head].mask):rotate(nodes[head].mask);if(seen.has(mask))continue;
+          seen.add(mask);nodes.push({mask,parent:head,action});
+        }
+      }
+      if(found<0)return null;
+      const path=[];for(let i=found;nodes[i].parent>=0;i=nodes[i].parent)path.push(nodes[i].action);result.push(...path.reverse());
+    }
+    return result;
+  }
+  function surveySolution(def) { return def.paths.flatMap(path=>path.map((value,i)=>({type:'cell',value,continuation:i>0}))); }
+  function actionsFor(id,def,board) {
+    if(id==='jupiter')return Array.from({length:def.count},(_,value)=>def.masterwork?.mechanic==='swap'?[{type:'moon',value,instrument:'swap'},{type:'moon',value}]:[{type:'moon',value}]).flat();
+    if(id==='saturn')return [
+      ...(def.masterwork?.mechanic==='rotation'?def.blocks.flatMap((b,i)=>i>0&&b.len===3?[{type:'block',value:[i,0],instrument:'rotate'}]:[]):[]),
+      ...def.blocks.flatMap((_,i)=>[-1,1].map(sign=>({type:'block',value:[i,sign]}))),
+    ];
+    const moves=DIRS.map((_,value)=>({type:'move',value}));
+    if(id==='mars'&&def.masterwork?.mechanic==='winch'&&board?.winches)return [...DIRS.map((_,value)=>({type:'move',value,instrument:'winch'})),...moves];
+    if(id==='neptune'&&def.masterwork?.mechanic==='pulse')return [...DIRS.map((_,value)=>({type:'move',value,instrument:'pulse'})),...moves];
+    if(id==='uranus'&&def.masterwork?.mechanic==='anchor')return [...(board?.balls||[]).flatMap(anchor=>DIRS.map((_,value)=>({type:'move',value,anchor}))),...moves];
+    return moves;
   }
   async function solve(id,def,board,signal) {
-    if(id==='mercury')return lightSolution(def,board).map(value=>({type:'cell',value}));
-    const actions=actionsFor(id,def), nodes=[{board,parent:-1,action:null}], seen=new Set([JSON.stringify(board)]);
+    if(id==='mercury')return def.masterwork?.mechanic==='lenses'?lensSolution(def,board):lightSolution(def,board).map(value=>({type:'cell',value}));
+    if(id==='venus'&&def.masterwork?.mechanic==='mirror')return mirrorSolution(def,board);
+    if(id==='earth'&&def.gates&&board.paths.every(p=>!p.length))return surveySolution(def);
+    const nodes=[{board,parent:-1,action:null}], seen=new Set([JSON.stringify(board)]);
     for(let head=0;head<nodes.length && nodes.length<150000;head++) {
       if(head%1200===0) { await new Promise(resolve=>setTimeout(resolve,0)); if(signal?.aborted)return null; }
       const node=nodes[head];
       if(won(id,def,node.board)) { const path=[]; let i=head; while(nodes[i].parent>=0){ path.push(nodes[i].action); i=nodes[i].parent; } return path.reverse(); }
-      for(const action of actions) {
+      for(const action of actionsFor(id,def,node.board)) {
         const next=transition(id,def,node.board,action); if(!next)continue;
-        // A sample in a non-goal corner can never be recovered in a push-only puzzle.
-        if(id==='mars' && next.crates.some(p=>!def.goals.includes(p) && [0,2].some(d=>def.walls.includes(neighbour(p,d,def.n))) && [1,3].some(d=>def.walls.includes(neighbour(p,d,def.n)))))continue;
+        // A sample in a non-goal corner can never be recovered without a winch.
+        if(id==='mars' && def.masterwork?.mechanic!=='winch' && next.crates.some(p=>!def.goals.includes(p) && [0,2].some(d=>def.walls.includes(neighbour(p,d,def.n))) && [1,3].some(d=>def.walls.includes(neighbour(p,d,def.n)))))continue;
         const key=JSON.stringify(next); if(seen.has(key))continue;
         seen.add(key); nodes.push({board:next,parent:head,action});
       }
@@ -243,6 +357,7 @@ window.AetherPuzzles = (() => {
     return null;
   }
   function par(id,def,board) {
+    if(def.masterwork?.par!==undefined)return def.masterwork.par;
     if(id==='mercury')return lightSolution(def,board).length;
     if(id==='earth')return def.n**2-def.paths.length;
     if(id==='venus')return board.pipes.reduce((sum,m,p)=>{
@@ -261,7 +376,7 @@ window.AetherPuzzles = (() => {
     if(id==='mercury')return `${board.lights.filter(v=>!v).length} / ${def.n**2} in shadow`;
     if(id==='venus')return `${wetPipes(def,board).size} / ${def.n**2} pipes supplied`;
     if(id==='earth')return `${completedPaths(def,board)} / ${def.paths.length} linked · ${board.paths.flat().length} / ${def.n**2} squares`;
-    if(id==='mars')return `${board.crates.filter(p=>def.goals.includes(p)).length} / ${def.goals.length} samples stored`;
+    if(id==='mars')return `${board.crates.filter(p=>def.goals.includes(p)).length} / ${def.goals.length} samples stored${Number.isInteger(board.winches)?` · ${board.winches} winch pulls`:''}`;
     if(id==='jupiter')return `${board.phases.filter(v=>v===0).length} / ${def.count} aligned`;
     if(id==='saturn')return `Probe: ${4-board.positions[0]} squares from exit`;
     if(id==='uranus')return `${board.balls.filter(p=>def.goals.includes(p)).length} / ${def.goals.length} capsules docked`;
@@ -277,11 +392,11 @@ window.AetherPuzzles = (() => {
       const plan=ui.plan||[], hasPlan=plan.some(c=>c>0);
       const projected=hasPlan?orbitPlan(def,board,plan).board.phases:null;
       return `<div class="orbital-dials ${ui.won?'is-won':''}">${board.phases.map((phase,i)=>{
-        const moon=moonNames[i], burns=plan[i]||0, aim=projected?projected[i]:phase;
-        const label=projected
+        const moon=moonNames[i], burns=plan[i]||0, aim=projected?projected[i]:phase,exchange=def.masterwork?.mechanic==='swap'&&ui.instrument==='swap';
+        const label=exchange?`Exchange ${moon} with ${moonNames[mod(i+1,def.count)]} immediately. Current position ${phase} of ${def.divisions}.`:projected
           ? `${moon}: now at ${phase} of ${def.divisions}; the plan moves it to ${aim}${aim===0?', aligned':''}. Queue another burn (${coupling(def,i)}). ${burns} queued.`
           : `Queue a burn on ${moon}: ${coupling(def,i)}. Position ${phase} of ${def.divisions}; target 0.`;
-        return `<button class="orbital-dial ${phase===0?'aligned':''} ${projected&&aim===0?'plan-aligned':''} ${burns?'has-burns':''} ${ui.hintCell===i?'hinted':''} ${ui.changed?.has(i)?'changed':''}" style="${ui.deal?`--deal:${i};`:''}" data-puzzle-moon="${i}" aria-label="${label}"><span class="dial-title">${moon}</span><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="dial-track" cx="75" cy="75" r="53"/><circle class="dial-track-inner" cx="75" cy="75" r="30"/>${Array.from({length:def.divisions},(_,j)=>{const a=j/def.divisions*Math.PI*2;return `<circle cx="${75+Math.sin(a)*53}" cy="${75-Math.cos(a)*53}" r="${j===0?5:2}" class="${j===0?'dial-target':''}"/>`;}).join('')}<path class="dial-needle" d="M75 75L75 22" transform="rotate(${phase/def.divisions*360} 75 75)"/>${projected&&aim!==phase?`<path class="dial-needle dial-needle-plan" d="M75 75L75 32" transform="rotate(${aim/def.divisions*360} 75 75)"/>`:''}${projected?`<circle class="dial-moon-plan" cx="${75+Math.sin(aim/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(aim/def.divisions*Math.PI*2)*53}" r="5"/>`:''}<circle class="dial-moon" cx="${75+Math.sin(phase/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(phase/def.divisions*Math.PI*2)*53}" r="8"/></svg><span class="dial-position">${phase} / ${def.divisions} <span>${phase===0?'Aligned':'Queue +1 burn'}</span></span>${projected?`<span class="dial-position dial-plan-row">Now ${phase} → Plan ${aim} <span>${aim===0?'Will align ✓':'Off target'}</span></span>`:''}<small>${coupling(def,i)}</small>${burns?`<span class="burn-badge" aria-hidden="true">×${burns}</span>`:''}</button>`;
+        return `<button class="orbital-dial ${phase===0?'aligned':''} ${projected&&aim===0?'plan-aligned':''} ${burns?'has-burns':''} ${ui.hintCell===i?'hinted':''} ${ui.changed?.has(i)?'changed':''}" style="${ui.deal?`--deal:${i};`:''}" data-puzzle-moon="${i}" aria-label="${label}"><span class="dial-title">${moon}</span><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="dial-track" cx="75" cy="75" r="53"/><circle class="dial-track-inner" cx="75" cy="75" r="30"/>${Array.from({length:def.divisions},(_,j)=>{const a=j/def.divisions*Math.PI*2;return `<circle cx="${75+Math.sin(a)*53}" cy="${75-Math.cos(a)*53}" r="${j===0?5:2}" class="${j===0?'dial-target':''}"/>`;}).join('')}<path class="dial-needle" d="M75 75L75 22" transform="rotate(${phase/def.divisions*360} 75 75)"/>${projected&&aim!==phase?`<path class="dial-needle dial-needle-plan" d="M75 75L75 32" transform="rotate(${aim/def.divisions*360} 75 75)"/>`:''}${projected?`<circle class="dial-moon-plan" cx="${75+Math.sin(aim/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(aim/def.divisions*Math.PI*2)*53}" r="5"/>`:''}<circle class="dial-moon" cx="${75+Math.sin(phase/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(phase/def.divisions*Math.PI*2)*53}" r="8"/></svg><span class="dial-position">${phase} / ${def.divisions} <span>${phase===0?'Aligned':exchange?'Exchange next':'Queue +1 burn'}</span></span>${projected?`<span class="dial-position dial-plan-row">Now ${phase} → Plan ${aim} <span>${aim===0?'Will align ✓':'Off target'}</span></span>`:''}<small>${coupling(def,i)}</small>${burns?`<span class="burn-badge" aria-hidden="true">×${burns}</span>`:''}</button>`;
       }).join('')}</div>`;
     }
     if(id==='saturn')return `<div class="puzzle-grid ring-board board-saturn ${ui.won?'is-won':''}" style="--grid:6" role="group" aria-label="Sliding ring passage"><span class="ring-exit" aria-hidden="true">EXIT →</span>${Array.from({length:36},(_,p)=>`<span class="ring-square" style="${deal(p)}" aria-hidden="true"></span>`).join('')}</div>`;
@@ -296,12 +411,13 @@ window.AetherPuzzles = (() => {
         label+=`, pipe ${DIRS.map((_,d)=>board.pipes[p]&(1<<d)?directionNames[d]:'').filter(Boolean).join(' and ')}${end?`, ${end}`:''}${def.fixed.includes(p)?', fixed':''}`;
       }
       if(id==='earth') {
-        const endpoint=def.paths.findIndex(path=>path[0]===p||path.at(-1)===p), owner=board.paths.findIndex(path=>path.includes(p)), colour=endpoint>=0?endpoint:owner;
+        const endpoint=def.paths.findIndex(path=>path[0]===p||path.at(-1)===p), owner=board.paths.findIndex(path=>path.includes(p)), colour=endpoint>=0?endpoint:owner,gate=def.gates?.includes(p);
         if(colour>=0)style=`--path-colour:${colours[colour]};`;
-        kind=`flow-cell ${endpoint>=0?'flow-station':''} ${owner>=0?'routed':''} ${board.active===colour && colour>=0?'active-route':''}`;
+        kind=`flow-cell ${endpoint>=0?'flow-station':''} ${owner>=0?'routed':''} ${board.active===colour && colour>=0?'active-route':''} ${gate?'survey-gate':''}`;
         if(endpoint>=0)text=`<span class="station-ring" aria-hidden="true"></span><b>${endpoint+1}</b>`;
-        if(owner>=0) {const path=board.paths[owner],at=path.indexOf(p);let mask=0;for(const q of [path[at-1],path[at+1]])if(q!==undefined)mask|=1<<direction(p,q,def.n);art=pipeArt(mask,'river');}
-        label+=endpoint>=0?`, station ${endpoint+1}`:owner>=0?`, path ${owner+1}`:', empty';
+        if(gate){text+='<b aria-hidden="true">⇄</b>';style+='box-shadow:inset 0 0 0 2px #d8b57d;';}
+        if(owner>=0) {const path=board.paths[owner],at=path.indexOf(p);let mask=0;for(const q of [path[at-1],path[at+1]])if(q!==undefined){const d=direction(p,q,def.n);if(d>=0)mask|=1<<d;}art=pipeArt(mask,'river');}
+        label+=(endpoint>=0?`, station ${endpoint+1}`:owner>=0?`, path ${owner+1}`:', empty')+(gate?', paired survey gate; its route may continue to the other ⇄ gate':'');
       }
       if(def.walls?.includes(p)) {kind='terrain-wall';label+=', wall';}
       else if(id==='mars') {
@@ -316,16 +432,17 @@ window.AetherPuzzles = (() => {
         if(at>=0){kind+=` buoy-cell ${at<board.collected?'visited':''} ${at===board.collected?'next-buoy':''}`;art=`<span class="buoy-marker" aria-hidden="true"><i></i><b>${at===3?'R':at+1}</b></span>`;label+=`, ${at===3?'relay':'buoy '+(at+1)}${at<board.collected?', collected':''}`;}
         if(board.player===p){label+=', probe';}
       }
-      const interactive=['mercury','venus','earth','mars'].includes(id) && !def.walls?.includes(p);
-      return `<${interactive?'button':'span'} class="puzzle-cell ${kind} ${ui.hintCell===p?'hinted':''} ${ui.changed?.has(p)?'changed':''}" style="${style}${deal(p)}" ${interactive?`data-puzzle-cell="${p}" aria-label="${label}"${id==='venus'&&def.fixed.includes(p)?' aria-disabled="true"':''}`:`role="img" aria-label="${label}"`}>${art}<span class="cell-mark" aria-hidden="true">${text}</span></${interactive?'button':'span'}>`;
+      const anchored=id==='uranus'&&ui.instrument==='anchor'&&ui.selectedCell===p&&board.balls.includes(p),interactive=(['mercury','venus','earth','mars'].includes(id)||(id==='uranus'&&def.masterwork?.mechanic==='anchor'&&board.balls.includes(p))) && !def.walls?.includes(p);
+      if(anchored)style+='box-shadow:inset 0 0 0 3px #d8b57d;';
+      return `<${interactive?'button':'span'} class="puzzle-cell ${kind} ${ui.hintCell===p?'hinted':''} ${ui.changed?.has(p)?'changed':''}" style="${style}${deal(p)}" ${interactive?`data-puzzle-cell="${p}" aria-label="${label}${anchored?', selected anchor':''}"${id==='venus'&&def.fixed.includes(p)?' aria-disabled="true"':''}${anchored?' aria-pressed="true"':''}`:`role="img" aria-label="${label}"`}>${art}<span class="cell-mark" aria-hidden="true">${text}</span></${interactive?'button':'span'}>`;
     }).join('')}</div>`;
   }
   // Persistent overlay pieces (rover, canisters, capsules, probe, ring blocks) glide via CSS transitions.
   function piecesHTML(id,def,board,ui={}) {
     const deal=ui.deal?(i)=>`--deal:${i};`:()=>'';
     if(id==='saturn')return `<div class="pieces-layer ring-pieces" style="--grid:6">${def.blocks.map((b,i)=>{
-      const p=board.positions[i],x=b.axis==='h'?p:b.x,y=b.axis==='v'?p:b.y;
-      return `<button class="ring-block ${i===0?'probe-block':''} ${ui.selected===i?'selected':''} ${ui.hintCell===i?'hinted':''}" style="--x:${x};--y:${y};--w:${b.axis==='h'?b.len:1};--h:${b.axis==='v'?b.len:1};${deal(i)}" data-x="${x}" data-y="${y}" data-puzzle-block="${i}" aria-pressed="${ui.selected===i}" aria-label="${i===0?'Probe P':`Block ${i}`} · ${b.axis==='h'?'horizontal':'vertical'}"><span class="block-label">${i===0?'P':i}</span><small>${b.axis==='h'?'↔':'↕'}</small>${i===0?'<i class="probe-porthole" aria-hidden="true"></i>':''}</button>`;
+      const {axis,x,y}=blockGeometry(def,board,i);
+      return `<button class="ring-block ${i===0?'probe-block':''} ${ui.selected===i?'selected':''} ${ui.hintCell===i?'hinted':''}" style="--x:${x};--y:${y};--w:${axis==='h'?b.len:1};--h:${axis==='v'?b.len:1};${deal(i)}" data-x="${x}" data-y="${y}" data-puzzle-block="${i}" aria-pressed="${ui.selected===i}" aria-label="${i===0?'Probe P':`Block ${i}`} · ${axis==='h'?'horizontal':'vertical'}${def.masterwork&&i>0&&b.len===3?' · can rotate':''}"><span class="block-label">${i===0?'P':i}</span><small>${axis==='h'?'↔':'↕'}</small>${i===0?'<i class="probe-porthole" aria-hidden="true"></i>':''}</button>`;
     }).join('')}</div>`;
     if(!['mars','uranus','neptune'].includes(id))return '';
     const piece=(cls,x,y,extra='',i=0)=>`<span class="piece ${cls}" data-x="${x}" data-y="${y}" style="--x:${x};--y:${y};${deal(i)}${extra}" aria-hidden="true"></span>`;
@@ -521,5 +638,107 @@ window.AetherPuzzles = (() => {
     if(eclipseCache.size>=40)eclipseCache.delete(eclipseCache.keys().next().value);
     eclipseCache.set(cacheKey,clone(def));return clone(def);
   }
-  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,eclipse,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames};
+  // Masterwork is a second, additive optional layer. It deliberately has its
+  // own seed namespace and drafts: the original Eclipse boards above stay put.
+  const masterworkRules={
+    mercury:{name:'Prism array',mechanic:'lenses',unit:'switches',instruction:'Choose Cross for the usual orthogonal toggle or Prism to toggle only diagonal neighbours. Darken every crater.',rule:'Two switch instruments: Cross toggles a crater and its orthogonal neighbours; Prism toggles only its diagonal neighbours, never the selected crater. Choose the instrument before every switch.',tips:['Prism never toggles its own crater. Use it when a cross would undo a light you need to keep.','Both instruments cancel themselves if repeated. The verified plan mixes diagonal and orthogonal deductions.']},
+    venus:{name:'Mirror wrench',mechanic:'mirror',unit:'turns',instruction:'Turn a pipe clockwise or reflect its left and right openings with Mirror. Connect every pipe to P.',rule:'The Mirror wrench exchanges a pipe’s left and right openings without rotating it. Alternate Mirror and Turn on unpinned pipes; straight pipes are unchanged by mirroring, corners are not.',tips:['Mirror changes corners but leaves straight pipes alone. Look for a corner with the right vertical side and the wrong horizontal side.','Each tile can be solved independently. Compare its current shape with the pinned route before choosing a wrench.']},
+    earth:{name:'Paired survey gates',mechanic:'gates',unit:'survey moves',instruction:'Draw every route and fill the grid. A route on a ⇄ gate may continue directly to its paired gate, even across the board.',rule:'The two ⇄ gates are paired. A route may jump directly between them once it reaches either gate; every other link must be orthogonal. Stations, no-crossing and full-grid rules still apply.',tips:['The gate jump is part of one route, not a second station pair. Decide which numbered route can spare the two gate squares.','Read the whole route on both sides of a gate jump. The squares around each gate still need ordinary connections.']},
+    mars:{name:'Single-shot winch',mechanic:'winch',unit:'rover steps',instruction:'Push as usual, or use the winch once: step away from a touching sample to pull it into the rover’s old square.',rule:'You have one winch pull. With Winch selected, step into an empty square away from an adjacent sample; the sample moves into the square you left. Ordinary pushes and one winch pull share the same undoable action history.',tips:['The winch can rescue a sample from a corner that no rover can get behind. Its single charge is worth saving for that sample.','A winch step must move away from the sample into free terrain. After the pull, normal pushing still needs room behind the sample.']},
+    jupiter:{name:'Phase exchange',mechanic:'swap',unit:'actions',instruction:'Queue ordinary burns, or choose Exchange and tap a moon to swap its phase with the next moon immediately.',rule:'Exchange swaps a moon’s current phase with the next moon clockwise, without advancing either dial. It commits immediately; ordinary burns still use the previewable burn plan. Align every moon at zero.',tips:['Exchange moves existing phase offsets instead of adding new ones. A zero on the wrong moon can be carried around the loop.','Preview ordinary burns before committing an exchange. Undo restores either instrument one action at a time.']},
+    saturn:{name:'Centre-pivot wrench',mechanic:'rotation',unit:'actions',instruction:'Slide blocks along their axes, or select a three-square block and Rotate it 90° about its centre cell. Clear P’s lane.',rule:'Three-square blocks (not probe P) can rotate 90° about their centre cell. Rotation needs the full destination footprint to be empty; ordinary one-square slides remain available.',tips:['A rotating block’s centre never moves. Check the two cells its outer arms will sweep into.','Rotation can change which lane a block obstructs. The shortest verified plan uses the wrench before moving the probe.']},
+    uranus:{name:'Gyro anchor',mechanic:'anchor',unit:'tilts',instruction:'Tap a capsule to anchor it, then tilt: every other capsule slides while it stays fixed. Tilt normally to move all capsules.',rule:'Select any capsule as a temporary anchor for a tilt. It remains in place while all other capsules slide and collide normally. Release the anchor to return to simultaneous motion.',tips:['An anchor is a movable stopper you can remove. Use it to reposition one capsule without disturbing a docked partner.','The selected capsule is outlined. Normal Tilt releases the anchor; Undo restores the complete board.']},
+    neptune:{name:'Dual sails',mechanic:'pulse',unit:'fuel charges',instruction:'Wind rides to the next barrier; Pulse moves exactly one square. Stop on each buoy in order before fuel runs out.',rule:'Choose Wind for the usual barrier-to-barrier leg or Pulse for a precise one-square leg. Both cost one fuel charge; the verified route has two spare charges.',tips:['Wind is efficient across open water; Pulse can stop on a buoy with no barrier behind it.','A pulse into a wall is not a legal leg. The shortest verified plan uses both sails.']},
+  };
+  function transformedPoint(p,n,turn,flip) {
+    let x=p%n,y=Math.floor(p/n);if(flip)x=n-1-x;
+    for(let i=0;i<turn;i++){const next=x;x=n-1-y;y=next;}
+    return y*n+x;
+  }
+  function borderWalls(n) { return [...Array(n*n).keys()].filter(p=>p%n===0||p%n===n-1||Math.floor(p/n)===0||Math.floor(p/n)===n-1); }
+  function masterworkCandidate(id,random) {
+    const mechanic=masterworkRules[id].mechanic,mark=def=>({...def,masterwork:{mechanic}});
+    if(id==='mercury') {
+      const n=random()<.5?4:5,def=mark({n,scramble:[]});
+      for(let i=0;i<11;i++)def.scramble.push({type:'cell',value:Math.floor(random()*n*n),...(random()<.48?{instrument:'diagonal'}:{})});
+      def.scramble.push({type:'cell',value:Math.floor(random()*n*n),instrument:'diagonal'});return def;
+    }
+    if(id==='venus') {
+      const n=random()<.65?4:5,path=hamilton(n,Math.floor(random()*4294967296));if(!path)return null;
+      const def=mark({n,path});def.target=pipeTargets(def);def.fixed=[path[0],path.at(-1)];def.startPipes=[...def.target];
+      for(const p of path)if(!def.fixed.includes(p)) {
+        const turns=Math.floor(random()*4);for(let i=0;i<turns;i++)def.startPipes[p]=rotate(def.startPipes[p]);
+        if(random()<.65)def.startPipes[p]=mirrorPipe(def.startPipes[p]);
+      }
+      return def;
+    }
+    if(id==='earth') {
+      const n=random()<.7?4:5,snake=hamilton(n,Math.floor(random()*4294967296));if(!snake||direction(snake[0],snake.at(-1),n)>=0)return null;
+      const k=1+Math.floor(random()*(n*n-1)),rotated=[...snake.slice(k),...snake.slice(0,k)],gateAt=n*n-k,count=3+Math.floor(random()*2),lengths=Array(count).fill(2);
+      for(let i=0;i<n*n-count*2;i++)lengths[Math.floor(random()*count)]++;
+      let sum=0;const cuts=lengths.map(length=>sum+=length);if(cuts.slice(0,-1).includes(gateAt))return null;
+      const paths=[];let cursor=0;for(const length of lengths){paths.push(rotated.slice(cursor,cursor+length));cursor+=length;}
+      return mark({n,paths,gates:[snake.at(-1),snake[0]]});
+    }
+    if(id==='mars') {
+      const n=6,turn=Math.floor(random()*4),flip=random()<.5,map=p=>transformedPoint(p,n,turn,flip),walls=new Set(borderWalls(n));
+      const reserved=new Set([7,8,9,10,13,14,15,16,19,20,21,22,26,27,28]);
+      const free=[...Array(n*n).keys()].filter(p=>!walls.has(p)&&!reserved.has(p));sample(random,free,2).forEach(p=>walls.add(p));
+      return mark({n,walls:[...walls].map(map).sort((a,b)=>a-b),goals:[10,28].map(map).sort((a,b)=>a-b),player:map(8),crates:[7,21].map(map).sort((a,b)=>a-b),winchCount:1});
+    }
+    if(id==='jupiter') {
+      const count=4,divisions=random()<.5?6:8,def=mark({count,divisions});let board={phases:[0,0,0,0]};
+      for(let i=0;i<13;i++){const value=Math.floor(random()*count),action={type:'moon',value,...(random()<.45?{instrument:'swap'}:{})};board=transition(id,def,board,action)||board;}
+      def.startPhases=board.phases;return def;
+    }
+    if(id==='saturn') {
+      const flip=random()<.5,blocks=[{x:0,y:2,len:2,axis:'h'},{x:2,y:0,len:3,axis:'v'},{x:2,y:3,len:3,axis:'h'},{x:5,y:3,len:3,axis:'v'}].map(b=>flip?{...b,y:b.axis==='v'?6-b.y-b.len:5-b.y}:b),used=new Set();
+      for(const b of blocks)for(let j=0;j<b.len;j++)used.add((b.y+(b.axis==='v'?j:0))*6+b.x+(b.axis==='h'?j:0));
+      for(let attempt=0;attempt<12;attempt++) {
+        const axis=random()<.5?'h':'v',len=2,x=Math.floor(random()*6),y=Math.floor(random()*6),cells=Array.from({length:len},(_,j)=>(y+(axis==='v'?j:0))*6+x+(axis==='h'?j:0));
+        if((axis==='h'?x+len:y+len)>6||cells.some(p=>used.has(p)))continue;
+        blocks.push({x,y,len,axis});cells.forEach(p=>used.add(p));break;
+      }
+      return mark({n:6,blocks});
+    }
+    if(id==='uranus') {
+      const n=6,walls=new Set(borderWalls(n)),free0=[...Array(n*n).keys()].filter(p=>!walls.has(p));sample(random,free0,4).forEach(p=>walls.add(p));
+      const free=[...Array(n*n).keys()].filter(p=>!walls.has(p)),def=mark({n,walls:[...walls].sort((a,b)=>a-b),goals:sample(random,free,2).sort((a,b)=>a-b)});let board={balls:[...def.goals]};
+      for(let i=0;i<9;i++){const actions=actionsFor(id,def,board),next=transition(id,def,board,actions[Math.floor(random()*actions.length)]);if(next)board=next;}
+      def.balls=board.balls;return def;
+    }
+    const n=random()<.65?6:7,walls=new Set(borderWalls(n)),free0=[...Array(n*n).keys()].filter(p=>!walls.has(p));sample(random,free0,4).forEach(p=>walls.add(p));
+    const free=[...Array(n*n).keys()].filter(p=>!walls.has(p)),start=sample(random,free,1)[0],def=mark({n,walls:[...walls].sort((a,b)=>a-b),player:start,goals:[-1,-1,-1,-1]});let board={player:start,collected:0};
+    const visited=[];
+    for(let i=0;i<45;i++) {const actions=actionsFor(id,def,board),next=transition(id,def,board,actions[Math.floor(random()*actions.length)]);if(next){board=next;if(!visited.includes(board.player)&&board.player!==start)visited.push(board.player);}}
+    if(visited.length<10)return null;
+    const offset=Math.floor(random()*Math.min(3,visited.length-9));def.goals=[2,5,8,11].map(i=>visited[Math.min(visited.length-1,i+offset-1)]);return def;
+  }
+  function usesMasterworkInstrument(id,solution) {
+    if(id==='earth')return true;
+    if(id==='uranus')return solution.some(action=>Number.isInteger(action.anchor))&&solution.some(action=>!Number.isInteger(action.anchor));
+    return solution.some(action=>action.instrument)&&solution.some(action=>!action.instrument);
+  }
+  const masterworkCache=new Map();
+  async function masterwork(id,seed,signal) {
+    const rule=masterworkRules[id];if(!rule)return null;
+    seed>>>=0;const cacheKey=`${id}:${seed}`;if(masterworkCache.has(cacheKey))return clone(masterworkCache.get(cacheKey));
+    const base=(seed^0x5a17c9e3)>>>0;
+    for(let salt=0;salt<100;salt++) {
+      if(signal?.aborted)return null;
+      const random=rng((base+salt)>>>0),def=masterworkCandidate(id,random);if(!def)continue;
+      const board=initial(id,def,6);if(won(id,def,board))continue;
+      const solution=await solve(id,def,board,signal);if(signal?.aborted)return null;
+      if(!solution?.length||!usesMasterworkInstrument(id,solution))continue;
+      def.masterwork={...rule,seed,par:solution.length,solution:clone(solution),...(id==='neptune'?{budget:solution.length+2}:{})};
+      let checked=clone(board),moves=0,valid=true;
+      for(const action of solution) {const next=transition(id,def,checked,action);if(!next){valid=false;break;}moves+=actionCost(id,checked,next);checked=next;}
+      if(!valid||!won(id,def,checked)||(def.masterwork.budget&&moves>def.masterwork.budget))continue;
+      def.masterwork.par=moves;
+      if(masterworkCache.size>=40)masterworkCache.delete(masterworkCache.keys().next().value);
+      masterworkCache.set(cacheKey,clone(def));return clone(def);
+    }
+    return null;
+  }
+  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,eclipse,masterwork,masterworkRules,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames,blockAxis,blockGeometry,gateLink};
 })();

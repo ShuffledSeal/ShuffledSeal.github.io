@@ -591,6 +591,7 @@ window.AetherVoyage = (() => {
       queueToast(`${I[card.dataset.draft].name} joins the build.`);
       finishNode('won', `Drafted ${I[card.dataset.draft].name}.`);
     }));
+    stage.querySelector('[data-draft]')?.focus({ preventScroll: true });
   }
 
   function applyInstrument(id) {

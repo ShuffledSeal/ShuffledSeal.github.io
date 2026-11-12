@@ -13,12 +13,13 @@ This roadmap distinguishes what is playable **today** from proposed work. It del
 - Custom gameplay artwork, dedicated trial art and polished UI/CSS overlays.
 - Cabinet of Wonders art direction with local historical engravings, bespoke icons, matching game frames, reduced-motion-aware book transitions and mechanical UI feedback.
 - A working research cabinet with ordered/searchable saved works, marginalia, guided study, linked journal observations and Markdown export.
-- Solution-backed Daily Charts and three-board seeded Circuits in all eight planetary puzzle rooms, with isolated resumable saves. Circuit clears unlock deterministic Eclipse masterworks with genre-specific reserves, verified solutions, separate records, and legacy-save migration.
+- Solution-backed Daily Charts and three-board seeded Circuits in all eight planetary puzzle rooms, with isolated resumable saves. Circuit clears unlock deterministic Eclipse masterworks; Eclipse clears unlock eight alternate-instrument charts with verified solutions under their actual new transition rules, separate drafts/records, and legacy-save migration.
 - Veteran Sky unlocks for all six flagship cartridges, with separate records and engine-specific challenge rules.
 - Expanded Veteran mechanics: the Meridian Cantor and two fourth-act refits; Bastion sappers and the Ward Loom; Labyrinth scanners and null jammer; Chain Wardens, two formation relics and a new boss braid; a Cathedral/Meridian Deep Field finale and Stillpoint Seal; and three advanced Starforge contracts including the two-vent Ember Covenant. Astral Crucible, the Cantor, and Ember Covenant are cleared through real controls in browser regressions.
-- Eclipse-difficulty Grand Tour Perihelion encounters with seeded drifting gates and offset pairs; classic routes remain unchanged.
-- Four seal-gated arcade Masterworks: pendulum Planet Drop, twin-star Comet Surf, Umbra Veil Stardust Dash, and moving/armoured Orbit Breaker cathedrals, with separate record books.
-- Illustrated upgrade controls with readable refinement text, and silent non-flashing score updates.
+- A second Veteran mechanics layer: Reversal and Aegis Lancers; directional Bulwarks and shelter/snare Wards; investigative wall-aware Watchers; Star Cast and Mote Siphons; clue-only Safe/Nova proofs; and Starforge cooling-bus/Ember shunting.
+- Eclipse-difficulty Grand Tour Perihelion encounters with seeded drifting gates, offset pairs and precision-earned Corona aerobraking; classic routes remain unchanged.
+- Four seal-gated arcade Masterworks with separate record books, expanded by forecast anchors/Brace, Starhook/Twin Swap, Lantern Rein/Eclipse shades, and Focus Break/choir parries. New active verbs have keyboard and 48px touch/pointer paths.
+- Illustrated upgrade controls with 16px primary and 14px secondary relic copy, strong parchment/dark-surface contrast, accessible focus and contained scrolling, plus silent non-flashing score updates. Forty-six typography audits and an independent 24-scenario audit pass; earlier findings remain documented.
 - Save & Leave on every Grand Tour screen, resumable encounters, and confirmed abandonment with complete game teardown.
 - Existing Observatory, puzzles, arcade games, orchestra with sequencer, journal, progress and local-save model remain in place.
 

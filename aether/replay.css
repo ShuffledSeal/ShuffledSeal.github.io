@@ -1,10 +1,43 @@
 /* Seeded replay charts, kept distinct from the handcrafted level strip. */
 .puzzle-replay-modes{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:10px 12px;border:1px solid #c8a46150;background:#0a192b;color:#d9c7a3}
-.puzzle-replay-modes>button{min-height:37px;padding:7px 12px;border:1px solid #c8a46145;background:#102238;color:#d4c3a2;font:14px var(--serif);clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
-.puzzle-replay-modes>button[aria-pressed=true]{border-color:#d0ad68;background:url('assets/parchment.svg');color:#49351f}.puzzle-replay-modes>button:hover{border-color:#e0bd79;color:#f0d49b}.puzzle-replay-modes>button[aria-pressed=true]:hover{color:#49351f}
-.replay-seed{display:flex;align-items:center;gap:7px;margin-left:auto;color:#bcae90;font-size:9px;letter-spacing:.5px}.replay-seed input{width:105px;min-height:35px;padding:6px 8px;border:1px solid #c8a46145;background:#071629;color:#e5d2ad;font:12px var(--sans)}
+.puzzle-replay-modes>button{min-height:44px;padding:8px 12px;border:1px solid #c8a46145;background:#102238;color:#d4c3a2;font:16px/1.5 var(--serif);clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
+.puzzle-replay-modes>button[aria-pressed=true]{border-color:#d0ad68;background:url('assets/parchment.svg') #d8c6a1;color:#49351f}.puzzle-replay-modes>button:hover{border-color:#e0bd79;color:#f0d49b}.puzzle-replay-modes>button[aria-pressed=true]:hover{color:#49351f}
+.replay-seed{display:flex;align-items:center;gap:7px;margin-left:auto;color:#bcae90;font-size:14px;line-height:1.5;letter-spacing:.5px}.replay-seed input{width:105px;min-height:44px;padding:6px 8px;border:1px solid #c8a46145;background:#071629;color:#e5d2ad;font:14px/1.5 var(--sans)}
 .puzzle-replay-modes+.puzzle-levels{border-top:0}.puzzle-generation-error{padding:35px 20px;text-align:center;color:#ddcba9}.puzzle-generation-error h3{font-size:29px}.puzzle-generation-error p{max-width:390px;margin:12px auto 20px;color:#b9bbaa;font-size:12px}.puzzle-loading{display:block;padding:55px 20px;color:#d8bc7f;font:italic 21px var(--serif);text-align:center}.circuit-complete{margin:10px 0 17px;color:#d7bd7e;font:20px var(--serif)}
-.puzzle-replay-modes>.eclipse-tab{display:inline-flex;align-items:center;gap:8px;border-color:#8ba6c466}.eclipse-tab small{color:#9fb5c5;font:9px var(--sans);letter-spacing:.04em}.puzzle-replay-modes>.eclipse-tab[aria-pressed=true] small{color:#49351f}.puzzle-replay-modes>.eclipse-tab:disabled{cursor:not-allowed;border-style:dashed;opacity:.72}.puzzle-replay-modes>.eclipse-tab:disabled:hover{border-color:#8ba6c466;color:#d4c3a2}
-.eclipse-charter{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;margin:0 0 16px;padding:14px 16px;border:1px solid #8ba6c455;border-left:3px solid #b9d3df;background:linear-gradient(105deg,#0b1a2d,#111c2d);color:#d8e0df}.eclipse-charter p{margin:0;font-size:12px;line-height:1.55}.eclipse-charter .eyebrow{margin-bottom:5px;color:#a9c5d3}.eclipse-charter strong{max-width:190px;color:#e6cb8e;font:17px/1.4 var(--serif);text-align:right}.eclipse-unlocked,.eclipse-complete{color:#bad2db;font-size:12px;line-height:1.6}
-@media(max-width:650px){.puzzle-replay-modes{gap:5px;padding:8px}.puzzle-replay-modes>button{font-size:12px;padding:6px 8px}.puzzle-replay-modes>.eclipse-tab{gap:4px}.eclipse-tab small{font-size:8px}.replay-seed{margin-left:0;flex:1}.replay-seed input{flex:1;min-width:70px}.puzzle-replay-modes>button[data-replay-action=apply-seed]{margin-left:auto}.eclipse-charter{grid-template-columns:1fr;gap:9px;padding:12px}.eclipse-charter strong{max-width:none;text-align:left;font-size:15px}}
-@media(prefers-reduced-motion:reduce){.puzzle-replay-modes>button{transition:none}}
+.puzzle-replay-modes>.eclipse-tab{display:inline-flex;align-items:center;gap:8px;border-color:#8ba6c466}.eclipse-tab small{color:#9fb5c5;font:14px/1.5 var(--sans);letter-spacing:.04em}.puzzle-replay-modes>.eclipse-tab[aria-pressed=true] small{color:#49351f}.puzzle-replay-modes>.eclipse-tab:disabled{cursor:not-allowed;border-style:dashed;opacity:.72}.puzzle-replay-modes>.eclipse-tab:disabled:hover{border-color:#8ba6c466;color:#d4c3a2}
+.puzzle-replay-modes>.masterwork-tab{display:inline-flex;align-items:center;gap:8px;border-color:#b59bc466}.masterwork-tab small{color:#c2add1;font:14px/1.5 var(--sans);letter-spacing:.04em}.puzzle-replay-modes>.masterwork-tab[aria-pressed=true] small{color:#49351f}.puzzle-replay-modes>.masterwork-tab:disabled{border-style:dashed;opacity:.72;cursor:not-allowed}
+.eclipse-charter{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;margin:0 0 16px;padding:14px 16px;border:1px solid #8ba6c455;border-left:3px solid #b9d3df;background:linear-gradient(105deg,#0b1a2d,#111c2d);color:#d8e0df}.eclipse-charter p{margin:0;font-size:16px;line-height:1.6;overflow-wrap:anywhere}.eclipse-charter .eyebrow{margin-bottom:5px;color:#a9c5d3;font-size:14px;line-height:1.5}.eclipse-charter strong{max-width:260px;color:#e6cb8e;font:17px/1.5 var(--serif);text-align:right;overflow-wrap:anywhere}.eclipse-unlocked,.eclipse-complete{color:#bad2db;font-size:14px;line-height:1.6}
+@media(max-width:650px){.puzzle-replay-modes{gap:5px;padding:8px}.puzzle-replay-modes>button{font-size:16px;padding:8px}.puzzle-replay-modes>.eclipse-tab{gap:4px}.eclipse-tab small{font-size:14px}.replay-seed{margin-left:0;flex:1}.replay-seed input{flex:1;min-width:70px}.puzzle-replay-modes>button[data-replay-action=apply-seed]{margin-left:auto}.eclipse-charter{grid-template-columns:1fr;gap:9px;padding:12px}.eclipse-charter strong{max-width:none;text-align:left;font-size:17px}}
+/* Masterwork Instruments: readable rules and controls on enamel and parchment. */
+.planet-puzzle:has(.masterwork-tab[aria-pressed=true]) .puzzle-course{font-size:14px;line-height:1.5;white-space:normal}
+.puzzle-replay-modes+.puzzle-levels button>span:nth-child(2){font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.puzzle-replay-modes+.puzzle-levels small{font-size:14px;line-height:1.5}
+.masterwork-instruments .puzzle-readout{flex-wrap:wrap;font-size:16px;line-height:1.5}
+.masterwork-instruments .puzzle-readout>span:last-child{white-space:normal;text-align:right;margin-left:auto}
+.masterwork-instruments .puzzle-lesson{font-size:14px;line-height:1.5;letter-spacing:.06em}
+.masterwork-instruments .puzzle-instruction{font-size:16px;line-height:1.6;overflow-wrap:anywhere}
+.masterwork-instruments .burn-plan-title{font-size:14px;line-height:1.5;color:#c0c9b2}
+.masterwork-instruments :is(.instrument-picker,.burn-plan,.puzzle-tools) .button{font-size:16px;line-height:1.5;min-height:44px}
+.masterwork-instruments .button-primary{background:linear-gradient(105deg,#c39b55,#e3c27f 45%,#bd914b 80%);color:#2a2114}
+.masterwork-instruments .button-primary:hover{background:linear-gradient(105deg,#d0ad68,#f0d494 45%,#c39b55);color:#17120c}
+.masterwork-instruments .puzzle-direction-pad>span{font-size:14px;line-height:1.5;color:#c0c9b2}
+.masterwork-instruments .puzzle-status{font-size:16px;line-height:1.6}
+.masterwork-instruments .puzzle-guide{min-width:0;background-color:#d8c6a1}
+.masterwork-instruments .puzzle-guide p,.masterwork-instruments .puzzle-guide details p{font-size:14px;line-height:1.65;color:#58482f;overflow-wrap:anywhere}
+.masterwork-instruments .puzzle-guide>.eyebrow{font-size:14px;line-height:1.5;color:#60461f}
+.masterwork-instruments .puzzle-guide .puzzle-legend{font-size:14px;line-height:1.65;color:#58482f}
+.masterwork-instruments .puzzle-guide summary{min-height:44px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.masterwork-instruments .puzzle-record small{font-size:14px;line-height:1.6;color:#58482f;overflow-wrap:anywhere}
+.masterwork-instruments .puzzle-guide .puzzle-save-note,.masterwork-instruments .puzzle-guide .puzzle-keyboard{font-size:14px;line-height:1.65;color:#58482f}
+.masterwork-instruments .puzzle-result p{font-size:14px;line-height:1.6}
+.masterwork-instruments .puzzle-result .button{font-size:16px;line-height:1.5}
+.masterwork-instruments .dial-position{font-size:14px;line-height:1.5}
+.masterwork-instruments .orbital-dial>small{font-size:14px;line-height:1.5;color:#c0c9b2}
+.masterwork-instruments .burn-badge{font-size:14px;line-height:1.5}
+.masterwork-instruments .burn-chip{font-size:14px;line-height:1.5}
+.masterwork-instruments .burn-chip button{font-size:16px;line-height:1.5}
+.puzzle-replay-modes>button:focus-visible,.masterwork-instruments :is(.instrument-picker,.burn-plan,.puzzle-tools) .button:focus-visible{outline:3px solid #f6d58f;outline-offset:3px}
+.masterwork-instruments .puzzle-guide summary:focus-visible{outline:3px solid #49331c;outline-offset:3px}
+@media(max-width:1000px){.masterwork-instruments .eclipse-charter{grid-template-columns:1fr;gap:10px}.masterwork-instruments .eclipse-charter strong{max-width:none;text-align:left}}
+@media(max-width:650px){.masterwork-instruments .burn-chip{font-size:14px}.masterwork-instruments .puzzle-readout>span:last-child{margin-left:0;text-align:left}}
+@media(prefers-reduced-motion:reduce){.puzzle-replay-modes>button,.masterwork-instruments :is(.instrument-picker,.burn-plan,.puzzle-tools) .button{transition:none}}

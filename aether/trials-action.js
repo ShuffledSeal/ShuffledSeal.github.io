@@ -60,10 +60,10 @@
       { name: 'The Unraveller', hint: 'Dodge the marked cross. Attack the open core between sweeps.', events: [[0, 'boss', 1]] },
     ];
     const VETERAN_ROUTE = [
-      { name: 'Aurora crossing', hint: 'A lattice warden tracks in violet, then locks its severing line. Cross after the lock; watch the scissor lanes.', events: [[0, 'warden', 1], [3, 'cross', 2], [6, 'drift', 3]] },
-      { name: 'Twin needle', hint: 'A keeper and warden alternate body and line attacks. Draw the charge away, then switch formation for the lock.', events: [[0, 'elite', 1], [2, 'warden', 1], [5, 'elite', 1], [8, 'drift', 3]] },
-      { name: 'Falling choir', hint: 'Wardens pin the recovery windows while drift shards flood the staff. A compact formation slips their locked lines.', events: [[0, 'drift', 3], [2, 'warden', 1], [4, 'cross', 2], [6, 'drift', 4], [9, 'warden', 1]] },
-      { name: 'Splintered orbit', hint: 'Two wardens hold opposite poles. Bait both locks before crossing; their cores take extra damage while they rest.', events: [[0, 'warden', 1], [1, 'elite', 1], [3, 'warden', 1], [5, 'cross', 3], [8, 'drift', 4]] },
+      { name: 'Aurora crossing', hint: 'A siphon harvests free motes unless you collect or cast through it. Warden lines lock before they sever.', events: [[0, 'warden', 1], [1.5, 'siphon', 1], [3, 'cross', 2], [6, 'drift', 3]] },
+      { name: 'Twin needle', hint: 'Keepers and a mote siphon compete for your attention. Spend a tail link with Q, then recover the kill’s mote.', events: [[0, 'elite', 1], [1.5, 'siphon', 1], [2, 'warden', 1], [5, 'elite', 1], [8, 'drift', 3]] },
+      { name: 'Falling choir', hint: 'Wardens pin recovery while a siphon turns ignored motes into drift shards. Ribbon can harvest along its length.', events: [[0, 'drift', 3], [2, 'warden', 1], [3, 'siphon', 1], [4, 'cross', 2], [6, 'drift', 4], [9, 'warden', 1]] },
+      { name: 'Splintered orbit', hint: 'Two wardens hold opposite poles while a siphon feeds. Break a harvest with Star Cast or deny its marked mote.', events: [[0, 'warden', 1], [1, 'elite', 1], [2, 'siphon', 1], [3, 'warden', 1], [5, 'cross', 3], [8, 'drift', 4]] },
       { name: 'The Unraveller ascendant', hint: 'Three spokes lock around your last position. Leave the violet lines, then strike the gold core while it rests.', events: [[0, 'boss', 1]] },
     ];
     const ROUTE = options.veteran ? VETERAN_ROUTE : ROUTE_BASE;
@@ -71,12 +71,13 @@
     let phase = 'ready', encounter = startEncounter, circuit = 1, elapsed = 0, eventIndex = 0, formation = 'ribbon';
     let invuln = 0, ward = 0, wardTime = 0, pulseTime = 0, moving = false, surge = false, orbitA = 0, tickN = 0;
     let relayTime = 0, relayCount = 0, attune = 0, attuned = false;
+    let castTime = 0, castCount = 0, castRefunds = 0, castBursts = 0, siphonSteals = 0, siphonDenials = 0;
     let hazards = [], choices = [], relics = {}, draftCount = 0, shotsFired = 0, collected = 0, destroyed = false;
     const level = id => relics[id] || 0;
     const keys = new Set();
     let pointer = null;
     const g = frame(container, W, H, {
-      label: 'Constellation Chain. Five encounters and four relic drafts. Steer with the pointer, WASD or arrows. F changes formation. Space uses an equipped Pulse heart. P pauses. Choose relics with buttons or 1, 2, 3.',
+      label: 'Constellation Chain. Five encounters and four relic drafts. Steer with the pointer, WASD or arrows. F changes formation. Space uses an equipped Pulse heart.' + (options.veteran ? ' Q casts away the tail link as a formation-specific weapon; kills refund a collectible mote. Interrupt siphon harvests by collecting their marked mote or destroying them.' : '') + ' P pauses. Choose relics with buttons or 1, 2, 3.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -93,7 +94,12 @@
     const build = document.createElement('p'); build.className = 'chain-build';
     const pulseButton = document.createElement('button'); pulseButton.type = 'button';
     pulseButton.dataset.chainPulse = ''; pulseButton.textContent = 'Pulse · Space'; pulseButton.hidden = true;
-    controls.append(status, formations, build, pulseButton, draft); container.append(controls);
+    const castButton = document.createElement('button'); castButton.type = 'button';
+    castButton.dataset.chainCast = ''; castButton.hidden = !options.veteran;
+    castButton.title = 'Star Cast sacrifices your last link. Ribbon seeks, Halo bursts on impact, Spear pierces with heavy damage. Each cast kill leaves a mote so skilled recovery can repay the link.';
+    controls.append(status, formations, build, pulseButton);
+    if (options.veteran) controls.append(castButton);
+    controls.append(draft); container.append(controls);
     for (const [id, info] of Object.entries(FORMATIONS)) {
       const button = document.createElement('button'); button.type = 'button';
       button.dataset.chainFormation = id; button.innerHTML = `<span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(id)}</span><span class="upgrade-copy">${info.name} — ${info.hint}</span>`;
@@ -101,6 +107,7 @@
       listen(button, 'click', () => setFormation(id));
     }
     listen(pulseButton, 'click', () => { pulse(); canvas.focus({ preventScroll: true }); });
+    listen(castButton, 'click', () => { starCast(); canvas.focus({ preventScroll: true }); });
     // Delegate draft events so a long endless run does not accumulate listeners.
     listen(draft, 'click', e => {
       const button = e.target.closest('button');
@@ -118,14 +125,14 @@
       phase, encounter: encounter + 1, circuit, elapsed, formation, relics: { ...relics },
       range: FORMATIONS[formation].range, draft: !draft.hidden,
       links: links.length, linkPositions: links.map(l => ({ x: l.x, y: l.y })), head: { ...head }, choices: [...choices],
-      enemies: shards.map(s => ({ x: s.x, y: s.y, hp: s.hp, kind: s.kind, mode: s.mode, r: s.r, slow: s.slow, timer: s.timer, aim: s.aim, maxHp: s.maxHp })),
+      enemies: shards.map(s => ({ x: s.x, y: s.y, hp: s.hp, kind: s.kind, mode: s.mode, r: s.r, slow: s.slow, timer: s.timer, aim: s.aim, maxHp: s.maxHp, harvests: s.harvests || 0, harvestTarget: s.targetMote && motes.includes(s.targetMote) ? { x: s.targetMote.x, y: s.targetMote.y } : null })),
       boss: shards.find(s => s.kind === 'boss')?.hp ?? 0,
       bossMode: shards.find(s => s.kind === 'boss')?.mode ?? '', bossPattern: options.veteran ? 'braid' : 'cross',
       hazards: hazards.map(h => ({ x: h.x, y: h.y, dx: h.dx, dy: h.dy, warning: h.warning, width: h.width, kind: h.kind || 'lane', life: h.life ?? 0, length: h.length ?? 0 })),
-      motes: motes.map(m => ({ x: m.x, y: m.y })),
-      bolts: bolts.map(b => ({ x: b.x, y: b.y, damage: b.damage, pierce: b.pierce, lodestar: !!b.lodestar })),
+      motes: motes.map(m => ({ x: m.x, y: m.y, cast: !!m.cast })),
+      bolts: bolts.map(b => ({ x: b.x, y: b.y, damage: b.damage, pierce: b.pierce, lodestar: !!b.lodestar, cast: b.cast || '' })),
       shotsFired, collected, draftCount, ward, pulseTime, broken, over, invuln,
-      relayTime, relayCount, attune, attuned, routeNames: ROUTE.map(r => r.name),
+      relayTime, relayCount, attune, attuned, castTime, castCount, castRefunds, castBursts, siphonSteals, siphonDenials, routeNames: ROUTE.map(r => r.name),
     }) });
     // The same headline diagnostics mirrored onto the canvas as dataset
     // attributes so browser tests can wait on them without polling JS.
@@ -151,6 +158,10 @@
       canvas.dataset.chainRelayCount = String(relayCount);
       canvas.dataset.chainAttuned = String(attuned);
       canvas.dataset.chainWardens = String(shards.filter(s => s.kind === 'warden').length);
+      canvas.dataset.chainCast = castTime > 0 ? castTime.toFixed(2) : 'ready';
+      canvas.dataset.chainCastCount = String(castCount); canvas.dataset.chainCastRefunds = String(castRefunds); canvas.dataset.chainCastBursts = String(castBursts);
+      canvas.dataset.chainSiphons = String(shards.filter(s => s.kind === 'siphon').length);
+      canvas.dataset.chainSiphonSteals = String(siphonSteals); canvas.dataset.chainSiphonDenials = String(siphonDenials);
     }
     canvas.style.touchAction = 'none';
     try { canvas.focus({ preventScroll: true }); } catch { canvas.focus(); }
@@ -163,6 +174,8 @@
       pulseButton.hidden = !level('nova');
       pulseButton.disabled = g.paused || phase !== 'combat' || pulseTime > 0 || !!over;
       pulseButton.textContent = pulseTime > 0 ? `Pulse · ${Math.ceil(pulseTime)}s` : 'Pulse ready · Space';
+      castButton.disabled = !options.veteran || g.paused || phase !== 'combat' || castTime > 0 || links.length <= 1 || !!over;
+      castButton.textContent = castTime > 0 ? `Star Cast · ${castTime.toFixed(1)}s` : `Q · Star Cast (${formation}) · spend 1 link`;
       for (const button of formations.children) button.setAttribute('aria-pressed', String(button.dataset.chainFormation === formation));
       const arts = [];
       if (level('relay')) arts.push(`Counterpoint ${relayTime > 0 ? `${Math.ceil(relayTime)}s` : 'ready'}`);
@@ -194,7 +207,7 @@
       heading.textContent = initial ? 'Weave your constellation' : `Safe refit · encounter ${encounter + 1} cleared`;
       const description = document.createElement('p');
       description.textContent = initial
-        ? 'Five authored encounters. Every link fires and shields you. Choose a formation, then launch. F switches formation in flight.'
+        ? `Five authored encounters. Every link fires and shields you. Choose a formation, then launch. F switches formation in flight.${options.veteran ? ' Veteran: Q sacrifices a tail link for a Star Cast; its kills leave recovery motes. Siphons turn ignored motes into shards.' : ''}`
         : `Chain restored to ${links.length} links. No threats advance here. Choose one permanent relic, then face ${ROUTE[(encounter + 1) % ROUTE.length].name}.`;
       draft.append(heading, description);
       if (initial) {
@@ -239,7 +252,7 @@
     function launch() {
       if (destroyed || g.paused || over || phase === 'combat') return;
       phase = 'combat'; elapsed = 0; eventIndex = 0; moteAt = 2.2; invuln = 1.5;
-      pulseTime = 0; relayTime = 0; attune = 0; attuned = false; clearInput(); draft.hidden = true;
+      pulseTime = 0; relayTime = 0; castTime = 0; attune = 0; attuned = false; clearInput(); draft.hidden = true;
       head.x = 450; head.y = 320; head.dx = 1; head.dy = 0;
       links.forEach((l, i) => { l.x = head.x - (i + 1) * SP; l.y = head.y; l.cool = .1 * i; });
       status.textContent = `${circuit > 1 ? `Circuit ${circuit}. ` : ''}${encounter + 1}/5 · ${ROUTE[encounter].name}. ${ROUTE[encounter].hint}`;
@@ -270,17 +283,19 @@
         let x = side === 0 ? -24 : side === 1 ? W + 24 : 80 + rand() * (W - 160);
         let y = side === 2 ? 65 : side === 3 ? H + 24 : 100 + rand() * (H - 190);
         if (kind === 'boss') { x = 680; y = 270; }
-        const hp = (kind === 'boss' ? 115 : kind === 'elite' ? 22 : kind === 'warden' ? 30 : 2) * pressure;
-        const speed = (kind === 'elite' ? 95 : 76 + encounter * 8) * scale * pressure;
+        const hp = (kind === 'boss' ? 115 : kind === 'elite' ? 22 : kind === 'warden' ? 30 : kind === 'siphon' ? 14 : 2) * pressure;
+        const speed = (kind === 'elite' ? 95 : kind === 'siphon' ? 62 : 76 + encounter * 8) * scale * pressure;
         const a = Math.atan2(head.y - y, head.x - x);
         const s = {
           x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-          r: kind === 'boss' ? 35 : kind === 'elite' ? 22 : kind === 'warden' ? 20 : 14,
+          r: kind === 'boss' ? 35 : kind === 'elite' ? 22 : kind === 'warden' ? 20 : kind === 'siphon' ? 18 : 14,
           hp, maxHp: hp, a: rand() * TAU, spin: rand() - .5, kind,
-          mode: 'arrive', timer: kind === 'boss' ? 2.5 : kind === 'warden' ? 1.4 : 2, slow: 0, age: 0, aim: 0, sx: 0, sy: 0,
+          mode: 'arrive', timer: kind === 'boss' ? 2.5 : kind === 'warden' ? 1.4 : kind === 'siphon' ? 1.1 : 2, slow: 0, age: 0, aim: 0, sx: 0, sy: 0,
+          harvests: kind === 'siphon' ? 0 : undefined, targetMote: null,
         };
-        if (kind === 'elite' || kind === 'warden') { s.sx = 150 + rand() * (W - 300); s.sy = 130 + rand() * (H - 260); }
+        if (kind === 'elite' || kind === 'warden' || kind === 'siphon') { s.sx = 150 + rand() * (W - 300); s.sy = 130 + rand() * (H - 260); }
         shards.push(s);
+        if (kind === 'siphon') { status.textContent = 'Mote siphon. Its dashed harvest line marks a target: gather that mote or break the siphon before it makes drift shards.'; tone(245, .18, 'sine', .035); }
         if (kind === 'warden') { status.textContent = 'Lattice warden. Violet tracks you; the locked line does not. Cross it after the lock, then punish its rest.'; tone(205, .22, 'triangle', .04); }
         if (kind === 'boss') { status.textContent = options.veteran ? 'The Unraveller ascendant. Three spokes lock around your last position; leave them and strike the open core.' : 'The Unraveller. Dodge the marked cross; strike while the core is open.'; tone(98, .5, 'sawtooth', .06); }
       }
@@ -294,9 +309,9 @@
       if (links.length) links.splice(index >= 0 ? index : links.length - 1, 1);
       else end(false);
     }
-    function radial(x, y, radius, amount) {
+    function radial(x, y, radius, amount, onKill = null) {
       arcs.push({ ring: true, x1: x, y1: y, radius, t: .35 });
-      for (const s of [...shards]) if (Math.hypot(s.x - x, s.y - y) < radius + s.r) damage(s, amount);
+      for (const s of [...shards]) if (Math.hypot(s.x - x, s.y - y) < radius + s.r) damage(s, amount, onKill);
     }
     function spawnBeam(x, y, angle, warning = .9, width = 11, life = .75) {
       hazards.push({ kind: 'beam', x, y, dx: Math.cos(angle), dy: Math.sin(angle), warning, width, life, length: Math.hypot(W, H), speed: 0 });
@@ -317,16 +332,17 @@
       g.after(() => { g.destroy(); onEnd({ won, score: score() }); }, 900);
     }
 
-    function damage(s, amount) {
+    function damage(s, amount, onKill = null) {
       if (!shards.includes(s)) return;
-      const exposure = s.kind === 'boss' && s.mode !== 'open' ? .25 : s.kind === 'warden' && s.mode === 'rest' ? 1.5 : 1;
+      const exposure = s.kind === 'boss' && s.mode !== 'open' ? .25 : s.kind === 'warden' && s.mode === 'rest' ? 1.5 : s.kind === 'siphon' && (s.mode === 'harvest' || s.mode === 'rest') ? 1.35 : 1;
       s.hp -= amount * exposure;
       if (s.hp > 0) { tone(320, .05, 'triangle', .03); return; }
       if (!shards.includes(s)) return;
       shards.splice(shards.indexOf(s), 1);
       broken++;
       burst(s.x, s.y, '#d8c48b', 16, 190); tone(240 + Math.random() * 80, .1, 'triangle', .06);
-      if ((broken % 6 === 0 || (verbs.has('parallax') && broken % 5 === 0) || s.kind === 'elite' || s.kind === 'warden') && motes.length < 5)
+      if (onKill) onKill(s);
+      else if ((broken % 6 === 0 || (verbs.has('parallax') && broken % 5 === 0) || s.kind === 'elite' || s.kind === 'warden' || (s.kind === 'siphon' && s.mode === 'harvest')) && motes.length < (options.veteran ? 8 : 5))
         motes.push({ x: clamp(s.x, 50, W - 50), y: clamp(s.y, 90, H - 50), p: rand() * TAU });
     }
 
@@ -359,6 +375,31 @@
       for (const l of links) fireLink(l, true);
       burst(head.x, head.y, '#b7d8e8', 12, 120); tone(620, .12, 'triangle', .04);
     }
+    function starCastRefund(s) {
+      if (motes.length >= 8) return;
+      motes.push({ x: clamp(s.x, 40, W - 40), y: clamp(s.y, 70, H - 40), p: castCount * .618 % TAU, cast: true });
+      castRefunds++;
+    }
+    function starCast() {
+      if (!options.veteran || g.paused || destroyed || over || phase !== 'combat' || castTime > 0 || links.length <= 1 || bolts.length >= 160) return;
+      const link = links.pop();
+      let target = null, best = 740;
+      for (const s of shards) {
+        const d = Math.hypot(s.x - link.x, s.y - link.y);
+        if (d < best) { best = d; target = s; }
+      }
+      const angle = target ? Math.atan2(target.y - link.y, target.x - link.x) : Math.atan2(head.dy, head.dx);
+      const speed = formation === 'spear' ? 820 : formation === 'halo' ? 580 : 660;
+      const damage = formation === 'spear' ? 14 : formation === 'halo' ? 8 : 9;
+      bolts.push({
+        x: link.x, y: link.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        target, life: 1.6, speed, damage, pierce: formation === 'spear' ? 8 : formation === 'ribbon' ? 2 : 0,
+        cast: formation, struck: [],
+      });
+      castCount++; shotsFired++; castTime = formation === 'spear' ? 1.6 : formation === 'halo' ? 1.1 : 1.35;
+      status.textContent = `${FORMATIONS[formation].name} Star Cast: one link spent. ${formation === 'spear' ? 'The cast pierces the staff.' : formation === 'halo' ? 'The cast bursts on impact.' : 'The cast seeks its mark.'} Recover the kill mote to reweave.`;
+      burst(link.x, link.y, '#a7ebde', 15, 180); tone(680, .16, 'triangle', .05); syncControls();
+    }
 
     function step(dt) {
       shake = Math.max(0, shake - dt * 16);
@@ -386,6 +427,11 @@
         const before = Math.ceil(relayTime);
         relayTime = Math.max(0, relayTime - dt);
         if (Math.ceil(relayTime) !== before || !relayTime) syncControls();
+      }
+      if (castTime > 0) {
+        const before = Math.ceil(castTime * 10);
+        castTime = Math.max(0, castTime - dt);
+        if (Math.ceil(castTime * 10) !== before || !castTime) syncControls();
       }
       if (level('lodestar') && !attuned) {
         const before = Math.floor(attune * 4);
@@ -488,6 +534,48 @@
             if (s.timer <= 0) { s.mode = 'rest'; s.timer = 1.4; }
           } else if (s.timer <= 0) { s.mode = 'aim'; s.timer = 1.15; }
           s.x = clamp(s.x, 24, W - 24); s.y = clamp(s.y, 56, H - 24);
+        } else if (s.kind === 'siphon') {
+          // A harvest is a race over a resource, not a timer-only spawn. The
+          // dashed line identifies exactly which mote to deny; two successful
+          // thefts make the siphon abandon harvesting and hunt the chain.
+          s.timer -= dt * slowMul;
+          if (s.mode === 'arrive') {
+            const dx = s.sx - s.x, dy = s.sy - s.y, d = Math.hypot(dx, dy) || 1;
+            if (d > 8) { s.x += dx / d * 105 * scale * slowMul * dt; s.y += dy / d * 105 * scale * slowMul * dt; }
+            if (s.timer <= 0) s.mode = 'seek';
+          } else if (s.mode === 'seek') {
+            let target = null, best = Infinity;
+            if (s.harvests < 2) for (const m of motes) {
+              const d = Math.hypot(m.x - s.x, m.y - s.y);
+              if (d < best) { best = d; target = m; }
+            }
+            if (target) {
+              s.targetMote = target; s.mode = 'harvest'; s.timer = 1.8;
+              status.textContent = 'Siphon harvest locked. Gather its marked mote to expose it, or destroy it before two drift shards break out.';
+              tone(310, .16, 'triangle', .035);
+            } else {
+              const dx = head.x - s.x, dy = head.y - s.y, d = Math.hypot(dx, dy) || 1;
+              s.x += dx / d * 46 * scale * slowMul * dt; s.y += dy / d * 46 * scale * slowMul * dt;
+            }
+          } else if (s.mode === 'harvest') {
+            if (!s.targetMote || !motes.includes(s.targetMote)) {
+              s.targetMote = null; s.mode = 'rest'; s.timer = 1.7; siphonDenials++;
+              status.textContent = 'Harvest denied. The siphon is exposed while it finds another thread.';
+              tone(590, .12, 'sine', .035);
+            } else if (s.timer <= 0) {
+              motes.splice(motes.indexOf(s.targetMote), 1); s.targetMote = null;
+              s.harvests++; siphonSteals++; s.mode = s.harvests >= 2 ? 'hunt' : 'rest'; s.timer = 1.1;
+              spawn('drift', 2); arcs.push({ ring: true, x1: s.x, y1: s.y, radius: 62, t: .35 });
+              status.textContent = 'The siphon consumed a mote and made two drift shards. Break the next harvest or deny its mark.';
+              burst(s.x, s.y, '#c4a7e7', 16, 160); tone(135, .24, 'sawtooth', .045);
+            }
+          } else if (s.mode === 'rest') {
+            if (s.timer <= 0) s.mode = s.harvests >= 2 ? 'hunt' : 'seek';
+          } else {
+            const dx = head.x - s.x, dy = head.y - s.y, d = Math.hypot(dx, dy) || 1;
+            s.x += dx / d * 92 * scale * slowMul * dt; s.y += dy / d * 92 * scale * slowMul * dt;
+          }
+          s.x = clamp(s.x, 24, W - 24); s.y = clamp(s.y, 56, H - 24);
         } else if (s.kind === 'boss') {
           const pressure = 1 + (circuit - 1) * .16;
           s.timer -= dt * slowMul;
@@ -582,8 +670,12 @@
           if (b.struck.includes(s)) continue;
           if (Math.hypot(s.x - b.x, s.y - b.y) < s.r + 4) {
             b.struck.push(s);
-            burst(b.x, b.y, '#f2d38a', 6, 90);
-            damage(s, b.damage);
+            burst(b.x, b.y, b.cast ? '#a7ebde' : '#f2d38a', 6, 90);
+            const onCastKill = b.cast ? starCastRefund : null;
+            damage(s, b.damage, onCastKill);
+            if (b.cast === 'halo' && !b.detonated) {
+              b.detonated = true; castBursts++; radial(s.x, s.y, 74, 4, onCastKill); tone(480, .13, 'sine', .035);
+            }
             if (level('frost') && shards.includes(s)) s.slow = Math.max(s.slow, .4 + .3 * level('frost'));
             if (verbs.has('chain')) {
               const other = shards.find(o => o !== s && Math.hypot(o.x - s.x, o.y - s.y) < 150);
@@ -727,6 +819,13 @@
       // Shards: dark spinning flint; keepers aim in rose, the Unraveller's
       // core gilds while open, frost pales whatever it chills.
       for (const s of shards) {
+        if (s.kind === 'siphon' && s.mode === 'harvest' && s.targetMote && motes.includes(s.targetMote)) {
+          ctx.save(); ctx.strokeStyle = '#c4a7e7'; ctx.lineWidth = 2; ctx.setLineDash([4, 8]);
+          ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.targetMote.x, s.targetMote.y); ctx.stroke(); ctx.setLineDash([]);
+          ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 9, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(s.timer / 1.8, 0, 1)); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(s.targetMote.x - 11, s.targetMote.y); ctx.lineTo(s.targetMote.x + 11, s.targetMote.y);
+          ctx.moveTo(s.targetMote.x, s.targetMote.y - 11); ctx.lineTo(s.targetMote.x, s.targetMote.y + 11); ctx.stroke(); ctx.restore();
+        }
         if (s.kind === 'elite' && s.mode === 'aim') {
           ctx.save();
           ctx.globalAlpha = .45 + Math.sin(clock * 12) * .2;
@@ -753,19 +852,25 @@
         }
         ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.a);
         ctx.beginPath();
-        const points = s.kind === 'boss' ? 12 : s.kind === 'warden' ? 6 : 8;
+        const points = s.kind === 'boss' ? 12 : s.kind === 'warden' ? 6 : s.kind === 'siphon' ? 4 : 8;
         for (let i = 0; i < points; i++) {
           const a = i / points * TAU, w = s.r * (0.82 + Math.sin(i * 2.7 + s.r) * .2);
           i ? ctx.lineTo(Math.cos(a) * w, Math.sin(a) * w) : ctx.moveTo(Math.cos(a) * w, Math.sin(a) * w);
         }
         ctx.closePath();
-        ctx.fillStyle = s.kind === 'boss' ? '#2c2530' : s.kind === 'warden' ? '#282338' : '#33302a'; ctx.fill();
-        ctx.strokeStyle = s.slow > 0 ? '#9ec7d4' : s.kind === 'elite' ? '#c9846a' : s.kind === 'warden' ? '#c4a7e7' : s.kind === 'boss' ? '#a88950' : s.hp < 2 ? '#f58e9b' : '#8d7f5c';
+        ctx.fillStyle = s.kind === 'boss' ? '#2c2530' : s.kind === 'warden' || s.kind === 'siphon' ? '#282338' : '#33302a'; ctx.fill();
+        ctx.strokeStyle = s.slow > 0 ? '#9ec7d4' : s.kind === 'elite' ? '#c9846a' : s.kind === 'warden' || s.kind === 'siphon' ? '#c4a7e7' : s.kind === 'boss' ? '#a88950' : s.hp < 2 ? '#f58e9b' : '#8d7f5c';
         ctx.lineWidth = 2; ctx.stroke();
         if (s.kind === 'warden') {
           ctx.fillStyle = s.mode === 'rest' ? '#f2d38a' : s.mode === 'lock' || s.mode === 'channel' ? '#eadcff' : '#826b9e';
           ctx.beginPath(); ctx.arc(0, 0, s.mode === 'rest' ? 8 : 5, 0, TAU); ctx.fill();
           if (s.mode === 'rest') { ctx.strokeStyle = '#f2d38a88'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.stroke(); }
+        }
+        if (s.kind === 'siphon') {
+          ctx.fillStyle = s.mode === 'rest' ? '#f2d38a' : s.mode === 'harvest' ? '#eadcff' : '#826b9e';
+          ctx.beginPath(); ctx.arc(0, 0, s.mode === 'harvest' ? 7 : 5, 0, TAU); ctx.fill();
+          ctx.strokeStyle = '#c4a7e7'; ctx.lineWidth = 1.5;
+          for (let n = 0; n < 2 - s.harvests; n++) { ctx.beginPath(); ctx.arc(-5 + n * 10, s.r + 7, 2, 0, TAU); ctx.stroke(); }
         }
         if (s.hp < 2 && s.kind === 'drift') {
           ctx.strokeStyle = '#f58e9b88'; ctx.lineWidth = 1.5;
@@ -782,9 +887,12 @@
         }
         ctx.restore();
       }
-      // Bolts: short gilt streaks.
-      ctx.strokeStyle = '#f2d38a'; ctx.lineWidth = 2;
-      for (const b of bolts) { ctx.beginPath(); ctx.moveTo(b.x - b.vx * .014, b.y - b.vy * .014); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+      // Bolts: short gilt streaks; sacrificed links are broader teal diamonds.
+      for (const b of bolts) {
+        ctx.strokeStyle = b.cast ? '#a7ebde' : '#f2d38a'; ctx.lineWidth = b.cast ? 4 : 2;
+        ctx.beginPath(); ctx.moveTo(b.x - b.vx * (b.cast ? .022 : .014), b.y - b.vy * (b.cast ? .022 : .014)); ctx.lineTo(b.x, b.y); ctx.stroke();
+        if (b.cast) { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, TAU); ctx.stroke(); }
+      }
       // Arcs: chain-verb light between shards, and the rings of relic novas.
       for (const a of arcs) {
         if (a.ring) {
@@ -805,9 +913,10 @@
       // HUD
       ctx.fillStyle = '#e9dcae'; ctx.font = HUD; ctx.textAlign = 'left';
       ctx.fillText(`SCORE ${score()} · CHAIN ${links.length}`, 20, 28);
-      if (level('relay') || level('lodestar')) {
-        ctx.fillStyle = level('relay') && relayTime <= 0 || attuned ? '#9ed7c6' : '#b7bda4'; ctx.font = SMALL;
+      if (options.veteran || level('relay') || level('lodestar')) {
+        ctx.fillStyle = level('relay') && relayTime <= 0 || attuned || options.veteran && castTime <= 0 ? '#9ed7c6' : '#b7bda4'; ctx.font = SMALL;
         const arts = [];
+        if (options.veteran) arts.push(`Q STAR CAST ${castTime > 0 ? `${castTime.toFixed(1)}s` : links.length > 1 ? 'READY · COST 1 LINK' : 'NEED 2 LINKS'}`);
         if (level('relay')) arts.push(`COUNTERPOINT ${relayTime > 0 ? `${Math.ceil(relayTime)}s` : 'READY'}`);
         if (level('lodestar')) arts.push(attuned ? `${FORMATIONS[formation].name.toUpperCase()} ATTUNED` : `ATTUNE ${Math.round(clamp(attune / (4 - .5 * level('lodestar')), 0, 1) * 100)}%`);
         ctx.fillText(arts.join(' · '), 20, 48); ctx.font = HUD;
@@ -832,7 +941,7 @@
         ctx.fillText(phase === 'ready' ? 'Weave your constellation' : 'Safe refit — the sky waits', W / 2, 120);
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText(`Steer with the pointer or WASD · F formation (${FORMATIONS[formation].name})${level('nova') ? ' · Space pulse' : ''} · gather star-motes · P pauses`, W / 2, H - 16);
+      ctx.fillText(options.veteran ? `Steer / WASD · F formation (${FORMATIONS[formation].name}) · Q Star Cast costs 1 link · deny siphon marks · P pauses` : `Steer with the pointer or WASD · F formation (${FORMATIONS[formation].name})${level('nova') ? ' · Space pulse' : ''} · gather star-motes · P pauses`, W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd']);
@@ -852,6 +961,7 @@
       const k = e.key.toLowerCase();
       if (GAMEKEYS.has(k)) { e.preventDefault(); keys.add(k); return; }
       if (k === 'f') { e.preventDefault(); setFormation(FORMATION_IDS[(FORMATION_IDS.indexOf(formation) + 1) % FORMATION_IDS.length]); return; }
+      if (k === 'q') { e.preventDefault(); if (!e.repeat) starCast(); return; }
       if (k === ' ') { e.preventDefault(); pulse(); return; }
       if (k === 'enter') { if (phase === 'ready') { e.preventDefault(); launch(); } return; }
       draftKey(e);
@@ -881,6 +991,7 @@
     const skiff = { x: 200, y: (TOP + BOT) / 2, vy: 0 };
     let gates = [], passed = 0, over = 0, invuln = 0, forgiven = false, shake = 0, gateTimer = 0, pointerHeld = false;
     let gateIndex = 0, patternCounts = {}, tickN = 0;
+    let corona = veteran ? 1 : 0, coronaEarned = 0, preciseThreads = 0, brakeTime = 0, brakesUsed = 0;
     // Classic keeps its original random stream. Veteran uses a separate,
     // seeded stream for its authored gate grammar and daily determinism.
     let seed = 307;
@@ -889,15 +1000,32 @@
     const random = () => veteran ? rand() : Math.random();
     const keys = new Set();
     const g = frame(container, W, H, {
-      label: veteran ? 'Perihelion Run Veteran Sky. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Teal rails mark drifting gates and numbered golden rings arrive in pairs. Survive sixty seconds. Press P to pause.' : 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
+      label: veteran ? 'Perihelion Run Veteran Sky. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Teal rails mark drifting gates and numbered golden rings arrive in pairs. Cross a gate within its teal centre mark to earn a Corona charge. E or right-click spends one charge on a 1.8 second aerobrake: gates slow, but the run timer continues and braking threads earn no replacement charge. Survive sixty seconds. Press P to pause.' : 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(311, 60);
+    const brakeButton = document.createElement('button'); brakeButton.type = 'button';
+    brakeButton.dataset.perihelionBrake = ''; brakeButton.hidden = !veteran;
+    brakeButton.style.cssText = 'display:block;margin:8px auto;max-width:calc(100% - 16px);min-height:44px;padding:9px 16px;border:1px solid #9ed7c6;background:#0f2034;color:#e5efdf;font:600 14px/1.5 "DM Sans",sans-serif;cursor:pointer';
+    brakeButton.title = 'Spend one precision-earned Corona charge to slow gates for 1.8 seconds. The 60-second run clock does not slow and braking threads cannot refund a charge.';
+    if (veteran) container.appendChild(brakeButton);
+    listen(brakeButton, 'click', () => { aerobrake(); canvas.focus({ preventScroll: true }); });
+    const frameDestroy = g.destroy;
+    g.destroy = () => { brakeButton.remove(); frameDestroy(); };
+    const framePause = g.pause, frameResume = g.resume;
+    g.pause = () => { framePause(); keys.clear(); pointerHeld = false; syncDataset(); };
+    g.resume = () => { frameResume(); syncDataset(); };
     canvas.style.touchAction = 'none';
     try { canvas.focus({ preventScroll: true }); } catch { canvas.focus(); }
 
-    const speed = () => (230 + g.clock * 3.2) * scale;
+    const speed = () => (230 + g.clock * 3.2) * scale * (brakeTime > 0 ? .58 : 1);
+    const score = () => passed * 120 + (veteran ? preciseThreads * 40 : 0);
+    function aerobrake() {
+      if (!veteran || g.paused || over || corona < 1 || brakeTime > 0) return;
+      corona--; brakesUsed++; brakeTime = 1.8;
+      tone(260, .22, 'sine', .045); syncDataset();
+    }
     const routeName = () => !veteran ? 'classic' : g.clock < 18 ? 'Wayward tail' : g.clock < 40 ? 'Braided tail' : 'Solar crown';
     function syncDataset() {
       canvas.dataset.perihelionVeteran = String(veteran);
@@ -907,11 +1035,17 @@
       canvas.dataset.perihelionPatterns = Object.keys(patternCounts).join(',');
       canvas.dataset.perihelionPhase = over ? (over > 0 ? 'won' : 'lost') : 'running';
       canvas.dataset.perihelionSpeedScale = String(scale);
+      canvas.dataset.perihelionCorona = String(corona); canvas.dataset.perihelionCoronaEarned = String(coronaEarned);
+      canvas.dataset.perihelionThreads = String(preciseThreads); canvas.dataset.perihelionBrakes = String(brakesUsed);
+      canvas.dataset.perihelionBrakeTime = brakeTime.toFixed(3);
+      brakeButton.disabled = !veteran || g.paused || !!over || corona < 1 || brakeTime > 0;
+      brakeButton.textContent = brakeTime > 0 ? `Aerobrake · ${brakeTime.toFixed(1)}s · charge bank paused` : `E · Aerobrake · ${corona}/3 Corona`;
     }
     Object.defineProperty(g, 'state', { get: () => ({
       veteran, route: routeName(), passed, over, gateTimer, gateIndex, patternCounts: { ...patternCounts },
-      clock: g.clock, speed: speed(), skiff: { ...skiff },
-      gates: gates.map(gt => ({ x: gt.x, y: gt.y, baseY: gt.baseY, age: gt.age, pattern: gt.pattern, pairOrder: gt.pairOrder, scored: gt.scored })),
+      clock: g.clock, speed: speed(), skiff: { ...skiff }, score: score(),
+      corona, coronaEarned, preciseThreads, brakeTime, brakesUsed,
+      gates: gates.map(gt => ({ x: gt.x, y: gt.y, baseY: gt.baseY, age: gt.age, pattern: gt.pattern, pairOrder: gt.pairOrder, scored: gt.scored, threaded: !!gt.threaded, vy: gt.pattern === 'drift' ? Math.cos(gt.age * 1.25 + gt.driftPhase) * 58 * 1.25 : 0 })),
     }) });
 
     function addGate(x, y, pattern = 'ring', pairOrder = 0) {
@@ -948,7 +1082,7 @@
       if (over) return; over = won ? 1 : -1;
       syncDataset();
       if (won) { burst(skiff.x, skiff.y, '#f2d38a', 30, 240); tone(660, .3, 'sine', .06); tone(990, .45, 'sine', .05); }
-      g.after(() => { g.destroy(); onEnd({ won, score: passed * 120 }); }, 850);
+      g.after(() => { g.destroy(); onEnd({ won, score: score() }); }, 850);
     }
 
     function crash(kind, gy) {
@@ -971,6 +1105,11 @@
       if ((++tickN & 7) === 0) syncDataset();
       shake = Math.max(0, shake - dt * 16);
       invuln = Math.max(0, invuln - dt);
+      if (brakeTime > 0) {
+        const before = Math.ceil(brakeTime * 10);
+        brakeTime = Math.max(0, brakeTime - dt);
+        if (Math.ceil(brakeTime * 10) !== before || !brakeTime) syncDataset();
+      }
       // Hold dives, release climbs; the tail's pull is patient.
       const holding = pointerHeld || keys.size > 0;
       skiff.vy = clamp(skiff.vy + (holding ? 620 : -560) * dt, -250, 260);
@@ -991,7 +1130,13 @@
         // Threading the gate: cross its plane inside the gap.
         if (gt.prevDx !== null && gt.prevDx > 0 && dx <= 0 && !gt.scored && Math.abs(dy) < gapHalf - 4) {
           gt.scored = true; passed++;
+          if (veteran && Math.abs(dy) <= 22) {
+            gt.threaded = true; preciseThreads++;
+            if (brakeTime <= 0 && corona < 3) { corona++; coronaEarned++; }
+            tone(1040, .12, 'sine', .035);
+          }
           burst(skiff.x + 24, skiff.y, '#f2d38a', 12, 150); tone(760 + passed * 8, .09, 'triangle', .05);
+          syncDataset();
         }
         gt.prevDx = dx;
         if (invuln > 0) continue;
@@ -1022,7 +1167,7 @@
       const hazeB = ctx.createLinearGradient(0, BOT + 40, 0, BOT);
       hazeB.addColorStop(0, '#c4ac7900'); hazeB.addColorStop(1, '#c4ac7914');
       ctx.fillStyle = hazeB; ctx.fillRect(0, BOT, W, 40);
-      ctx.strokeStyle = '#c4ac79'; ctx.lineWidth = 2; ctx.setLineDash([10, 7]);
+      ctx.strokeStyle = brakeTime > 0 ? '#9ed7c6' : '#c4ac79'; ctx.lineWidth = brakeTime > 0 ? 3 : 2; ctx.setLineDash([10, 7]);
       ctx.beginPath(); ctx.moveTo(0, TOP); ctx.lineTo(W, TOP); ctx.moveTo(0, BOT); ctx.lineTo(W, BOT); ctx.stroke();
       ctx.setLineDash([]);
       // Faint teal streaks streaming past, a sense of speed.
@@ -1038,6 +1183,14 @@
       // The golden gates: two arcs with a gap fore and aft. Veteran drift
       // gates carry a teal travel rail; paired gates are numbered I and II.
       for (const gt of gates) {
+        if (veteran) {
+          // A static centre glyph marks the precision thread even with reduced
+          // motion; it never pulses or relies on the drift animation.
+          ctx.save(); ctx.strokeStyle = gt.threaded ? '#effff8' : '#9ed7c6'; ctx.lineWidth = 1.8;
+          ctx.beginPath(); ctx.moveTo(gt.x, gt.y - 7); ctx.lineTo(gt.x + 7, gt.y); ctx.lineTo(gt.x, gt.y + 7); ctx.lineTo(gt.x - 7, gt.y); ctx.closePath(); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(gt.x - 13, gt.y - 22); ctx.lineTo(gt.x + 13, gt.y - 22);
+          ctx.moveTo(gt.x - 13, gt.y + 22); ctx.lineTo(gt.x + 13, gt.y + 22); ctx.stroke(); ctx.restore();
+        }
         if (gt.pattern === 'drift') {
           ctx.save(); ctx.strokeStyle = '#9ed7c65c'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 7]);
           ctx.beginPath(); ctx.moveTo(gt.x, gt.baseY - 68); ctx.lineTo(gt.x, gt.baseY + 68); ctx.stroke();
@@ -1074,12 +1227,13 @@
       ctx.restore();
       // HUD
       ctx.fillStyle = '#e9dcae'; ctx.font = HUD; ctx.textAlign = 'left';
-      ctx.fillText(`GATES ${passed} · ${passed * 120}`, 20, 28);
+      ctx.fillText(`GATES ${passed} · ${score()}`, 20, 28);
       ctx.textAlign = 'right';
       ctx.fillText(over ? (over > 0 ? 'PERIHELION REACHED' : 'LOST TO THE LIGHT') : `${Math.ceil(WIN - g.clock)}s`, W - 20, 28);
       if (veteran) {
         ctx.fillStyle = '#9ed7c6'; ctx.textAlign = 'center'; ctx.font = SMALL;
-        ctx.fillText(`VETERAN · ${routeName().toUpperCase()}`, W / 2, 28); ctx.font = HUD;
+        ctx.fillText(`VETERAN · ${routeName().toUpperCase()}`, W / 2, 28);
+        ctx.fillText(brakeTime > 0 ? `AEROBRAKE ${brakeTime.toFixed(1)}s · CORONA BANK PAUSED` : `CORONA ${corona}/3 · CENTRE THREADS CHARGE · E BRAKES`, W / 2, 48); ctx.font = HUD;
       }
       if (g.clock < 4.2 && !over) {
         ctx.globalAlpha = clamp((4.2 - g.clock) / 1.2, 0, 1);
@@ -1088,18 +1242,24 @@
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText(veteran ? 'Hold to dive · teal rails mark drifting gates · paired rings demand quick reversals' : 'Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
+      ctx.fillText(veteran ? 'Hold to dive · centre diamonds earn Corona · E / right-click brakes gates, not the timer · no charge refund while braking' : 'Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set([' ', 'w', 'arrowup']);
     listen(canvas, 'keydown', e => {
       const k = e.key.toLowerCase();
+      if (k === 'p') { syncDataset(); return; }
+      if (veteran && (k === 'e' || k === 'shift')) { e.preventDefault(); if (!e.repeat) aerobrake(); return; }
       if (!GAMEKEYS.has(k)) return;
       e.preventDefault(); keys.add(k);
     });
     listen(window, 'keyup', e => keys.delete(e.key.toLowerCase()));
-    listen(window, 'blur', () => { keys.clear(); pointerHeld = false; });
-    listen(canvas, 'pointerdown', e => { pointerHeld = true; try { canvas.setPointerCapture(e.pointerId); } catch {} });
+    listen(window, 'blur', () => { keys.clear(); pointerHeld = false; syncDataset(); });
+    listen(canvas, 'pointerdown', e => {
+      if (veteran && e.button === 2) { e.preventDefault(); pointerHeld = false; aerobrake(); return; }
+      pointerHeld = true; try { canvas.setPointerCapture(e.pointerId); } catch {}
+    });
+    listen(canvas, 'contextmenu', e => { if (veteran) e.preventDefault(); });
     listen(canvas, 'pointerup', () => { pointerHeld = false; });
     listen(canvas, 'pointercancel', () => { pointerHeld = false; });
     return g;

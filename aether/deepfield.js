@@ -27,6 +27,39 @@ window.AetherDeepField = (() => {
     return result;
   }
 
+  // Logical proofs consume only visible clues and the player's committed flags.
+  // Hidden grid values are deliberately absent from this function's inputs.
+  // Besides basic all-safe/all-mine rules, subset constraints resolve overlaps.
+  function deduce({ cols, rows, revealed = [], flagged = [], clues = {} } = {}) {
+    const open = new Set(revealed), marks = new Set(flagged), constraints = [];
+    const coordinate = p => `${String.fromCharCode(65 + p % cols)}${Math.floor(p / cols) + 1}`;
+    for (const [key, raw] of Object.entries(clues)) {
+      const index = Number(key), value = Number(raw);
+      if (!Number.isInteger(index) || !open.has(index) || !Number.isInteger(value) || value <= 0) continue;
+      const around = neighbours(index, cols, rows), hidden = around.filter(p => !open.has(p) && !marks.has(p));
+      const remaining = value - around.filter(p => marks.has(p)).length;
+      if (hidden.length && remaining >= 0 && remaining <= hidden.length) constraints.push({ cells: hidden, remaining, origin: index });
+    }
+    const safe = new Map(), mines = new Map();
+    const prove = (cells, remaining, source, against = null) => {
+      if (!cells.length || remaining < 0 || remaining > cells.length) return;
+      const basis = against ? `${coordinate(source.origin)} − ${coordinate(against.origin)}` : coordinate(source.origin);
+      if (remaining === 0) for (const p of cells) if (!mines.has(p)) safe.set(p, `${basis}: no novae remain`);
+      if (remaining === cells.length) for (const p of cells) if (!safe.has(p)) mines.set(p, `${basis}: every sector is a nova`);
+    };
+    constraints.forEach(rule => prove(rule.cells, rule.remaining, rule));
+    for (const inner of constraints) for (const outer of constraints) {
+      if (inner === outer || !inner.cells.every(p => outer.cells.includes(p))) continue;
+      const difference = outer.cells.filter(p => !inner.cells.includes(p));
+      prove(difference, outer.remaining - inner.remaining, outer, inner);
+    }
+    // Contradictory player flags can invalidate a proof. Never guess between
+    // conflicting outcomes; the next board action remains entirely the player's.
+    for (const p of [...safe.keys()]) if (mines.has(p)) { safe.delete(p); mines.delete(p); }
+    const entries = map => [...map].map(([index, reason]) => ({ index, reason })).sort((a, b) => a.index - b.index);
+    return { safe: entries(safe), mines: entries(mines) };
+  }
+
   function generate({ cols = 9, rows = 9, mines = 10, seed = 1, safeIndex = -1 } = {}) {
     cols = clamp(Math.round(cols), 5, 24); rows = clamp(Math.round(rows), 5, 24);
     const total = cols * rows;
@@ -80,10 +113,10 @@ window.AetherDeepField = (() => {
     let presetId = mode === 'trial' ? 'apprentice' : mode === 'daily' ? 'navigator' : settings.preset;
     let runSeed = Number.isInteger(options.seed) ? options.seed >>> 0 : freshSeed();
     let gameplayRandom = random(runSeed ^ 0x9e3779b9), fxRandom = random(runSeed ^ 0x51f15e);
-    let stage = 0, chartsCleared = 0, runScore = 0, totalElapsed = 0, totalHints = 0, hintBonus = 0, aegis = 0, echoOpen = false, stillpoint = false;
-    let config, grid = null, roundSeed, initialSafe = -1, revealed, flagged, questioned, cells = [];
+    let stage = 0, chartsCleared = 0, runScore = 0, totalElapsed = 0, totalHints = 0, totalProofs = 0, hintBonus = 0, aegis = 0, echoOpen = false, stillpoint = false;
+    let config, grid = null, roundSeed, initialSafe = -1, revealed, flagged, questioned, proofMarks, cells = [];
     let started = false, paused = false, roundOver = false, runEnded = false, won = false, elapsedBefore = 0, startedAt = 0;
-    let hintsLeft = 0, hintsUsed = 0, shieldsUsed = 0, stillpointReady = false, inputMode = 'reveal', cursor = 0, zoom = settings.zoom, intermissionDrafted = false, roundGeneration = 0;
+    let hintsLeft = 0, hintsUsed = 0, proofsUsed = 0, shieldsUsed = 0, stillpointReady = false, inputMode = 'reveal', cursor = 0, zoom = settings.zoom, intermissionDrafted = false, roundGeneration = 0;
     let board, status, effectLayer, pauseBadge, intermission = null, longPress = null, suppressClick = { index: -1, until: 0 };
 
     const after = (callback, delay) => {
@@ -137,6 +170,7 @@ window.AetherDeepField = (() => {
       <div class="df-tools" aria-label="Survey controls">
         <div class="df-input-mode" role="group" aria-label="Touch input mode"><button type="button" data-df-action="reveal-mode" aria-pressed="true">◎ Reveal</button><button type="button" data-df-action="flag-mode" aria-pressed="false">⚑ Flag</button></div>
         <button type="button" data-df-action="hint" title="Reveal one safe sector; reduces the time bonus">✧ Oracle <span data-df-hints></span></button>
+        ${veteran ? '<button type="button" data-df-action="proof-safe" title="Reveal a logically proven safe sector; costs one Oracle charge">∴ Safe proof <span data-df-hints></span></button><button type="button" data-df-action="proof-mine" title="Flag a logically proven nova; costs one Oracle charge">⚑ Nova proof <span data-df-hints></span></button>' : ''}
         <button type="button" data-df-action="pause" aria-pressed="false">Ⅱ Pause</button>
         <button type="button" data-df-action="sound" aria-pressed="${soundOn}">${soundOn ? 'Sound on' : 'Sound off'}</button>
         <span class="df-tool-spacer"></span>
@@ -145,7 +179,7 @@ window.AetherDeepField = (() => {
       <p class="df-status" data-df-status role="status" aria-live="polite"></p>
       <div class="df-board-frame"><div class="df-board-scroll"><div class="deepfield-grid" tabindex="0" role="group"></div></div><div class="df-effects" aria-hidden="true"></div><div class="df-paused" data-df-paused hidden><span>❚❚</span><strong>The instruments are covered.</strong><small>Press P or choose Resume.</small></div></div>
       <div class="df-round-actions"><button type="button" class="df-text-button" data-df-action="retry">↶ Retry this chart <kbd>R</kbd></button><button type="button" class="df-text-button" data-df-action="fresh">✦ New expedition</button></div>
-      <details class="df-manual"><summary>Field manual &amp; controls</summary><div><p><b>Reveal</b> every safe sector. A number counts novae in the eight neighbouring sectors. Your first reveal and its neighbours are always safe.</p><p><b>Chord:</b> when a revealed number has that many flags around it, activate the number again to reveal its other neighbours. Incorrect flags can still cost the run. The veteran Stillpoint Seal cancels one such false chord on each later chart.</p><p><b>Mouse:</b> click reveal · right-click flag / question / clear · click a number to chord.<br><b>Touch:</b> tap reveal · hold to flag · or use the Reveal / Flag mode buttons.<br><b>Keyboard:</b> arrows move · Enter / Space reveal · F flag · Q question · C chord · H oracle · T input mode · P pause · R retry.</p><p>The Oracle reveals a safe sector but lowers your score bonus. Campaign relics persist for the current expedition. Meridian permits only twelve hand-placed flags at once; recall one before moving it. Zoom never changes the underlying chart.</p></div></details>
+      <details class="df-manual"><summary>Field manual &amp; controls</summary><div><p><b>Reveal</b> every safe sector. A number counts novae in the eight neighbouring sectors. Your first reveal and its neighbours are always safe.</p><p><b>Chord:</b> when a revealed number has that many flags around it, activate the number again to reveal its other neighbours. Incorrect flags can still cost the run. The veteran Stillpoint Seal cancels one such false chord on each later chart.</p>${veteran ? '<p><b>Veteran proofs:</b> D reveals a logically proven safe sector; V flags a proven nova. Proofs use visible clues, subset logic and your flags—never hidden cells. Each spends one Oracle charge; no proof means no charge. Proof flags do not consume Meridian’s hand-flag slots.</p>' : ''}<p><b>Mouse:</b> click reveal · right-click flag / question / clear · click a number to chord.<br><b>Touch:</b> tap reveal · hold to flag · or use the Reveal / Flag mode buttons.<br><b>Keyboard:</b> arrows move · Enter / Space reveal · F flag · Q question · C chord · H oracle · T input mode · P pause · R retry.</p><p>The Oracle reveals a safe sector but lowers your score bonus. Campaign relics persist for the current expedition. Meridian permits only twelve hand-placed flags at once; recall one before moving it. Zoom never changes the underlying chart.</p></div></details>
       <p class="df-accessible-help" id="df-help">Deep Field Minesweeper. Reveal every safe sector and mark the novae. Use arrow keys to move between sectors; the field manual lists every command.</p>
     </section>`;
     board = container.querySelector('.deepfield-grid'); status = container.querySelector('[data-df-status]');
@@ -192,7 +226,7 @@ window.AetherDeepField = (() => {
       board.style.setProperty('--df', config.cols); board.style.setProperty('--df-rows', config.rows); board.style.setProperty('--df-zoom', zoom);
       container.querySelector('.df-board-scroll').style.setProperty('--df-max', config.cols);
       board.dataset.deepField = 'true'; board.dataset.difficulty = presetId; board.dataset.stage = String(stage + 1); board.dataset.seed = String(roundSeed);
-      board.dataset.mines = String(config.mines); board.dataset.gridSignature = signature(); board.dataset.mode = mode;
+      board.dataset.mines = String(config.mines); board.dataset.gridSignature = signature(); board.dataset.mode = mode; delete board.dataset.lastProof;
       board.dataset.modifier = config.flagLimit ? 'limited-flags' : 'standard'; board.dataset.flagLimit = String(config.flagLimit || 0); board.dataset.scoreMultiplier = String(config.scoreMultiplier || 1);
       board.setAttribute('aria-label', `${config.name} Deep Field: ${config.cols} columns by ${config.rows} rows, ${config.mines} novae.${config.flagLimit ? ` Only ${config.flagLimit} hand-placed flags.` : ''} Arrow keys move; Enter reveals; F flags.`);
       board.setAttribute('aria-rowcount', config.rows); board.setAttribute('aria-colcount', config.cols);
@@ -202,7 +236,7 @@ window.AetherDeepField = (() => {
         cell.dataset.cell = String(p); cell.style.setProperty('--deal', Math.min(30, p % config.cols + Math.floor(p / config.cols)));
         cell.tabIndex = p === 0 ? 0 : -1; board.appendChild(cell); return cell;
       });
-      revealed = new Set(); flagged = new Set(); questioned = new Set(); cursor = 0;
+      revealed = new Set(); flagged = new Set(); questioned = new Set(); proofMarks = new Set(); cursor = 0;
       cells.forEach((_, p) => syncCell(p));
       if (oldActive?.closest?.('.deepfield-grid') || oldActive === board) board.focus({ preventScroll: true });
       updateHUD();
@@ -217,15 +251,16 @@ window.AetherDeepField = (() => {
       container.querySelector('[data-df-safe]').textContent = `${charted} / ${safe} safe`;
       container.querySelector('[data-df-score]').textContent = Math.round(runScore).toLocaleString();
       container.querySelector('[data-df-progress]').style.width = `${progress * 100}%`;
-      container.querySelector('[data-df-hints]').textContent = `(${hintsLeft})`;
+      container.querySelectorAll('[data-df-hints]').forEach(node => { node.textContent = `(${hintsLeft})`; });
       container.querySelector('[data-df-action="hint"]').disabled = hintsLeft <= 0 || roundOver || paused;
+      container.querySelectorAll('[data-df-action="proof-safe"], [data-df-action="proof-mine"]').forEach(button => { button.disabled = hintsLeft <= 0 || roundOver || paused || !grid; });
       container.querySelector('[data-df-action="retry"]').disabled = roundOver;
       container.querySelector('[data-df-action="fresh"]').disabled = roundOver;
       container.querySelectorAll('[data-df-preset]').forEach(button => { button.disabled = roundOver; });
       container.querySelector('[data-df-mode]').textContent = mode === 'campaign' ? `CAMPAIGN · CHART ${stage + 1} / ${campaign.length}` : mode === 'daily' ? 'DAILY VIGIL · ONE SHARED SKY' : mode === 'endless' ? `ENDLESS EXPEDITION · CHART ${stage + 1}` : 'GRAND TOUR · SINGLE SURVEY';
       container.querySelector('[data-df-seed]').textContent = `SEED ${String(roundSeed).padStart(10, '0')}`;
       board.dataset.revealed = String(charted); board.dataset.flags = String(flagged.size); board.dataset.questions = String(questioned.size);
-      board.dataset.hints = String(hintsUsed); board.dataset.aegis = String(aegis); board.dataset.stillpoint = String(stillpointReady); board.dataset.score = String(Math.round(runScore));
+      board.dataset.hints = String(hintsUsed); board.dataset.proofs = String(proofsUsed); board.dataset.proofFlags = String(proofMarks?.size || 0); board.dataset.aegis = String(aegis); board.dataset.stillpoint = String(stillpointReady); board.dataset.score = String(Math.round(runScore));
       board.dataset.started = String(started); board.dataset.over = String(roundOver); board.dataset.won = String(won);
       board.dataset.gridSignature = signature(); board.dataset.paused = String(paused); board.dataset.zoom = zoom.toFixed(2);
       if (message) status.textContent = message;
@@ -271,6 +306,7 @@ window.AetherDeepField = (() => {
     }
     function mark(p, cycle = true) {
       if (roundOver || paused || revealed.has(p)) return;
+      proofMarks.delete(p);
       if (config.flagLimit && !flagged.has(p) && flagged.size >= config.flagLimit) {
         announce(`Meridian’s ${config.flagLimit} flags are all in service. Recall a flag before placing another.`); tone(160, .07, 'triangle', .025); return;
       }
@@ -301,7 +337,7 @@ window.AetherDeepField = (() => {
       burstAt(index, 'nova', 30); tone(75, .5, 'sawtooth', .07);
       finishRound(false, `A nova breaks the survey at ${String.fromCharCode(65 + index % config.cols)}${Math.floor(index / config.cols) + 1}.`);
     }
-    function reveal(start, { automatic = false, hinted = false } = {}) {
+    function reveal(start, { automatic = false, hinted = false, proof = false } = {}) {
       if (roundOver || paused || runEnded || start < 0 || start >= gridLength() || flagged.has(start)) return;
       if (revealed.has(start)) { chord(start); return; }
       if (!automatic) startClock();
@@ -313,7 +349,7 @@ window.AetherDeepField = (() => {
           if (revealed.has(index) || grid[index] < 0) continue;
           revealed.add(index); questioned.delete(index); syncCell(index);
           cells[index].style.setProperty('--wave', Math.min(14, wave));
-          if (hinted && index === start) cells[index].classList.add('oracle-revealed');
+          if (hinted && index === start) cells[index].classList.add(proof ? 'proof-revealed' : 'oracle-revealed');
         }
       };
       apply(opening);
@@ -328,7 +364,7 @@ window.AetherDeepField = (() => {
       if (opening.length) { tone(270 + Math.min(5, grid[start]) * 55, .08, 'sine', .035); burstAt(start, hinted ? 'oracle' : 'reveal', Math.min(14, 4 + opening.length)); }
       const safe = config.cols * config.rows - config.mines;
       if (revealed.size >= safe) { finishRound(true); return; }
-      updateHUD(hinted ? `The Oracle clears ${String.fromCharCode(65 + start % config.cols)}${Math.floor(start / config.cols) + 1}. ${hintsLeft} charge${hintsLeft === 1 ? '' : 's'} remain.` : `${revealed.size} / ${safe} safe sectors charted. ${config.mines - flagged.size} novae unmarked.`);
+      updateHUD(hinted ? `${proof ? 'Visible logic proves' : 'The Oracle clears'} ${String.fromCharCode(65 + start % config.cols)}${Math.floor(start / config.cols) + 1}. ${hintsLeft} charge${hintsLeft === 1 ? '' : 's'} remain.` : `${revealed.size} / ${safe} safe sectors charted. ${config.mines - flagged.size} novae unmarked.`);
     }
     function gridLength() { return config.cols * config.rows; }
     function chord(index) {
@@ -356,6 +392,25 @@ window.AetherDeepField = (() => {
       if (!candidates.length) return;
       const p = candidates[Math.floor(gameplayRandom() * candidates.length)];
       hintsLeft--; hintsUsed++; totalHints++; reveal(p, { hinted: true });
+    }
+    function proof(kind) {
+      if (!veteran || roundOver || paused || hintsLeft <= 0 || !grid || !['safe', 'mines'].includes(kind)) return;
+      const clues = {};
+      for (const p of revealed) if (grid[p] > 0) clues[p] = grid[p];
+      const inference = deduce({ cols: config.cols, rows: config.rows, revealed, flagged, clues });
+      const candidate = inference[kind][0];
+      if (!candidate) { announce(`No ${kind === 'safe' ? 'safe sector' : 'nova'} is proven by the visible clues. No charge spent.`); tone(180, .06, 'triangle', .025); return; }
+      const p = candidate.index;
+      hintsLeft--; hintsUsed++; totalHints++; proofsUsed++; totalProofs++; startClock();
+      board.dataset.lastProof = `${kind === 'safe' ? 'safe' : 'nova'}:${p}`;
+      if (kind === 'safe') {
+        reveal(p, { hinted: true, proof: true });
+        if (!roundOver) updateHUD(`${String.fromCharCode(65 + p % config.cols)}${Math.floor(p / config.cols) + 1} is proven safe · ${candidate.reason}. ${hintsLeft} charge${hintsLeft === 1 ? '' : 's'} remain.`);
+      } else {
+        flagged.add(p); questioned.delete(p); proofMarks.add(p); syncCell(p); cells[p].classList.add('proof-flag');
+        burstAt(p, 'flag', 8); tone(570, .1, 'triangle', .035);
+        updateHUD(`${String.fromCharCode(65 + p % config.cols)}${Math.floor(p / config.cols) + 1} is a proven nova · ${candidate.reason}. ${hintsLeft} charge${hintsLeft === 1 ? '' : 's'} remain.`);
+      }
     }
     function roundValue(success) {
       const safe = config.cols * config.rows - config.mines;
@@ -416,7 +471,7 @@ window.AetherDeepField = (() => {
       const generation = ++roundGeneration;
       clearHold(); container.querySelector('.df-intermission')?.remove();
       if (fresh) {
-        stage = 0; chartsCleared = 0; runScore = 0; totalElapsed = 0; totalHints = 0; hintBonus = 0; aegis = 0; echoOpen = false; stillpoint = false;
+        stage = 0; chartsCleared = 0; runScore = 0; totalElapsed = 0; totalHints = 0; totalProofs = 0; hintBonus = 0; aegis = 0; echoOpen = false; stillpoint = false;
         if (veteran && mode === 'campaign') campaign[campaign.length - 1] = 'cathedral';
         runSeed = mode === 'daily' && Number.isInteger(options.seed) ? options.seed >>> 0 : freshSeed();
       }
@@ -429,7 +484,7 @@ window.AetherDeepField = (() => {
       if (mode === 'campaign') presetId = campaign[Math.min(stage, campaign.length - 1)];
       if (!same) initialSafe = -1;
       grid = same && initialSafe >= 0 ? generate({ ...config, seed: roundSeed, safeIndex: initialSafe }).grid : null;
-      hintsLeft = config.hints; hintsUsed = 0; shieldsUsed = 0; stillpointReady = stillpoint; started = false; paused = false; roundOver = false; won = false;
+      hintsLeft = config.hints; hintsUsed = 0; proofsUsed = 0; shieldsUsed = 0; stillpointReady = stillpoint; started = false; paused = false; roundOver = false; won = false;
       elapsedBefore = 0; startedAt = 0; intermission = null; intermissionDrafted = false; inputMode = 'reveal';
       container.querySelector('.df-board-frame').classList.remove('has-result');
       board.classList.remove('is-won'); pauseBadge.hidden = true; board.inert = false;
@@ -456,7 +511,7 @@ window.AetherDeepField = (() => {
       if (destroyed || callbackFired) return;
       callbackFired = true; runEnded = true; clearHold(); abort.abort();
       timers.forEach(timer => { clearTimeout(timer); clearInterval(timer); }); timers.clear();
-      const detail = `${chartsCleared} chart${chartsCleared === 1 ? '' : 's'} sealed · ${formatTime(totalElapsed / 1000)} active time · ${totalHints} Oracle charge${totalHints === 1 ? '' : 's'} used`;
+      const detail = `${chartsCleared} chart${chartsCleared === 1 ? '' : 's'} sealed · ${formatTime(totalElapsed / 1000)} active time · ${totalHints} Oracle charge${totalHints === 1 ? '' : 's'} used${totalProofs ? ` · ${totalProofs} logical proof${totalProofs === 1 ? '' : 's'}` : ''}`;
       audio?.close().catch(() => {});
       onEnd({ won: success, score: Math.max(0, Math.round(runScore)), detail, charts: chartsCleared, time: Math.floor(totalElapsed / 1000) });
     }
@@ -480,6 +535,8 @@ window.AetherDeepField = (() => {
       const action = event.target.closest('[data-df-action]')?.dataset.dfAction; if (!action) return;
       if (roundOver && !['continue', 'sound'].includes(action)) return;
       if (action === 'hint') hint();
+      else if (action === 'proof-safe') proof('safe');
+      else if (action === 'proof-mine') proof('mines');
       else if (action === 'pause') paused ? resume() : pause();
       else if (action === 'sound') { soundOn = !soundOn; const button = container.querySelector('[data-df-action="sound"]'); button.textContent = soundOn ? 'Sound on' : 'Sound off'; button.setAttribute('aria-pressed', String(soundOn)); saveSettings(); if (soundOn) tone(440); }
       else if (action === 'reveal-mode') setInputMode('reveal');
@@ -515,6 +572,8 @@ window.AetherDeepField = (() => {
       const cell = event.target.closest('.deepfield-cell');
       if (key === 'r') { event.preventDefault(); setupRound(false, true); return; }
       if (key === 'h') { event.preventDefault(); hint(); return; }
+      if (veteran && key === 'd') { event.preventDefault(); proof('safe'); return; }
+      if (veteran && key === 'v') { event.preventDefault(); proof('mines'); return; }
       if (key === 't') { event.preventDefault(); setInputMode(inputMode === 'reveal' ? 'flag' : 'reveal'); return; }
       if (!cell) {
         if (event.key.startsWith('Arrow')) { event.preventDefault(); setCursor(cursor, true); }
@@ -544,7 +603,7 @@ window.AetherDeepField = (() => {
       canvas: board, pause, resume,
       get paused() { return paused; },
       get board() { return board; },
-      snapshot() { return { grid: grid?.slice() || null, config: { ...config }, revealed: [...revealed], flagged: [...flagged], questioned: [...questioned], seed: roundSeed, stage, chartsCleared, score: runScore, mode, stillpointReady, route: campaign[Math.min(stage, campaign.length - 1)], signature: signature() }; },
+      snapshot() { return { grid: grid?.slice() || null, config: { ...config }, revealed: [...revealed], flagged: [...flagged], questioned: [...questioned], proofMarks: [...proofMarks], hintsLeft, proofsUsed, seed: roundSeed, stage, chartsCleared, score: runScore, mode, stillpointReady, route: campaign[Math.min(stage, campaign.length - 1)], signature: signature() }; },
       destroy() {
         if (destroyed) return;
         destroyed = true; clearHold(); abort.abort();
@@ -555,5 +614,5 @@ window.AetherDeepField = (() => {
     };
   }
 
-  return { create, generate, flood, neighbours, PRESETS, CAMPAIGN };
+  return { create, generate, flood, neighbours, deduce, PRESETS, CAMPAIGN };
 })();
