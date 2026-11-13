@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none" stroke="#c7a76a" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Original illuminated-manuscript rule and lancet corners for Æther. -->
+  <g opacity=".62">
+    <rect x="7" y="7" width="786" height="586" stroke-width="1.2"/>
+    <rect x="14" y="14" width="772" height="572" stroke-width=".45"/>
+    <path d="M7 124V7h117M676 7h117v117M7 476v117h117M676 593h117V476" stroke-width="3"/>
+    <path d="M20 112V20h92M688 20h92v92M20 488v92h92M688 580h92v-92" stroke-width=".65"/>
+  </g>
+  <g opacity=".5" stroke-width=".85">
+    <path d="M22 105V56c0-14 12-25 34-36 22 11 34 22 34 36v49M30 101V58c0-10 9-19 26-29 17 10 26 19 26 29v43M56 30v71M31 65h50M34 56l44 38M78 56 34 94"/>
+    <circle cx="56" cy="53" r="12"/><path d="m56 38 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z"/>
+    <path d="M710 105V56c0-14 12-25 34-36 22 11 34 22 34 36v49M718 101V58c0-10 9-19 26-29 17 10 26 19 26 29v43M744 30v71M719 65h50M722 56l44 38M766 56l-44 38"/>
+    <circle cx="744" cy="53" r="12"/><path d="m744 38 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z"/>
+    <path d="M22 495v49c0 14 12 25 34 36 22-11 34-22 34-36v-49M30 499v43c0 10 9 19 26 29 17-10 26-19 26-29v-43M56 570v-71M31 535h50M34 544l44-38M78 544l-44-38"/>
+    <circle cx="56" cy="547" r="12"/><path d="m56 532 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z"/>
+    <path d="M710 495v49c0 14 12 25 34 36 22-11 34-22 34-36v-49M718 499v43c0 10 9 19 26 29 17-10 26-19 26-29v-43M744 570v-71M719 535h50M722 544l44-38M766 544l-44-38"/>
+    <circle cx="744" cy="547" r="12"/><path d="m744 532 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z"/>
+  </g>
+  <g fill="#c7a76a" stroke="none" opacity=".7">
+    <path d="m400 7 4 6-4 6-4-6ZM400 593l4-6-4-6-4 6ZM7 300l6-4 6 4-6 4ZM793 300l-6-4-6 4 6 4Z"/>
+    <circle cx="115" cy="7" r="1.7"/><circle cx="685" cy="7" r="1.7"/><circle cx="115" cy="593" r="1.7"/><circle cx="685" cy="593" r="1.7"/>
+  </g>
+</svg>

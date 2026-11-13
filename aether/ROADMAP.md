@@ -1,6 +1,6 @@
 # Æther Grand Tour — Development Roadmap
 
-**Build:** Cartographer's Edition, 12 November 2026
+**Build:** Cartographer's Edition, 13 November 2026
 **Status:** Playable browser prototype / substantial vertical-slice upgrade. **Not** a finished commercial £90 game.
 
 This roadmap distinguishes what is playable **today** from proposed work. It deliberately avoids treating content quantity or a high price tag as proof of quality.
@@ -10,20 +10,27 @@ This roadmap distinguishes what is playable **today** from proposed work. It del
 - A designed **Grand Tour** landing page (`grand-tour.html`) with gameplay captures, integrated with the Observatory at `index.html`.
 - Mouse-following ship controls in the Grand Tour hunt, plus keyboard movement and improved combat feedback; new arena visual treatment, enemies, progression, difficulty choices, bosses and ship/instrument variation.
 - Expanded trial roster, including **Aether Bastion** (lane-based defence with construction decisions), **Glass Labyrinth** (guard stealth and key collection), **Constellation Chain** (survival with orbiting/following weapons), and **Perihelion Run** (momentum/racing challenge). Older Grand Tour trials remain.
-- Custom gameplay artwork, dedicated trial art and polished UI/CSS overlays.
-- Cabinet of Wonders art direction with local historical engravings, bespoke icons, matching game frames, reduced-motion-aware book transitions and mechanical UI feedback.
+- A shared midnight Gothic presentation in `gothic.css`: blue/black enamel, oxblood mahogany, tarnished brass, ivory etching, pointed arches and stained glass. Original local `gothic-window.svg`, `gothic-frame.svg` and `relic-seal.svg` complement the existing historical engravings, instrument icons and layered engraved/Gothic game frames, with provenance preserved in `assets/ENGRAVINGS.md`.
 - A working research cabinet with ordered/searchable saved works, marginalia, guided study, linked journal observations and Markdown export.
 - Solution-backed Daily Charts and three-board seeded Circuits in all eight planetary puzzle rooms, with isolated resumable saves. Circuit clears unlock deterministic Eclipse masterworks; Eclipse clears unlock eight alternate-instrument charts with verified solutions under their actual new transition rules, separate drafts/records, and legacy-save migration.
-- Veteran Sky unlocks for all six flagship cartridges, with separate records and engine-specific challenge rules.
-- Expanded Veteran mechanics: the Meridian Cantor and two fourth-act refits; Bastion sappers and the Ward Loom; Labyrinth scanners and null jammer; Chain Wardens, two formation relics and a new boss braid; a Cathedral/Meridian Deep Field finale and Stillpoint Seal; and three advanced Starforge contracts including the two-vent Ember Covenant. Astral Crucible, the Cantor, and Ember Covenant are cleared through real controls in browser regressions.
-- A second Veteran mechanics layer: Reversal and Aegis Lancers; directional Bulwarks and shelter/snare Wards; investigative wall-aware Watchers; Star Cast and Mote Siphons; clue-only Safe/Nova proofs; and Starforge cooling-bus/Ember shunting.
-- Eclipse-difficulty Grand Tour Perihelion encounters with seeded drifting gates, offset pairs and precision-earned Corona aerobraking; classic routes remain unchanged.
-- Four seal-gated arcade Masterworks with separate record books, expanded by forecast anchors/Brace, Starhook/Twin Swap, Lantern Rein/Eclipse shades, and Focus Break/choir parries. New active verbs have keyboard and 48px touch/pointer paths.
-- Illustrated upgrade controls with 16px primary and 14px secondary relic copy, strong parchment/dark-surface contrast, accessible focus and contained scrolling, plus silent non-flashing score updates. Forty-six typography audits and an independent 24-scenario audit pass; earlier findings remain documented.
+- **32-stage Grand Expeditions:** four optional, deterministic, solution-backed chambers per planet after Instruments. Native mechanisms and ordered wards alter each engine, energy is shared across the run, and additive record provenance is rebuilt from contiguous verified chamber replays. Valid prefixes recover with exact prior energy; tested malformed/forged saves cannot award an unearned finale or overwrite crafted, Daily, Circuit, Eclipse or Instruments data.
+- Veteran Sky unlocks for all six flagship cartridges, with separate records and engine-specific challenge rules; standard campaign structures and unlock requirements remain intact in the tested routes.
+- Current combat systems: weapon-hit **Consonance** and **Cadenza** censers, Deacon tether objectives and the three-stage **Ossuary Bell**; **Star Cast**, **Link Lattice**, the **Black Office** and route vows; shared-Corona **Wingover**, collision-backed Ivory/Oxblood route forks and the three-stage **Solar Verger**.
+- Current premium systems: Bastion **tower actives**, Needle/Prism/Ward synergies, physical **lane crossings**, three-office sieges and the interruptible **Gilded Warden**. Glass Labyrinth adds coordinated Watchers, production-speed Meridian **doors/relays/heart**, phase-changing objectives and a traversable escape route.
+- Current Foundry systems: Deep Field **Nocturne** canticles, bounded safe rifts, recoverable seals and a three-plate visible-logic finale; **Nocturne Machina** inner-ring topology, conjoined links, Cooling/Forge/Ward buses, three phases and a correctly gated Heart Seal. Standard generators and campaign records remain separate.
+- Four arcade Masterwork finales: **Horologist**, **Binary Regent**, **Whale Choir** and the **Last Cathedral**, with their own Tune/shelves, currents/Veil/hunters, tides/banking/moths, and Litany/Censer/Focus mechanics. Essential phone HUD text is effectively 14px at 390px, with 44–48px primary touch controls. Reviewed automated Breaker clears span 160–260 simulated seconds, with 251.275 seconds in the final run; the final Regent clear succeeded on attempt 1. These are not human session-length or balance claims.
+- Illustrated upgrade controls and responsive tactical DOM readouts: 16px primary and 14px secondary relic copy, essential 14px phone HUD alternatives, strong contrast, accessible focus and contained scrolling, plus silent non-flashing score updates. Forty-six typography audits and an independent 24-scenario audit pass; earlier findings remain documented.
 - Save & Leave on every Grand Tour screen, resumable encounters, and confirmed abandonment with complete game teardown.
 - Existing Observatory, puzzles, arcade games, orchestra with sequencer, journal, progress and local-save model remain in place.
 
-The features above indicate *implementation*, not that every game has yet met a professional content or balancing standard. In particular, the new trials are initial playable versions, not fully featured multi-hour standalone releases.
+The features above indicate *implementation*, not professional content or balancing certification. Automated clears and reviewed seeds are not external human playtesting. The registered release path contains **30 Python/Chromium suites**, including the six deep combat/premium/Foundry/arcade/puzzle/Gothic suites; **all 30 passed on 13 November 2026**, as detailed below. Node is unavailable in this environment, so the checked-in Node suites remain unexecuted and current browser evidence is Chromium-only. Save compatibility claims are limited to the checked legacy, malformed, provenance and migration fixtures rather than every possible browser store.
+
+## Integrated Python verification — completed 13 November 2026
+
+- **All 30 Python/Chromium suites passed.** Independent cross-review closed combat boss/determinism/touch issues; Foundry retry/Ward/callback/pause/topology/touch-removal issues; puzzle route/save/preview/drag/provenance issues; premium production Warden/Meridian reliability; and arcade phone-HUD/Regent/Focus/shade/pacing issues.
+- Verified artifacts include **46 typography audits**, the independent **24/24 relic audit with zero defects**, **19 Gothic states and 42 screenshots**, **32 deterministic puzzle stages**, and essential **14px tactical/HUD text**. Standard fixture and tested save-migration compatibility passed within those checked paths.
+- The production **1.18× base-gadget Meridian** route passed. The final **Binary Regent** clear succeeded on **attempt 1**; the final **Last Cathedral** clear took **251.275 simulated seconds**, within the reviewed automated **160–260-second** range. These measurements do not guarantee human session length.
+- This completes the registered Python verification only. The Node command was unavailable, so Node-only suites were not executed. Results are Chromium-only; automated reviewed seeds are not external human balance certification. Physical devices, Firefox, Safari, perfection, and commercial readiness remain unclaimed.
 
 ## Prioritised next milestones
 
@@ -90,12 +97,13 @@ Avoid expanding marketing claims faster than implementation, piling on particle 
 
 ## Validation checklist for this handoff
 
-- [x] JavaScript source syntax checks performed for the premium scripts.
+- [x] Shipped JavaScript parsed and exercised in Chromium.
 - [x] Archive structure validated.
 - [x] Playable browser implementation and visual previews packaged.
-- [ ] Comprehensive regression testing of every minigame.
+- [x] Complete the 30-suite Python/Chromium regression run; all 30 passed on 13 November 2026.
+- [ ] Run the checked-in Node syntax/depth suites when a Node command is available.
 - [ ] External playtesting and balancing.
-- [ ] Documented cross-browser/mobile compatibility pass.
+- [ ] Physical-device, Firefox and Safari compatibility review.
 - [ ] Accessibility audit and controller remapping.
 - [ ] Independent validation that £90 is a viable market price.
 

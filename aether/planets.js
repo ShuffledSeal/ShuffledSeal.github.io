@@ -2,12 +2,29 @@
 
 window.AetherPlanets = (() => {
   const P=window.AetherPuzzles, notes=window.AetherPlanetNotes;
+  // Scoped here because this module owns the puzzle presentation. The layered
+  // midnight/oxblood enamel, brass rules and ivory ink stay legible in motion-
+  // reduced play and do not alter the atlas or other cartridge styles.
+  const puzzleStyle=document.createElement('style');puzzleStyle.dataset.puzzleIllumination='true';puzzleStyle.textContent=`
+    .puzzle-workbench{background:radial-gradient(ellipse at 50% 18%,#4b1c292b,transparent 58%),repeating-linear-gradient(135deg,transparent 0 17px,#c7a76605 17px 18px),#080f1c}
+    .puzzle-grid{border-color:#a8894f;box-shadow:0 0 0 3px #080d17,0 0 0 4px #6f5732,0 14px 38px #0008}
+    .puzzle-cell{border-color:#b99a5830;color:#e9dfc7}.orbital-dial{border-color:#a8894f66;color:#eadfc6}
+    .puzzle-replay-modes>.expedition-tab{display:inline-flex;align-items:center;gap:8px;border-color:#b88a7566}.expedition-tab small{color:#d2aaa4;font:14px/1.5 var(--sans);letter-spacing:.04em}.puzzle-replay-modes>.expedition-tab[aria-pressed=true] small{color:#49351f}.puzzle-replay-modes>.expedition-tab:disabled{border-style:dashed;opacity:.72;cursor:not-allowed}
+    .grand-expedition .puzzle-readout{flex-wrap:wrap}.grand-expedition .puzzle-readout>span:first-child{max-width:100%}.grand-expedition .puzzle-readout>span:last-child{white-space:normal}
+    .expedition-charter{border-color:#b5905577;border-left-color:#c6a35e;background:linear-gradient(120deg,#090f1e,#2a101c 76%,#170d18);color:#eadfc6}.expedition-charter .eyebrow{color:#d4b979}.expedition-charter strong{color:#f0d89c}
+    .expedition-stage-track{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;list-style:none;padding:0;margin:13px 0 10px;counter-reset:folio}.expedition-stage-track li{min-width:0;padding:7px 6px;border:1px solid #b99a5838;background:#070d18aa;color:#b9b6aa;font-size:12px;line-height:1.35}.expedition-stage-track li b{display:grid;place-items:center;width:22px;height:22px;margin-bottom:4px;border:1px solid #b99a5866;border-radius:50%;color:#e4c985;font:15px var(--serif)}.expedition-stage-track li span{display:block;overflow-wrap:anywhere}.expedition-stage-track li.current{border-color:#d0ae67;background:#4a1b27;color:#f1e4c8}.expedition-stage-track li.sealed{border-color:#9c8953;background:#172019;color:#e1d5b8}.expedition-stage-track li.sealed b::after{content:'✦'}.expedition-stage-track li.sealed b{font-size:0}.expedition-stage-track li.sealed b::after{font-size:13px}
+    .expedition-mechanism-readout{margin-top:8px!important;padding-top:8px;border-top:1px solid #b99a5838;color:#e2cda4!important;font:15px/1.5 var(--serif)!important}
+    .expedition-controls{display:flex;align-items:stretch;justify-content:center;flex-wrap:wrap;gap:8px;margin:18px auto 4px;max-width:580px}.expedition-controls .button{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 8px;min-width:145px;min-height:52px;padding:8px 12px;border:1px solid #b5905577;background:linear-gradient(120deg,#111c2d,#32131f);color:#f0dfbd;font:16px/1.35 var(--serif);text-align:left}.expedition-controls .button>span{grid-row:1/3;font-size:22px;color:#d9b96f}.expedition-controls .button small{display:block;color:#c5bca9;font:12px/1.4 var(--sans)}.expedition-controls .button:hover:not(:disabled){border-color:#e2c17a;background:linear-gradient(120deg,#1a2b3e,#4a1b27)}.expedition-controls .button:disabled{cursor:not-allowed;opacity:.58}.expedition-controls .button[aria-pressed=true]{border-color:#c8b477;background:#17251f;color:#eee2c5}.expedition-controls .button:focus-visible{outline:3px solid #f6d58f;outline-offset:3px}
+    .expedition-warded{outline:2px solid #b65767!important;outline-offset:-4px!important;background-image:repeating-linear-gradient(45deg,transparent 0 8px,#5c18243b 8px 10px)!important}.ring-block.expedition-warded{outline-offset:-5px!important}.ring-exit.exit-west{left:-21px;right:auto;transform:rotate(180deg)}
+    @media(max-width:650px){.puzzle-replay-modes>.expedition-tab{gap:4px}.expedition-stage-track{grid-template-columns:repeat(2,minmax(0,1fr))}.expedition-controls{display:grid;grid-template-columns:1fr;width:100%}.expedition-controls .button{min-width:0;width:100%;min-height:52px}.ring-exit.exit-west{left:-14px}}
+    @media(prefers-reduced-motion:reduce){.expedition-controls .button,.puzzle-replay-modes>.expedition-tab{transition:none}.expedition-controls .button:hover{transform:none}}
+  `;document.head.append(puzzleStyle);
   const KEY='aether-planet-puzzles-v1', ids=planets.map(p=>p.id), sessions=new Map();
   let controller, hintController, genController, current, reverse=false, painting=false, lastPaint=-1, gesture=null, ignoreClickUntil=0, observer;
   let hostHooks = {};
   const progress={records:{},drafts:{},levels:{},endless:{}};
   const REPLAY_KEY='aether-planet-replays-v1', REPLAY_VERSION=1;
-  const replayProgress={daily:{},circuits:{},eclipse:{},masterwork:{},last:{}};
+  const replayProgress={daily:{},circuits:{},eclipse:{},masterwork:{},expeditions:{},last:{}};
   try {
     const raw=JSON.parse(localStorage.getItem(REPLAY_KEY));
     if(raw?.version===REPLAY_VERSION) {
@@ -22,7 +39,12 @@ window.AetherPlanets = (() => {
         if(eclipse&&Number.isInteger(eclipse.seed)&&validActions(eclipse))replayProgress.eclipse[id]={seed:eclipse.seed>>>0,actions:eclipse.actions,hints:Number.isInteger(eclipse.hints)?Math.max(0,Math.min(999,eclipse.hints)):0,result:result(eclipse.result)};
         const masterwork=raw.masterwork?.[id];
         if(masterwork&&Number.isInteger(masterwork.seed)&&validActions(masterwork))replayProgress.masterwork[id]={seed:masterwork.seed>>>0,actions:masterwork.actions,hints:Number.isInteger(masterwork.hints)?Math.max(0,Math.min(999,masterwork.hints)):0,result:result(masterwork.result)};
-        if(['daily','circuit','eclipse','masterwork','crafted','endless'].includes(raw.last?.[id]))replayProgress.last[id]=raw.last[id];
+        const expedition=raw.expeditions?.[id];
+        if(expedition&&Number.isInteger(expedition.seed)&&Number.isInteger(expedition.stage)&&expedition.stage>=0&&expedition.stage<4) {
+          const drafts=Array.from({length:4},(_,stage)=>{const draft=expedition.drafts?.[stage];return {actions:validActions(draft)?draft.actions:[],hints:Number.isInteger(draft?.hints)?Math.max(0,Math.min(999,draft.hints)):0,result:result(draft?.result)};});
+          replayProgress.expeditions[id]={seed:expedition.seed>>>0,stage:expedition.stage,drafts,result:replayProgress.masterwork[id]?.result?result(expedition.result):null,unverifiedResult:result(expedition.unverifiedResult)||(!replayProgress.masterwork[id]?.result?result(expedition.result):null)};
+        }
+        if(['daily','circuit','eclipse','masterwork','expedition','crafted','endless'].includes(raw.last?.[id]))replayProgress.last[id]=raw.last[id];
       }
     }
   } catch { /* Replay data is isolated from all crafted/endless progress. */ }
@@ -45,6 +67,72 @@ window.AetherPlanets = (() => {
     const eclipse=replayProgress.eclipse[id];if(!eclipse?.result)return false;
     replayProgress.masterwork[id]={seed:replaySeed(`${id}:instruments:${eclipse.seed}`),actions:[],hints:0,result:null};
     return true;
+  }
+  function expeditionUnlocked(id) { return Boolean(replayProgress.masterwork[id]?.result); }
+  function unlockExpedition(id) {
+    const masterwork=replayProgress.masterwork[id];if(!masterwork?.result)return false;
+    if(replayProgress.expeditions[id])return true;
+    replayProgress.expeditions[id]={seed:replaySeed(`${id}:grand-expedition:${masterwork.seed}`),stage:0,drafts:Array.from({length:4},()=>({actions:[],hints:0,result:null})),result:null};
+    return true;
+  }
+  const instrumented=s=>['masterwork','expedition'].includes(s.mode);
+  function replayChamberResult(id,def,draft) {
+    if(!draft?.result||!draft.actions.length)return false;
+    let board=P.initial(id,def,6),moves=0;
+    for(const action of draft.actions) {
+      if(P.won(id,def,board))return false;
+      const next=P.transition(id,def,board,action);if(!next)return false;
+      moves+=P.actionCost(id,board,next);board=next;
+    }
+    const expectedStars=draft.hints?1:moves<=def.expedition.par?3:moves<=def.expedition.par*2?2:1;
+    return P.won(id,def,board)&&draft.result.moves===moves&&draft.result.hints===draft.hints&&draft.result.stars===expectedStars;
+  }
+  function replayActiveChamber(id,def,draft) {
+    if(draft.result)return false;
+    let board=P.initial(id,def,6);
+    for(const action of draft.actions) {
+      if(P.won(id,def,board))return false;
+      const next=P.transition(id,def,board,action);if(!next)return false;
+      board=next;
+    }
+    return !P.won(id,def,board);
+  }
+  function validateExpedition(id,run) {
+    const expedition=replayProgress.expeditions[id];if(!expedition)return false;
+    const before=JSON.stringify(expedition),empty=()=>({actions:[],hints:0,result:null});
+    let contiguous=0;
+    while(contiguous<4&&replayChamberResult(id,run.stages[contiguous],expedition.drafts[contiguous]))contiguous++;
+    let stage=expedition.stage;
+    const unadvanced=contiguous>0&&stage===contiguous-1;
+    if(stage!==contiguous&&!unadvanced)stage=Math.min(contiguous,3);
+    // A result at the first incomplete index failed replay validation. Clear it
+    // and every later draft rather than allowing a forged contiguous prefix.
+    if(contiguous<4&&expedition.drafts[contiguous].result)expedition.drafts[contiguous]=empty();
+    const keepThrough=unadvanced?stage:contiguous;
+    for(let i=keepThrough+1;i<4;i++)expedition.drafts[i]=empty();
+    expedition.stage=stage;
+    if(stage<4&&contiguous<4&&!unadvanced&&!replayActiveChamber(id,run.stages[stage],expedition.drafts[stage]))expedition.drafts[stage]=empty();
+    if(contiguous<4) {
+      if(expedition.result&&!expedition.unverifiedResult)expedition.unverifiedResult=expedition.result;
+      expedition.result=null;
+    } else {
+      const moves=expedition.drafts.reduce((sum,draft)=>sum+draft.result.moves,0),hints=expedition.drafts.reduce((sum,draft)=>sum+draft.result.hints,0),stars=hints?1:moves<=run.par?3:moves<=run.par*2?2:1,previous=expedition.result,derived={stars,moves,hints};
+      // Only the four replayed chambers prove an overall record. A conflicting
+      // legacy value is retained for data compatibility, but is never presented
+      // as a verified best and never participates in progression or energy.
+      if(previous&&JSON.stringify(previous)!==JSON.stringify(derived)&&!expedition.unverifiedResult)expedition.unverifiedResult=previous;
+      expedition.result=derived;
+    }
+    const changed=before!==JSON.stringify(expedition);
+    if(changed) {
+      const prefix=`${id}:expedition:${expedition.seed}:`;for(const key of sessions.keys())if(key.startsWith(prefix))sessions.delete(key);
+      saveReplay();
+    }
+    return changed;
+  }
+  function expeditionRecordComplete(id) {
+    const expedition=replayProgress.expeditions[id];
+    return Boolean(expedition?.result&&expedition.drafts.every(draft=>draft.result));
   }
   let storageOK=true;
   try {
@@ -90,9 +178,9 @@ window.AetherPlanets = (() => {
   function replaySession(id,spec) {
     const mode=spec.mode,stage=spec.stage||0,seed=spec.seed>>>0,key=`${id}:${mode}:${seed}:${stage}`;
     if(sessions.has(key))return sessions.get(key);
-    const levelDef=spec.def,difficulty=spec.difficulty??(mode==='daily'?2:['eclipse','masterwork'].includes(mode)?6:[1,3,5][stage]),board=P.initial(id,levelDef,difficulty);
-    const s={id,index:0,key,mode,round:difficulty,def:levelDef,board,initial:structuredClone(board),par:P.par(id,levelDef,board),moves:0,hints:0,actions:[],history:[],future:[],selected:0,selectedCell:-1,instrument:'primary',hintCell:-1,face:1,justDealt:true,plan:[],replay:{seed,stage,date:spec.date||null,difficulty}};
-    const draft=mode==='daily'?replayProgress.daily[id]:mode==='eclipse'?replayProgress.eclipse[id]:mode==='masterwork'?replayProgress.masterwork[id]:replayProgress.circuits[id];
+    const levelDef=spec.def,difficulty=spec.difficulty??(mode==='daily'?2:['eclipse','masterwork','expedition'].includes(mode)?6:[1,3,5][stage]),board=P.initial(id,levelDef,difficulty);
+    const s={id,index:0,key,mode,round:difficulty,def:levelDef,board,initial:structuredClone(board),par:P.par(id,levelDef,board),moves:0,hints:0,actions:[],history:[],future:[],selected:0,selectedCell:-1,instrument:'primary',hintCell:-1,face:1,justDealt:true,plan:[],replay:{seed,stage,date:spec.date||null,difficulty},expedition:spec.expedition||null};
+    const draft=mode==='daily'?replayProgress.daily[id]:mode==='eclipse'?replayProgress.eclipse[id]:mode==='masterwork'?replayProgress.masterwork[id]:mode==='expedition'?replayProgress.expeditions[id]?.drafts[stage]:replayProgress.circuits[id];
     if(draft) {
       s.hints=draft.hints||0;
       for(const action of draft.actions||[]) {
@@ -109,6 +197,7 @@ window.AetherPlanets = (() => {
     if(s.mode==='circuit')return `Circuit ${s.replay.stage+1} / 3 · difficulty ${s.replay.difficulty}`;
     if(s.mode==='eclipse')return `Eclipse masterwork · ${s.def.eclipse.name}`;
     if(s.mode==='masterwork')return `Masterwork instruments · ${s.def.masterwork.name}`;
+    if(s.mode==='expedition')return `Grand Expedition ${s.replay.stage+1} / 4 · ${s.def.expedition.name}`;
     if(s.mode==='endless')return `Endless · board ${s.round+1}`;
     return P.catalogue[s.id].levels[s.index];
   }
@@ -117,14 +206,15 @@ window.AetherPlanets = (() => {
     if(s.mode==='circuit')return `Seed ${s.replay.seed} · solution-backed generated board.`;
     if(s.mode==='eclipse')return `Seed ${s.replay.seed} · verified solution · ${s.def.eclipse.budget} ${s.def.eclipse.unit} available.`;
     if(s.mode==='masterwork')return `Seed ${s.replay.seed} · verified solution · par ${s.def.masterwork.par}${s.def.masterwork.budget?` · ${s.def.masterwork.budget} ${s.def.masterwork.unit} available`:''}.`;
+    if(s.mode==='expedition')return `Seed ${s.replay.seed} · chamber par ${s.par} · ${s.def.expedition.transformed?'transformed-core rules':'guided opening chamber'}${s.def.expedition.finale?' · finale':''}.`;
     if(s.mode==='endless')return 'A fresh solver-checked board.';
     return P.lessons[s.id][s.index];
   }
   function stash(s) {
     replayProgress.last[s.id]=s.mode;
     if(s.mode==='endless'){saveReplay();return;}
-    if(s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse'||s.mode==='masterwork') {
-      const target=s.mode==='daily'?replayProgress.daily[s.id]:s.mode==='eclipse'?replayProgress.eclipse[s.id]:s.mode==='masterwork'?replayProgress.masterwork[s.id]:replayProgress.circuits[s.id];
+    if(s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse'||s.mode==='masterwork'||s.mode==='expedition') {
+      const target=s.mode==='daily'?replayProgress.daily[s.id]:s.mode==='eclipse'?replayProgress.eclipse[s.id]:s.mode==='masterwork'?replayProgress.masterwork[s.id]:s.mode==='expedition'?replayProgress.expeditions[s.id]?.drafts[s.replay.stage]:replayProgress.circuits[s.id];
       if(!target)return;
       target.actions=s.actions.slice(0,1500);target.hints=s.hints;
       saveReplay();return;
@@ -158,49 +248,63 @@ window.AetherPlanets = (() => {
   function renderIndex() {
     return `<section class="planet-atlas-index" aria-labelledby="atlas-index-title"><header class="atlas-section-heading"><p class="eyebrow">EIGHT PLANETS / EIGHT PUZZLE ROOMS</p><h2 id="atlas-index-title">Choose a world.</h2><p>Read its field notes, then try a puzzle built around something that makes it different.</p></header><div class="atlas-card-grid">${planets.map((p,i)=>`<a class="atlas-card" href="#planet/${p.id}" style="--planet-accent:${p.color}"><span class="atlas-card-number">0${i+1} <span>${p.distance}</span></span><span class="atlas-sphere planet-sphere ${p.id}" aria-hidden="true"></span><h3>${p.name}</h3><p>${notes[p.id].heading}</p><span class="atlas-card-game">${P.catalogue[p.id].title} <span>↗</span></span><small>${P.catalogue[p.id].genre} · ${solvedCount(p.id)}/5 solved${progress.endless[p.id]?.best?` · endless ×${progress.endless[p.id].best}`:''}</small></a>`).join('')}</div></section>`;
   }
+  function expeditionPriorMoves(s) {
+    if(s.mode!=='expedition')return 0;
+    const drafts=replayProgress.expeditions[s.id]?.drafts||[];
+    return drafts.slice(0,s.replay.stage).reduce((sum,draft)=>sum+(draft.result?.moves||0),0);
+  }
   function moveLimit(s) {
+    if(s.mode==='expedition')return Math.max(0,(s.expedition?.energy??0)-expeditionPriorMoves(s));
     if(s.mode==='eclipse')return s.def.eclipse?.budget??Infinity;
     if(s.mode==='masterwork')return s.def.masterwork?.budget??Infinity;
     return s.id==='neptune'?s.par+3:Infinity;
   }
   function reserveText(s) {
     const limit=moveLimit(s),remaining=Math.max(0,limit-s.moves),queued=s.id==='jupiter'?(s.plan||[]).reduce((sum,n)=>sum+(n||0),0):0;
+    if(s.mode==='expedition')return `Shared energy ${remaining} / ${s.expedition.energy}${expeditionPriorMoves(s)?` · ${expeditionPriorMoves(s)} spent in earlier chambers`:''}${queued?` · ${queued} queued`:''}`;
     if(s.mode==='masterwork'&&!Number.isFinite(limit))return `${s.def.masterwork.name} · verified par ${s.par}`;
     return `Reserve ${remaining} / ${limit} · ${(s.mode==='masterwork'?s.def.masterwork:s.def.eclipse).unit}${queued?` · ${queued} queued`:''}`;
   }
-  function reserveSpent(s) {return ['eclipse','masterwork'].includes(s.mode)?`${s.mode==='eclipse'?'Eclipse':'Masterwork'} reserve spent. Undo a move or restart to recover it.`:'Out of fuel. Undo a leg or restart to plan a shorter route.';}
+  function reserveSpent(s) {return s.mode==='expedition'?'Shared expedition energy spent. Undo a move or restart this chamber; Reset run recovers energy overspent in earlier chambers.':['eclipse','masterwork'].includes(s.mode)?`${s.mode==='eclipse'?'Eclipse':'Masterwork'} reserve spent. Undo a move or restart to recover it.`:'Out of fuel. Undo a leg or restart to plan a shorter route.';}
   function gameShell(s) {
-    const game=P.catalogue[s.id],guideRules=s.mode==='masterwork'?s.def.masterwork.instruction:game.rules,guideDetail=s.mode==='masterwork'?s.def.masterwork.tips[0]:game.detail;
+    const game=P.catalogue[s.id],guideRules=s.mode==='expedition'?s.def.expedition.rule:s.mode==='masterwork'?s.def.masterwork.instruction:game.rules,guideDetail=s.mode==='expedition'?s.def.expedition.tips[0]:s.mode==='masterwork'?s.def.masterwork.tips[0]:game.detail;
     const tabs=game.levels.map((name,i)=>{const record=progress.records[`${s.id}:${i}`];return `<button data-puzzle-level="${i}" aria-pressed="${s.mode==='crafted'&&i===s.index}" aria-label="Level ${i+1}: ${name}${record?`, completed, ${record.stars} stars`:''}"><span>0${i+1}</span><span>${name}</span><small aria-hidden="true">${record?'✦'.repeat(record.stars):'—'}</small></button>`;}).join('')
       +`<button class="endless-tab" data-puzzle-level="endless" aria-pressed="${s.mode==='endless'}" aria-label="Endless mode${progress.endless[s.id]?.best?`, furthest: board ${progress.endless[s.id].best}`:''}"><span>∞</span><span>Endless</span><small aria-hidden="true">${progress.endless[s.id]?.best?'×'+progress.endless[s.id].best:'—'}</small></button>`;
-    const unlocked=eclipseUnlocked(s.id),seals=replayProgress.circuits[s.id]?.boards.filter(Boolean).length||0,instruments=masterworkUnlocked(s.id);
+    const unlocked=eclipseUnlocked(s.id),seals=replayProgress.circuits[s.id]?.boards.filter(Boolean).length||0,instruments=masterworkUnlocked(s.id),expedition=expeditionUnlocked(s.id);
     const eclipseLabel=unlocked?'Eclipse masterwork':'Eclipse masterwork, locked; seal all three circuit charts to unlock';
     const instrumentLabel=instruments?'Masterwork instruments':'Masterwork instruments, locked; seal this planet’s Eclipse board to unlock';
-    const replayBar=`<nav class="puzzle-replay-modes" aria-label="Puzzle replay charts"><button data-replay="crafted" aria-pressed="${s.mode==='crafted'||s.mode==='endless'}">Crafted course</button><button data-replay="daily" aria-pressed="${s.mode==='daily'}">Daily chart</button><button data-replay="circuit" aria-pressed="${s.mode==='circuit'}">Three-board circuit</button><button class="eclipse-tab" data-replay="eclipse" aria-pressed="${s.mode==='eclipse'}" aria-label="${eclipseLabel}" ${unlocked?'':'disabled'}><span>Eclipse</span><small>${unlocked?'Masterwork':`${seals} / 3 to unlock`}</small></button><button class="masterwork-tab" data-replay="masterwork" aria-pressed="${s.mode==='masterwork'}" aria-label="${instrumentLabel}" ${instruments?'':'disabled'}><span>Instruments</span><small>${instruments?'New rules':'Seal Eclipse'}</small></button>${s.mode==='circuit'?`<label class="replay-seed">Seed <input id="replay-seed" type="text" inputmode="numeric" pattern="[0-9]*" value="${s.replay.seed}" aria-label="Circuit seed" /></label><button data-replay-action="apply-seed">Deal seed</button>`:''}</nav>`;
-    const charter=s.mode==='eclipse'?`<section class="eclipse-charter" aria-label="Eclipse modifier"><div><p class="eyebrow">ECLIPSE MODIFIER / ${s.def.eclipse.name.toUpperCase()}</p><p>${s.def.eclipse.rule}</p></div><strong id="eclipse-reserve">${reserveText(s)}</strong></section>`:s.mode==='masterwork'?`<section class="eclipse-charter" aria-label="Masterwork alternate rules"><div><p class="eyebrow">MASTERWORK INSTRUMENT / ${s.def.masterwork.name.toUpperCase()}</p><p>${s.def.masterwork.rule}</p></div><strong id="eclipse-reserve">${reserveText(s)}</strong></section>`:'';
+    const expeditionLabel=expedition?'Grand Expedition, four linked chambers':'Grand Expedition, locked; seal this planet’s Instruments chart to unlock';
+    const replayBar=`<nav class="puzzle-replay-modes" aria-label="Puzzle replay charts"><button data-replay="crafted" aria-pressed="${s.mode==='crafted'||s.mode==='endless'}">Crafted course</button><button data-replay="daily" aria-pressed="${s.mode==='daily'}">Daily chart</button><button data-replay="circuit" aria-pressed="${s.mode==='circuit'}">Three-board circuit</button><button class="eclipse-tab" data-replay="eclipse" aria-pressed="${s.mode==='eclipse'}" aria-label="${eclipseLabel}" ${unlocked?'':'disabled'}><span>Eclipse</span><small>${unlocked?'Masterwork':`${seals} / 3 to unlock`}</small></button><button class="masterwork-tab" data-replay="masterwork" aria-pressed="${s.mode==='masterwork'}" aria-label="${instrumentLabel}" ${instruments?'':'disabled'}><span>Instruments</span><small>${instruments?'New rules':'Seal Eclipse'}</small></button><button class="expedition-tab" data-replay="expedition" aria-pressed="${s.mode==='expedition'}" aria-label="${expeditionLabel}" ${expedition?'':'disabled'}><span>Expedition</span><small>${expedition?'4 chambers':'Seal Instruments'}</small></button>${s.mode==='circuit'?`<label class="replay-seed">Seed <input id="replay-seed" type="text" inputmode="numeric" pattern="[0-9]*" value="${s.replay.seed}" aria-label="Circuit seed" /></label><button data-replay-action="apply-seed">Deal seed</button>`:''}</nav>`;
+    const charter=s.mode==='eclipse'?`<section class="eclipse-charter" aria-label="Eclipse modifier"><div><p class="eyebrow">ECLIPSE MODIFIER / ${s.def.eclipse.name.toUpperCase()}</p><p>${s.def.eclipse.rule}</p></div><strong id="eclipse-reserve">${reserveText(s)}</strong></section>`:s.mode==='masterwork'?`<section class="eclipse-charter" aria-label="Masterwork alternate rules"><div><p class="eyebrow">MASTERWORK INSTRUMENT / ${s.def.masterwork.name.toUpperCase()}</p><p>${s.def.masterwork.rule}</p></div><strong id="eclipse-reserve">${reserveText(s)}</strong></section>`:s.mode==='expedition'?`<section class="eclipse-charter expedition-charter" aria-label="Grand Expedition linked rules"><div><p class="eyebrow">GRAND EXPEDITION / ${s.expedition.name.toUpperCase()}</p><p>${s.def.expedition.rule}</p><ol class="expedition-stage-track" aria-label="Four expedition chambers">${s.expedition.stageNames.map((name,i)=>`<li class="${i<s.replay.stage?'sealed':i===s.replay.stage?'current':''}" aria-current="${i===s.replay.stage?'step':'false'}"><b>${i+1}</b><span>${name}</span></li>`).join('')}</ol><p class="expedition-mechanism-readout" id="expedition-mechanism">${s.def.expedition.mechanism}: position ${s.board.dial+1} / ${s.def.expedition.period} · wards ${s.board.seals.filter(Boolean).length} / ${s.board.seals.length}</p></div><strong id="eclipse-reserve">${reserveText(s)}</strong></section>`:'';
     return `${replayBar}<div class="puzzle-levels endless-strip" role="group" aria-label="Choose a puzzle level">${tabs}</div>
-      <div class="puzzle-layout${s.mode==='masterwork'?' masterwork-instruments':''}"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${sessionTitle(s)} <small class="puzzle-lesson">${sessionLesson(s)}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p>${charter}<div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button></div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
-      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${guideRules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${guideDetail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Daily charts & circuits</summary><p>Daily charts use one fixed UTC date and one solution-backed board. A circuit deals three boards at difficulties 1, 3 and 5 from a shareable seed. Replays save separately from the five handcrafted levels and endless records.</p></details><details ${['eclipse','masterwork'].includes(s.mode)?'open':''}><summary>Eclipse & masterwork instruments</summary><p>Seal all three circuit charts on this planet to unlock its original fixed Eclipse board. Seal that board to unlock a separate Instruments chart with a genuinely different instrument or topology, a verified action plan, and its own draft and best record. Both layers are optional and never replace standard play.</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?(s.mode==='masterwork'?'arrows move between moons · Enter or Space uses the selected instrument · L launches queued burns':'arrows move between moons · Enter or Space queues a burn · L launches the plan'):['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo. No timer.</p></aside></div>`;
+      <div class="puzzle-layout${instrumented(s)?' masterwork-instruments':''}${s.mode==='expedition'?' grand-expedition':''}"><div class="puzzle-workbench"><div class="puzzle-readout"><span id="puzzle-level-name">${sessionTitle(s)} <small class="puzzle-lesson">${sessionLesson(s)}</small></span><span><b id="puzzle-moves">${s.moves}</b> moves <span id="puzzle-par"></span></span></div><p id="puzzle-instruction" class="puzzle-instruction"></p>${charter}<div id="puzzle-board" class="board-wrap"></div><div id="puzzle-controls"></div><div class="puzzle-tools"><button class="button" data-puzzle="undo">↶ Undo</button><button class="button" data-puzzle="redo">↷ Redo</button><button class="button" data-puzzle="hint">Hint</button><button class="button" data-puzzle="restart">Restart</button>${s.mode==='expedition'?'<button class="button" data-puzzle="replay-expedition" title="Clear all four current chamber drafts and restart the expedition; older charts and the expedition best are preserved">Reset run</button>':''}</div><p id="puzzle-status" class="puzzle-status" role="status" aria-live="polite"></p><div id="puzzle-result" class="puzzle-result" hidden></div></div>
+      <aside class="puzzle-guide"><p class="eyebrow">HOW TO PLAY</p><h3>${game.lead}</h3><p>${guideRules}</p><p class="puzzle-legend">${game.legend}</p><details open><summary>A useful starting point</summary><p>${guideDetail}</p></details><details><summary>Why ${planets.find(p=>p.id===s.id).name}?</summary><p>${game.connection}</p></details><details><summary>Daily charts & circuits</summary><p>Daily charts use one fixed UTC date and one solution-backed board. A circuit deals three boards at difficulties 1, 3 and 5 from a shareable seed. Replays save separately from the five handcrafted levels and endless records.</p></details><details ${['eclipse','masterwork'].includes(s.mode)?'open':''}><summary>Eclipse & masterwork instruments</summary><p>Seal all three circuit charts on this planet to unlock its original fixed Eclipse board. Seal that board to unlock a separate Instruments chart with a genuinely different instrument or topology, a verified action plan, and its own draft and best record. Both layers are optional and never replace standard play.</p></details><details ${s.mode==='expedition'?'open':''}><summary>Grand Expedition · four linked chambers</summary><p>Seal Instruments to unlock this optional expedition. Three chambers and a finale combine the instrument rules with deterministic moving mechanisms and ordered wards. Every chamber has a solution-backed plan. Energy is shared across all four stages; undo and chamber restart restore energy, while earlier sealed chambers keep their actual cost. Expedition drafts and records are additive and never alter other charts.</p></details><details><summary>Endless mode</summary><p>After the five crafted boards, endless mode deals fresh, solver-checked boards that grow a little larger and busier each round. Hints still work there.</p></details><div class="puzzle-record"><span class="eyebrow">YOUR RECORD</span><p id="puzzle-best"></p><small>Three stars: at or below par, without hints. Two: within twice par, without hints. Every solved puzzle earns a star.</small></div><p class="puzzle-save-note" id="puzzle-save-note">${storageOK?'Progress saved on this device.':'Browser storage is unavailable. Progress is kept for this visit.'}</p><p class="puzzle-keyboard">Keyboard: ${s.id==='jupiter'?(instrumented(s)?'arrows move between moons · Enter or Space uses the selected instrument · L launches queued burns':'arrows move between moons · Enter or Space queues a burn · L launches the plan'):['mercury','venus','earth'].includes(s.id)?'arrows to move focus, Enter or Space to play':'arrow keys to move, or swipe'} · Z undo · Y redo${s.mode==='expedition'?' · C turns the mechanism · 1 / 2 opens an aligned ward':''}. No timer.</p></aside></div>`;
   }
   function instrumentControls(s,items) {
-    if(s.mode!=='masterwork')return '';
+    if(!instrumented(s))return '';
     return `<div class="burn-plan instrument-picker" role="group" aria-label="Choose puzzle instrument"><span class="burn-plan-title">Instrument</span>${items.map(([value,label,disabled=false])=>`<button class="button ${s.instrument===value?'button-primary':''}" data-puzzle-instrument="${value}" aria-pressed="${s.instrument===value}" ${disabled?'disabled':''}>${label}</button>`).join('')}</div>`;
   }
+  function expeditionControls(s) {
+    if(s.mode!=='expedition')return '';
+    const exp=s.def.expedition;
+    return `<div class="expedition-controls" role="group" aria-label="Expedition mechanism and ordered wards"><button class="button expedition-cycle" data-puzzle-mechanism="cycle" aria-label="${exp.cycleLabel}. Current position ${s.board.dial+1} of ${exp.period}. Keyboard C"><span>✥</span> ${exp.cycleLabel} <small>C · ${s.board.dial+1}/${exp.period}</small></button>${exp.seals.map((seal,i)=>{const open=s.board.seals[i],aligned=s.board.dial===seal.at,available=i===0||s.board.seals[i-1];return `<button class="button expedition-seal" data-puzzle-mechanism="${i}" aria-label="${exp.sealName} ${i+1}, ${open?'open':aligned?'aligned and ready':`requires position ${seal.at+1}`}. Keyboard ${i+1}" ${open||!aligned||!available?'disabled':''} aria-pressed="${open}"><span>${open?'✦':'⚿'}</span> ${exp.sealName} ${i+1}<small>${open?'Opened':`Ward at ${seal.at+1} · key ${i+1}`}</small></button>`;}).join('')}</div>`;
+  }
   function controls(s) {
-    if(s.id==='mercury')return instrumentControls(s,[['primary','✚ Cross'],['diagonal','◇ Prism']]);
-    if(s.id==='venus')return s.mode==='masterwork'?instrumentControls(s,[['primary','↷ Turn'],['mirror','↔ Mirror']]):`<button class="button rotation-toggle" data-puzzle="reverse" aria-pressed="${reverse}">${reverse?'↶ Turn anticlockwise':'↷ Turn clockwise'}</button>`;
+    if(s.id==='mercury')return expeditionControls(s)+instrumentControls(s,[['primary','✚ Cross'],['diagonal','◇ Prism']]);
+    if(s.id==='venus')return expeditionControls(s)+(instrumented(s)?instrumentControls(s,[['primary','↷ Turn'],['mirror','↔ Mirror']]):`<button class="button rotation-toggle" data-puzzle="reverse" aria-pressed="${reverse}">${reverse?'↶ Turn anticlockwise':'↷ Turn clockwise'}</button>`);
     if(s.id==='jupiter') {
       const total=(s.plan||[]).reduce((a,c)=>a+(c||0),0);
       const chips=P.moonNames.slice(0,s.def.count).map((moon,i)=>{
         const c=s.plan[i]||0;
         return `<span class="burn-chip ${c?'':'empty'}"><b>${moon}</b> ×${c}<button data-puzzle-unburn="${i}" aria-label="Remove one queued ${moon} burn" ${c?'':'disabled'}>−</button></span>`;
       }).join('');
-      return instrumentControls(s,[['primary','Queue burn'],['swap','⇄ Exchange']])+`<div class="burn-plan" role="group" aria-label="Queued burn plan"><span class="burn-plan-title">Burn plan</span>${chips}<button class="button button-primary" data-puzzle="launch" ${total?'':'disabled'}>Launch plan · ${total} burn${total===1?'':'s'}</button><button class="button" data-puzzle="clear-plan" ${total?'':'disabled'}>Clear plan</button></div>`;
+      return expeditionControls(s)+instrumentControls(s,[['primary','Queue burn'],['swap','⇄ Exchange']])+`<div class="burn-plan" role="group" aria-label="Queued burn plan"><span class="burn-plan-title">Burn plan</span>${chips}<button class="button button-primary" data-puzzle="launch" ${total?'':'disabled'}>Launch plan · ${total} burn${total===1?'':'s'}</button><button class="button" data-puzzle="clear-plan" ${total?'':'disabled'}>Clear plan</button></div>`;
     }
+    if(s.id==='earth')return expeditionControls(s);
     if(!['mars','saturn','uranus','neptune'].includes(s.id))return '';
     const picker=s.id==='mars'?instrumentControls(s,[['primary','Push / walk'],['winch',`Winch · ${s.board.winches??0} left`,!s.board.winches]]):s.id==='uranus'?instrumentControls(s,[['primary','Tilt all'],['anchor','Anchor selected',s.selectedCell<0]]):s.id==='neptune'?instrumentControls(s,[['primary','Wind ride'],['pulse','1-square Pulse']]):'';
-    const rotate=s.mode==='masterwork'&&s.id==='saturn'?`<div class="burn-plan"><button class="button" data-puzzle="rotate-block" ${s.selected>0&&s.def.blocks[s.selected]?.len===3?'':'disabled'}>↻ Rotate selected 90°</button></div>`:'';
-    return picker+rotate+`<div class="puzzle-direction-pad" role="group" aria-label="${s.id==='uranus'?'Tilt direction':'Movement controls'}">${[3,0,2,1].map(d=>`<button class="button" data-puzzle-direction="${d}" aria-label="${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[d]}">${['↑','→','↓','←'][d]}</button>`).join('')}<span>${s.id==='saturn'?`Selected: ${s.selected===0?'probe P':`block ${s.selected}`}`:s.id==='uranus'?(s.instrument==='anchor'?'Selected capsule stays fixed':'All capsules move together'):s.id==='neptune'?`${Number.isFinite(moveLimit(s))?Math.max(0,moveLimit(s)-s.moves):'∞'} fuel charges`:'Move the rover'}</span></div>`;
+    const rotate=instrumented(s)&&s.id==='saturn'?`<div class="burn-plan"><button class="button" data-puzzle="rotate-block" ${s.selected>0&&s.def.blocks[s.selected]?.len===3?'':'disabled'}>↻ Rotate selected 90°</button></div>`:'';
+    return expeditionControls(s)+picker+rotate+`<div class="puzzle-direction-pad" role="group" aria-label="${s.id==='uranus'?'Tilt direction':'Movement controls'}">${[3,0,2,1].map(d=>`<button class="button" data-puzzle-direction="${d}" aria-label="${s.id==='uranus'?'Tilt':'Move'} ${P.directionNames[d]}">${['↑','→','↓','←'][d]}</button>`).join('')}<span>${s.id==='saturn'?`Selected: ${s.selected===0?'probe P':`block ${s.selected}`}`:s.id==='uranus'?(s.instrument==='anchor'?'Selected capsule stays fixed':'All capsules move together'):s.id==='neptune'?`${Number.isFinite(moveLimit(s))?Math.max(0,moveLimit(s)-s.moves):'∞'} fuel charges`:'Move the rover'}</span></div>`;
   }
   function glidePiece(el,x,y,animate) {
     const oldX=Number(el.dataset.x??x),oldY=Number(el.dataset.y??y),moving=animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&(oldX!==x||oldY!==y);
@@ -232,8 +336,10 @@ window.AetherPlanets = (() => {
       layer.querySelectorAll('.ring-block').forEach((el,i)=>{
         const b=s.def.blocks[i],{axis,x,y}=P.blockGeometry(s.def,s.board,i);
         glidePiece(el,x,y,animate);el.style.setProperty('--w',axis==='h'?b.len:1);el.style.setProperty('--h',axis==='v'?b.len:1);
-        el.querySelector('small').textContent=axis==='h'?'↔':'↕';el.setAttribute('aria-label',`${i===0?'Probe P':`Block ${i}`} · ${axis==='h'?'horizontal':'vertical'}`);
+        el.querySelector('small').textContent=axis==='h'?'↔':'↕';
         el.classList.toggle('selected',s.selected===i);el.classList.toggle('hinted',s.hintCell===i);
+        const ward=s.def.expedition?s.def.expedition.seals.findIndex(seal=>seal.targets.includes(i)):-1,warded=ward>=0&&!s.board.seals[ward];el.classList.toggle('expedition-warded',warded);
+        el.setAttribute('aria-label',`${i===0?'Probe P':`Block ${i}`} · ${axis==='h'?'horizontal':'vertical'}${warded?` · sealed by ward ${ward+1}`:''}`);
         el.setAttribute('aria-pressed',String(s.selected===i));
       });
       return;
@@ -255,7 +361,7 @@ window.AetherPlanets = (() => {
     const active=document.activeElement;
     let focus=focusSelector;
     if(!focus && active?.closest('#planet-game')) {
-      const key=['puzzleCell','puzzleMoon','puzzleBlock','puzzleDirection','puzzleUnburn','puzzleInstrument','puzzle','puzzleLevel'].find(key=>active.dataset[key]!==undefined);
+      const key=['puzzleCell','puzzleMoon','puzzleBlock','puzzleDirection','puzzleUnburn','puzzleInstrument','puzzleMechanism','puzzle','puzzleLevel'].find(key=>active.dataset[key]!==undefined);
       if(key)focus=`[data-${key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${active.dataset[key]}"]`;
     }
     const won=P.won(s.id,s.def,s.board);
@@ -271,28 +377,43 @@ window.AetherPlanets = (() => {
     const guide=document.querySelector('#puzzle-instruction');if(guide)guide.textContent=P.instruction(s.id,s.def,s.board);
     document.querySelector('#puzzle-controls').innerHTML=controls(s);
     const reserve=document.querySelector('#eclipse-reserve');if(reserve)reserve.textContent=reserveText(s);
+    const mechanism=document.querySelector('#expedition-mechanism');if(mechanism)mechanism.textContent=`${s.def.expedition.mechanism}: position ${s.board.dial+1} / ${s.def.expedition.period} · wards ${s.board.seals.filter(Boolean).length} / ${s.board.seals.length}`;
     const eclipseTab=document.querySelector('.eclipse-tab');if(eclipseTab){const open=eclipseUnlocked(s.id),seals=replayProgress.circuits[s.id]?.boards.filter(Boolean).length||0;eclipseTab.disabled=!open;eclipseTab.setAttribute('aria-label',open?'Eclipse masterwork':'Eclipse masterwork, locked; seal all three circuit charts to unlock');const small=eclipseTab.querySelector('small');if(small)small.textContent=open?'Masterwork':`${seals} / 3 to unlock`;}
     const masterworkTab=document.querySelector('.masterwork-tab');if(masterworkTab){const open=masterworkUnlocked(s.id);masterworkTab.disabled=!open;masterworkTab.setAttribute('aria-label',open?'Masterwork instruments':'Masterwork instruments, locked; seal this planet’s Eclipse board to unlock');const small=masterworkTab.querySelector('small');if(small)small.textContent=open?'New rules':'Seal Eclipse';}
+    const expeditionTab=document.querySelector('.expedition-tab');if(expeditionTab){const open=expeditionUnlocked(s.id);expeditionTab.disabled=!open;expeditionTab.setAttribute('aria-label',open?'Grand Expedition, four linked chambers':'Grand Expedition, locked; seal this planet’s Instruments chart to unlock');const small=expeditionTab.querySelector('small');if(small)small.textContent=open?'4 chambers':'Seal Instruments';}
     document.querySelector('#puzzle-moves').textContent=s.moves;
     document.querySelector('#puzzle-par').textContent=s.par===null?'':` / par ${s.par}`;
     document.querySelector('[data-puzzle="undo"]').disabled=!s.history.length;
     document.querySelector('[data-puzzle="redo"]').disabled=!s.future.length;
     document.querySelector('[data-puzzle="hint"]').disabled=won;
-    const replayRecord=s.mode==='daily'?replayProgress.daily[s.id]?.result:s.mode==='eclipse'?replayProgress.eclipse[s.id]?.result:s.mode==='masterwork'?replayProgress.masterwork[s.id]?.result:s.mode==='circuit'?replayProgress.circuits[s.id]?.result:null;
-    const record=s.mode==='endless'||s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse'||s.mode==='masterwork'?replayRecord:progress.records[s.key];
+    const replayRecord=s.mode==='daily'?replayProgress.daily[s.id]?.result:s.mode==='eclipse'?replayProgress.eclipse[s.id]?.result:s.mode==='masterwork'?replayProgress.masterwork[s.id]?.result:s.mode==='expedition'?replayProgress.expeditions[s.id]?.result:s.mode==='circuit'?replayProgress.circuits[s.id]?.result:null;
+    const record=s.mode==='endless'||s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse'||s.mode==='masterwork'||s.mode==='expedition'?replayRecord:progress.records[s.key];
     document.querySelector('#puzzle-best').textContent=s.mode==='endless'
       ? `Endless: ${progress.endless[s.id]?.best||0} boards cleared`
       : s.mode==='eclipse'?`Eclipse: ${record?`${'✦'.repeat(record.stars)} · best ${record.moves} moves`:'not sealed yet'}`
       : s.mode==='masterwork'?`Instruments: ${record?`${'✦'.repeat(record.stars)} · best ${record.moves} moves`:'not sealed yet'}`
+      : s.mode==='expedition'?`Expedition: ${record?`${'✦'.repeat(record.stars)} · best ${record.moves} energy`:`${replayProgress.expeditions[s.id]?.drafts.filter(draft=>draft.result).length||0} / 4 chambers sealed`}`
       : s.mode==='circuit'?`Circuit: ${replayProgress.circuits[s.id]?.boards.length||0} / 3 charts sealed${record?` · this chart ${record.moves} moves`:''}`
       : record?`${'✦'.repeat(record.stars)} · Best: ${record.moves} moves`:'Not solved yet.';
     document.querySelector('#puzzle-status').textContent=message||P.progress(s.id,s.def,s.board);
     const result=document.querySelector('#puzzle-result');
     result.hidden=!won;
-    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='daily'||s.mode==='circuit'?'Chart sealed.':s.mode==='eclipse'?'Eclipse sealed.':s.mode==='masterwork'?'Masterwork sealed.':s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${resultHTML(s)}`;
-    if(focus)document.querySelector(focus)?.focus({preventScroll:true});
+    if(won)result.innerHTML=`<p class="eyebrow">SURVEY COMPLETE</p><h3 id="puzzle-result-title" tabindex="-1">${s.hosted?'Survey complete.':s.mode==='daily'||s.mode==='circuit'?'Chart sealed.':s.mode==='eclipse'?'Eclipse sealed.':s.mode==='masterwork'?'Masterwork sealed.':s.mode==='expedition'?(s.replay.stage===3?(expeditionRecordComplete(s.id)?'Grand Expedition sealed.':'Finale board sealed · run incomplete.'):`Chamber ${s.replay.stage+1} sealed.`):s.mode==='endless'?'Board cleared.':s.index===4?'All the way through.':'Route resolved.'}</h3><p>${s.moves} moves · ${s.hints?s.hints+' hints used':'No hints'}${s.par===null?'':` · Par ${s.par}`}</p>${resultHTML(s)}`;
+    if(focus){const target=document.querySelector(focus);if(target&&!target.disabled)target.focus({preventScroll:true});else if(s.mode==='expedition')document.querySelector('.expedition-cycle')?.focus({preventScroll:true});}
   }
   function recordWin(s) {
+    if(s.mode==='expedition') {
+      const expedition=replayProgress.expeditions[s.id],draft=expedition?.drafts[s.replay.stage];if(!draft)return;
+      const stars=s.hints?1:s.moves<=s.par?3:s.moves<=s.par*2?2:1;
+      draft.result={stars,moves:s.moves,hints:s.hints};
+      if(s.replay.stage===3) {
+        if(expedition.drafts.every(stage=>stage.result)) {
+          const moves=expedition.drafts.reduce((sum,stage)=>sum+stage.result.moves,0),hints=expedition.drafts.reduce((sum,stage)=>sum+stage.result.hints,0),finalStars=hints?1:moves<=s.expedition.par?3:moves<=s.expedition.par*2?2:1,previous=expedition.result;
+          expedition.result={stars:Math.max(finalStars,previous?.stars||0),moves:Math.min(moves,previous?.moves??Infinity),hints};
+        } else expedition.result=null;
+      }
+      saveReplay();return;
+    }
     if(s.mode==='daily'||s.mode==='circuit'||s.mode==='eclipse'||s.mode==='masterwork') {
       const stars=s.hints?1:s.moves<=(s.par??Infinity)?3:s.moves<=(s.par??Infinity)*2?2:1;
       const target=s.mode==='daily'?replayProgress.daily[s.id]:s.mode==='eclipse'?replayProgress.eclipse[s.id]:s.mode==='masterwork'?replayProgress.masterwork[s.id]:replayProgress.circuits[s.id];if(!target)return;
@@ -304,6 +425,7 @@ window.AetherPlanets = (() => {
         unlockEclipse(s.id);
       }
       if(s.mode==='eclipse')unlockMasterwork(s.id);
+      if(s.mode==='masterwork')unlockExpedition(s.id);
       saveReplay();return;
     }
     if(s.mode==='endless') {
@@ -329,7 +451,12 @@ window.AetherPlanets = (() => {
       return `<div><button class="button button-primary" data-puzzle="next-replay">Next circuit chart →</button><button class="button" data-puzzle="replay-this">Replay this chart</button></div>`;
     }
     if(s.mode==='eclipse')return '<p class="eclipse-complete">Eclipse record saved separately from the circuit. Masterwork instruments unlocked.</p><div><button class="button button-primary" data-replay="masterwork">Play new-rules instruments →</button><button class="button" data-puzzle="replay">Replay Eclipse board</button><button class="button" data-replay="circuit">Return to the circuit</button><button class="button" data-replay="crafted">Return to the course</button></div>';
-    if(s.mode==='masterwork')return '<p class="eclipse-complete">Instrument record and draft saved separately from Eclipse and the circuit.</p><div><button class="button button-primary" data-puzzle="replay">Replay instrument chart</button><button class="button" data-replay="eclipse">Return to Eclipse</button><button class="button" data-replay="crafted">Return to the course</button></div>';
+    if(s.mode==='masterwork')return '<p class="eclipse-complete">Instrument record saved separately. The four-chamber Grand Expedition is now unlocked.</p><div><button class="button button-primary" data-replay="expedition">Begin Grand Expedition →</button><button class="button" data-puzzle="replay">Replay instrument chart</button><button class="button" data-replay="eclipse">Return to Eclipse</button><button class="button" data-replay="crafted">Return to the course</button></div>';
+    if(s.mode==='expedition') {
+      if(s.replay.stage<3)return `<p class="eclipse-complete">Chamber ${s.replay.stage+1} sealed with ${s.moves} energy. Its cost carries into the shared expedition reserve; the next chamber has a new deterministic layout.</p><div><button class="button button-primary" data-puzzle="next-expedition">Enter chamber ${s.replay.stage+2} / 4 →</button><button class="button" data-puzzle="replay">Replay this chamber</button><button class="button" data-replay="crafted">Leave for the course</button></div>`;
+      const expedition=replayProgress.expeditions[s.id],moves=expedition.drafts.reduce((sum,stage)=>sum+(stage.result?.moves||0),0),complete=expeditionRecordComplete(s.id);
+      return complete?`<p class="eclipse-complete">All four chambers and the finale are sealed · ${moves} shared energy spent. The expedition best is saved separately from Instruments, Eclipse, Circuit and crafted play.</p><div><button class="button button-primary" data-puzzle="replay-expedition">Replay the expedition</button><button class="button" data-replay="masterwork">Return to Instruments</button><button class="button" data-replay="crafted">Return to the course</button></div>`:`<p class="eclipse-complete">The finale board is sealed, but the expedition is incomplete: an earlier chamber record is missing or failed replay validation. No four-chamber record was awarded.</p><div><button class="button button-primary" data-puzzle="replay-expedition">Restart from chamber 1</button><button class="button" data-replay="crafted">Return to the course</button></div>`;
+    }
     if(s.mode==='endless')return '<div><button class="button button-primary" data-puzzle="next-round">Next board →</button><a class="button" href="#planet/'+ids[(ids.indexOf(s.id)+1)%8]+'">Try '+planets[(ids.indexOf(s.id)+1)%8].name+'’s puzzle ↗</a></div>';
     return `<div><button class="button button-primary" data-puzzle="${s.index<4?'next':'replay'}">${s.index<4?'Next level →':'Replay this level'}</button><a class="button" href="#planet/${ids[(ids.indexOf(s.id)+1)%8]}">Try ${planets[(ids.indexOf(s.id)+1)%8].name}’s puzzle ↗</a></div>`;
   }
@@ -338,7 +465,7 @@ window.AetherPlanets = (() => {
     if(s.actions.length>=1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
     if(s.moves>=moveLimit(s)) {paint(reserveSpent(s));return;}
     const before=s.board, next=P.transition(s.id,s.def,s.board,action);
-    if(!next) {s.blocked=true;paint(action.type==='move'||action.type==='block'?'That direction is blocked. Try another direction or undo.':'That piece is fixed in this configuration. Try another instrument.');return;}
+    if(!next) {s.blocked=true;paint(action.type==='mechanism'?'That ward is not aligned, is already open, or must wait for the previous ward. Turn the mechanism and read its inscription.':action.type==='move'||action.type==='block'?'That action is blocked by terrain or an expedition ward. Try another direction, open its ward, or undo.':'That piece is fixed or warded in this configuration. Try another instrument or align its ward.');return;}
     const cost=P.actionCost(s.id,before,next);if(s.moves+cost>moveLimit(s)){paint(reserveSpent(s));return;}
     hintController?.abort();s.hintCell=-1;
     s.history.push({board:before,moves:s.moves,action});s.actions.push(action);s.future=[];
@@ -351,17 +478,19 @@ window.AetherPlanets = (() => {
     if(won) { recordWin(s); if(s.hosted) hostHooks.onSolve?.({moves:s.moves,hints:s.hints,par:s.par}); }
     stash(s);
     let message=won?null:P.explainAction(s.id,s.def,before,action,s.board);
-    if(!won && s.moves>=moveLimit(s))message=['eclipse','masterwork'].includes(s.mode)?reserveSpent(s):'Out of fuel. Undo a leg or restart to try a shorter route.';
+    if(!won && s.moves>=moveLimit(s))message=['eclipse','masterwork','expedition'].includes(s.mode)?reserveSpent(s):'Out of fuel. Undo a leg or restart to try a shorter route.';
     if(s.id==='mars' && s.def.masterwork?.mechanic!=='winch' && s.board.crates.some(p=>!s.def.goals.includes(p) && [0,2].some(d=>s.def.walls.includes(P.neighbour(p,d,s.def.n))) && [1,3].some(d=>s.def.walls.includes(P.neighbour(p,d,s.def.n)))))message='A canister is trapped in a corner. Undo to recover it.';
     paint(won?'Puzzle solved. Your record has been saved.':message);
     if(won){painting=false;document.querySelector('#puzzle-result-title')?.focus({preventScroll:true});}
   }
   function queueBurn(i) {
     const s=current;if(!s||s.id!=='jupiter'||P.won(s.id,s.def,s.board))return;
-    if(s.mode==='masterwork'&&s.instrument==='swap'){act({type:'moon',value:i,instrument:'swap'});return;}
+    if(instrumented(s)&&s.instrument==='swap'){act({type:'moon',value:i,instrument:'swap'});return;}
     const queued=(s.plan||[]).reduce((sum,n)=>sum+(n||0),0),remaining=moveLimit(s)-s.moves;
     if(queued>=remaining){paint(remaining>0?`Only ${remaining} burns remain in this Eclipse reserve.` :reserveSpent(s));return;}
-    s.plan[i]=(s.plan[i]||0)+1;s.changed=new Set([i]);
+    const candidate=[...s.plan];candidate[i]=(candidate[i]||0)+1;const preview=P.orbitPlan(s.def,s.board,candidate);
+    if(!preview.valid){const moon=P.moonNames[preview.invalidAction?.value??i];paint(`That queued burn on ${moon} is blocked by a resonance ward. Open the ward or remove that burn; your existing plan is unchanged.`);return;}
+    s.plan=candidate;s.changed=new Set([i]);
     paint();
   }
   function launchPlan() {
@@ -373,7 +502,9 @@ window.AetherPlanets = (() => {
     if(s.actions.length+total>1500) {paint('This draft has reached its move limit. Undo or restart to continue.');return;}
     // Each queued burn is committed as its own action, so undo steps back one
     // burn at a time and saved drafts keep the same plain action format.
-    const {actions}=P.orbitPlan(s.def,s.board,counts),phasesBefore=s.board.phases.slice();
+    const preview=P.orbitPlan(s.def,s.board,counts);
+    if(!preview.valid){const moon=P.moonNames[preview.invalidAction?.value??0];paint(`Launch blocked: the queued burn on ${moon} is warded. Open its ward or remove that burn. No burns were committed.`);return;}
+    const {actions}=preview,phasesBefore=s.board.phases.slice();
     hintController?.abort();s.hintCell=-1;s.future=[];
     for(const action of actions) {
       const next=P.transition(s.id,s.def,s.board,action);if(!next)break;
@@ -395,9 +526,9 @@ window.AetherPlanets = (() => {
       else paint(`This block moves ${axis==='h'?'left or right':'up or down'} only. Rotate a three-square block to change its axis.`);
     } else {
       const action={type:'move',value:d};
-      if(current.mode==='masterwork'&&current.id==='mars'&&current.instrument==='winch')action.instrument='winch';
-      if(current.mode==='masterwork'&&current.id==='neptune'&&current.instrument==='pulse')action.instrument='pulse';
-      if(current.mode==='masterwork'&&current.id==='uranus'&&current.instrument==='anchor') {
+      if(instrumented(current)&&current.id==='mars'&&current.instrument==='winch')action.instrument='winch';
+      if(instrumented(current)&&current.id==='neptune'&&current.instrument==='pulse')action.instrument='pulse';
+      if(instrumented(current)&&current.id==='uranus'&&current.instrument==='anchor') {
         if(!current.board.balls.includes(current.selectedCell)){paint('Select a capsule on the board before anchoring a tilt.');return;}action.anchor=current.selectedCell;
       }
       act(action);
@@ -439,6 +570,15 @@ window.AetherPlanets = (() => {
     } else if(mode==='masterwork') {
       if(!unlockMasterwork(id)){paint('Seal this planet’s Eclipse board to unlock its new-rules instrument chart.');return;}
       spec={mode,seed:replayProgress.masterwork[id].seed,stage:0,difficulty:6};
+    } else if(mode==='expedition') {
+      if(!unlockExpedition(id)){paint('Seal this planet’s Instruments chart to unlock its four-chamber Grand Expedition.');return;}
+      const expedition=replayProgress.expeditions[id];
+      if(advance) {
+        if(current.mode!=='expedition'||!P.won(current.id,current.def,current.board)||expedition.stage>=3){paint('Seal the current chamber before entering the next.');return;}
+        if(!expedition.drafts.slice(0,expedition.stage).every(draft=>draft.result)){paint('An earlier chamber record is missing. Return to the earliest unfinished chamber before advancing.');return;}
+        expedition.stage=Math.min(3,expedition.stage+1);
+      }
+      spec={mode,seed:expedition.seed,stage:expedition.stage,difficulty:6};
     } else {
       const old=replayProgress.circuits[id];
       if(seed!==null)spec={mode,seed:seed>>>0,stage:0,difficulty:1};
@@ -449,33 +589,36 @@ window.AetherPlanets = (() => {
     }
     replayProgress.last[id]=mode;saveReplay();
     const host=document.querySelector('#planet-game');if(host)host.inert=true;
-    const board=document.querySelector('#puzzle-board');if(board)board.innerHTML=`<p class="puzzle-loading" role="status">Charting ${mode==='daily'?'today’s firmament':mode==='eclipse'?'the Eclipse masterwork':mode==='masterwork'?'new-rules instruments':`circuit seed ${spec.seed}`}…</p>`;
-    const def=mode==='eclipse'?await P.eclipse(id,spec.seed,signal):mode==='masterwork'?await P.masterwork(id,spec.seed,signal):await P.replay(id,spec.seed,spec.difficulty,signal);
+    const board=document.querySelector('#puzzle-board');if(board)board.innerHTML=`<p class="puzzle-loading" role="status">Charting ${mode==='daily'?'today’s firmament':mode==='eclipse'?'the Eclipse masterwork':mode==='masterwork'?'new-rules instruments':mode==='expedition'?`Grand Expedition chamber ${spec.stage+1} of 4`:`circuit seed ${spec.seed}`}…</p>`;
+    let def,run=null;
+    if(mode==='expedition') {run=await P.expedition(id,spec.seed,signal);if(run){validateExpedition(id,run);spec.stage=replayProgress.expeditions[id].stage;def=run.stages[spec.stage];}}
+    else def=mode==='eclipse'?await P.eclipse(id,spec.seed,signal):mode==='masterwork'?await P.masterwork(id,spec.seed,signal):await P.replay(id,spec.seed,spec.difficulty,signal);
     if(signal.aborted||!current||current.id!==id)return;
     if(host)host.inert=false;
     if(!def) {
       if(board)board.innerHTML='<div class="puzzle-generation-error"><h3>The chart resisted resolution.</h3><p>No verified board arrived within the work limit. Your crafted progress is untouched.</p><button class="button" data-replay-action="retry">Try the chart again</button></div>';
       return;
     }
-    current=session(id,{...spec,def});stash(current);
+    const expedition=run?{name:run.name,energy:run.energy,par:run.par,stageNames:run.stages.map(stage=>stage.expedition.name)}:null;
+    current=session(id,{...spec,def,expedition});stash(current);
     if(host)host.innerHTML=gameShell(current);paint();
     document.querySelector(`[data-replay="${mode}"]`)?.focus({preventScroll:true});
   }
   async function hint() {
     const s=current;hintController?.abort();hintController=new AbortController();const signal=hintController.signal;
-    const tips=s.mode==='masterwork'?s.def.masterwork.tips:P.hintTips[s.id];
-    if(s.hints<tips.length) {
+    const tips=s.mode==='expedition'?s.def.expedition.tips:s.mode==='masterwork'?s.def.masterwork.tips:P.hintTips[s.id];
+    if(s.mode!=='expedition'&&s.hints<tips.length) {
       s.hints++;stash(s);paint(`Hint ${s.hints}: ${tips[s.hints-1]}`);return;
     }
     let message,cell=-1;
-    if(s.id==='earth') {
+    if(s.id==='earth'&&s.mode!=='expedition') {
       const i=s.def.paths.findIndex((path,j)=>{
         const drawn=s.board.paths[j];return !(drawn.length===path.length && (samePath(drawn,path)||samePath([...drawn].reverse(),path)));
       });
       if(i<0)return;
       const path=s.def.paths[i];cell=path[0];
       message=`One possible route for ${i+1}: ${path.map(p=>`${String.fromCharCode(65+p%s.def.n)}${Math.floor(p/s.def.n)+1}`).join(' → ')}. Columns A–${String.fromCharCode(64+s.def.n)} run left to right; rows start at 1.${s.def.gates?' A jump between ⇄ gates is intentional; it need not be between adjoining squares.':''}`;
-    } else if(s.id==='venus'&&s.mode!=='masterwork') {
+    } else if(s.id==='venus'&&!instrumented(s)) {
       cell=s.board.pipes.findIndex((mask,p)=>mask!==s.def.target[p]);if(cell<0)return;
       const sides=P.directionNames.filter((_,d)=>s.def.target[cell]&(1<<d));
       message=`One possible route: turn the highlighted pipe at row ${Math.floor(cell/s.def.n)+1}, column ${cell%s.def.n+1} so it connects ${sides.join(' and ')}.`;
@@ -483,11 +626,22 @@ window.AetherPlanets = (() => {
       paint('Checking a route from your current position…');document.querySelector('[data-puzzle="hint"]').disabled=true;
       const path=await P.solve(s.id,s.def,s.board,signal);
       if(signal.aborted||current!==s||!controller)return;
-      if(!path?.length){paint('No route found from here. Undo recent moves, or restart to recover the original solvable board.');return;}
+      if(!path?.length){
+        if(s.mode==='expedition') {
+          let steps=0;
+          for(let i=s.history.length-1;i>=0;i--) {
+            steps++;const entry=s.history[i],board=entry.restart?.board||entry.board;
+            if(board&&P.expeditionPath(s.def,board)?.length){paint(`This variation is off the chamber’s verified route. Undo ${steps} move${steps===1?'':'s'} to rejoin it, or restart the chamber.`);return;}
+          }
+          paint('This variation is off the chamber’s verified route. Restart the chamber to recover its guaranteed solvable initial board; your other charts are untouched.');return;
+        }
+        paint('No route found from here. Undo recent moves, or restart to recover the original solvable board.');return;
+      }
       const action=path[0];
+      if(action.type==='mechanism')message=action.value==='cycle'?`${s.def.expedition.cycleLabel} next. ${path.length} verified actions remain in this chamber.`:`Open ${s.def.expedition.sealName} ${action.value+1} now; the mechanism is aligned. ${path.length} verified actions remain.`;
       if(action.type==='cell'){
         cell=action.value;const at=`row ${Math.floor(cell/s.def.n)+1}, column ${cell%s.def.n+1}`;
-        message=s.id==='venus'?`${action.instrument==='mirror'?'Mirror':'Turn'} the highlighted pipe at ${at}. ${path.length} instrument actions remain on a verified route.`: `${action.instrument==='diagonal'?'Prism':'Cross'}-switch the highlighted crater: ${at}. ${path.length} switches remain on a verified solution.`;
+        message=s.id==='earth'?`Draw to the highlighted survey square at ${at}. ${path.length} verified actions remain; the moving ⇄ gates are part of this route.`:s.id==='venus'?`${action.instrument==='mirror'?'Mirror':'Turn'} the highlighted pipe at ${at}. ${path.length} instrument actions remain on a verified route.`: `${action.instrument==='diagonal'?'Prism':'Cross'}-switch the highlighted crater: ${at}. ${path.length} switches remain on a verified solution.`;
       }
       if(action.type==='moon'){cell=action.value;message=action.instrument==='swap'?`Exchange ${P.moonNames[cell]} with the next moon next. ${path.length} actions remain on a shortest solution.`:`Queue a burn on ${P.moonNames[cell]} next. ${path.length} burns remain on a shortest solution.`;}
       if(action.type==='block'){
@@ -498,7 +652,7 @@ window.AetherPlanets = (() => {
       if(action.type==='move'){
         const instrument=action.instrument==='winch'?'Winch-pull':action.instrument==='pulse'?'Pulse':Number.isInteger(action.anchor)?'Anchor and tilt':s.id==='uranus'?'Tilt':'Move';
         if(Number.isInteger(action.anchor)){s.selectedCell=action.anchor;s.instrument='anchor';}
-        message=`${instrument} ${P.directionNames[action.value]} next. ${path.length} moves remain on a shortest route.${path.length>moveLimit(s)-s.moves?` That exceeds your remaining ${['eclipse','masterwork'].includes(s.mode)?'reserve':'fuel'}; undo or restart.`:''}`;
+        message=`${instrument} ${P.directionNames[action.value]} next. ${path.length} moves remain on a shortest route.${path.length>moveLimit(s)-s.moves?` That exceeds your remaining ${['eclipse','masterwork','expedition'].includes(s.mode)?'reserve':'fuel'}; undo or restart.`:''}`;
       }
     }
     s.hints++;s.hintCell=cell;stash(s);paint(message);
@@ -509,11 +663,13 @@ window.AetherPlanets = (() => {
     if(action==='hint'){hint();return;}
     if(action==='next-round'){chooseLevel('endless');return;}
     if(action==='next-replay'){chooseReplay('circuit',null,true);return;}
+    if(action==='next-expedition'){chooseReplay('expedition',null,true);return;}
+    if(action==='replay-expedition') {const expedition=replayProgress.expeditions[s.id],prefix=`${s.id}:expedition:${expedition.seed}:`;for(const key of sessions.keys())if(key.startsWith(prefix))sessions.delete(key);expedition.stage=0;expedition.drafts=Array.from({length:4},()=>({actions:[],hints:0,result:null}));saveReplay();chooseReplay('expedition');return;}
     if(action==='new-circuit'){chooseReplay('circuit',crypto.getRandomValues(new Uint32Array(1))[0]);return;}
     if(action==='host-done'){hostHooks.onDone?.();return;}
     if(action==='clear-plan'){s.plan=[];paint('Plan cleared. Tap a moon to queue a fresh burn.');return;}
     if(action==='launch'){launchPlan();return;}
-    if(action==='rotate-block'){if(s.mode==='masterwork'&&s.id==='saturn'&&s.selected>0)act({type:'block',value:[s.selected,0],instrument:'rotate'});return;}
+    if(action==='rotate-block'){if(instrumented(s)&&s.id==='saturn'&&s.selected>0)act({type:'block',value:[s.selected,0],instrument:'rotate'});return;}
     hintController?.abort();s.hintCell=-1;
     if(action==='reverse'){reverse=!reverse;paint();return;}
     if(action==='next'){chooseLevel(Math.min(4,s.index+1));return;}
@@ -557,6 +713,7 @@ window.AetherPlanets = (() => {
     if(button.dataset.replayAction==='retry'){chooseReplay(current.mode);return;}
     if(button.dataset.puzzleLevel!==undefined){chooseLevel(button.dataset.puzzleLevel==='endless'?'endless':Number(button.dataset.puzzleLevel));return;}
     if(button.dataset.puzzle){tool(button.dataset.puzzle);return;}
+    if(button.dataset.puzzleMechanism!==undefined){const value=button.dataset.puzzleMechanism;act({type:'mechanism',value:value==='cycle'?'cycle':Number(value)});return;}
     if(button.dataset.puzzleDirection!==undefined){move(Number(button.dataset.puzzleDirection));return;}
     if(button.dataset.puzzleInstrument!==undefined){current.instrument=button.dataset.puzzleInstrument;paint(current.id==='uranus'&&current.instrument==='anchor'?'Now select a capsule on the board.':undefined);return;}
     if(button.dataset.puzzleBlock!==undefined){current.selected=Number(button.dataset.puzzleBlock);paint();return;}
@@ -567,7 +724,7 @@ window.AetherPlanets = (() => {
       if(current.id==='earth' && event.detail>0)return; // Pointer gestures are handled below; keyboard clicks still work.
       if(current.id==='mars'){const d=P.direction(current.board.player,p,current.def.n);if(d>=0)move(d);else paint('Use the arrow controls, or select a square next to the rover.');}
       else if(current.id==='uranus'){current.selectedCell=p;current.instrument='anchor';paint(`Capsule selected at row ${Math.floor(p/current.def.n)+1}, column ${p%current.def.n+1}. Choose a tilt; it will stay fixed.`);}
-      else {const action={type:'cell',value:p,reverse};if(current.mode==='masterwork'&&current.id==='mercury'&&current.instrument==='diagonal')action.instrument='diagonal';if(current.mode==='masterwork'&&current.id==='venus'&&current.instrument==='mirror')action.instrument='mirror';act(action);}
+      else {const action={type:'cell',value:p,reverse};if(instrumented(current)&&current.id==='mercury'&&current.instrument==='diagonal')action.instrument='diagonal';if(instrumented(current)&&current.id==='venus'&&current.instrument==='mirror')action.instrument='mirror';act(action);}
     }
   }
   function mount(view) {
@@ -577,7 +734,7 @@ window.AetherPlanets = (() => {
     const savedMode=progress.levels[id]===undefined?0:progress.levels[id];
     current=session(id,savedMode);
     const last=replayProgress.last[id];
-    if((last==='daily'&&replayProgress.daily[id])||(last==='circuit'&&replayProgress.circuits[id])||(last==='eclipse'&&eclipseUnlocked(id))||(last==='masterwork'&&masterworkUnlocked(id)))chooseReplay(last,null,false);
+    if((last==='daily'&&replayProgress.daily[id])||(last==='circuit'&&replayProgress.circuits[id])||(last==='eclipse'&&eclipseUnlocked(id))||(last==='masterwork'&&masterworkUnlocked(id))||(last==='expedition'&&expeditionUnlocked(id)))chooseReplay(last,null,false);
     else chooseLevel(savedMode,false);
     attachInput(signal);
   // Gentle plate parallax on fine pointers only.
@@ -609,6 +766,10 @@ window.AetherPlanets = (() => {
     main.addEventListener('keydown',event=>{
       if(!event.target.closest('#planet-game, .puzzle-host') || modal.open || event.ctrlKey||event.metaKey||event.altKey)return;
       if(['z','y'].includes(event.key.toLowerCase())){event.preventDefault();tool(event.key.toLowerCase()==='z'?'undo':'redo');return;}
+      if(current.mode==='expedition'&&!event.target.closest('input,textarea')) {
+        if(event.key.toLowerCase()==='c'){event.preventDefault();act({type:'mechanism',value:'cycle'});return;}
+        if(['1','2'].includes(event.key)){event.preventDefault();act({type:'mechanism',value:Number(event.key)-1});return;}
+      }
       if(event.key.toLowerCase()==='l' && current.id==='jupiter' && !event.target.closest('input,textarea')){event.preventDefault();launchPlan();return;}
       const d=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].indexOf(event.key);if(d<0)return;
       if(['mars','saturn','uranus','neptune'].includes(current.id)){event.preventDefault();move(d);return;}
@@ -630,7 +791,7 @@ window.AetherPlanets = (() => {
     },{signal});
     document.addEventListener('pointermove',event=>{
       if(gesture?.block!==undefined && current.id==='saturn') {
-        const axis=current.def.blocks[gesture.block].axis,delta=axis==='h'?event.clientX-gesture.x:event.clientY-gesture.y,wanted=Math.round(delta/gesture.unit);
+        const axis=P.blockAxis(current.def,current.board,gesture.block),delta=axis==='h'?event.clientX-gesture.x:event.clientY-gesture.y,wanted=Math.round(delta/gesture.unit);
         const count=Math.min(6,Math.abs(wanted-gesture.steps)),sign=Math.sign(wanted-gesture.steps);
         for(let i=0;i<count;i++) {
           const before=current.board.positions[gesture.block];

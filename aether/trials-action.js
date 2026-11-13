@@ -60,11 +60,11 @@
       { name: 'The Unraveller', hint: 'Dodge the marked cross. Attack the open core between sweeps.', events: [[0, 'boss', 1]] },
     ];
     const VETERAN_ROUTE = [
-      { name: 'Aurora crossing', hint: 'A siphon harvests free motes unless you collect or cast through it. Warden lines lock before they sever.', events: [[0, 'warden', 1], [1.5, 'siphon', 1], [3, 'cross', 2], [6, 'drift', 3]] },
+      { name: 'Aurora crossing', hint: 'A siphon harvests free motes unless you collect or cast through it. Warden lines lock before they sever. Save E Link Lattice for a live line.', events: [[0, 'warden', 1], [1.5, 'siphon', 1], [3, 'cross', 2], [6, 'drift', 3]] },
       { name: 'Twin needle', hint: 'Keepers and a mote siphon compete for your attention. Spend a tail link with Q, then recover the kill’s mote.', events: [[0, 'elite', 1], [1.5, 'siphon', 1], [2, 'warden', 1], [5, 'elite', 1], [8, 'drift', 3]] },
-      { name: 'Falling choir', hint: 'Wardens pin recovery while a siphon turns ignored motes into drift shards. Ribbon can harvest along its length.', events: [[0, 'drift', 3], [2, 'warden', 1], [3, 'siphon', 1], [4, 'cross', 2], [6, 'drift', 4], [9, 'warden', 1]] },
-      { name: 'Splintered orbit', hint: 'Two wardens hold opposite poles while a siphon feeds. Break a harvest with Star Cast or deny its marked mote.', events: [[0, 'warden', 1], [1, 'elite', 1], [2, 'siphon', 1], [3, 'warden', 1], [5, 'cross', 3], [8, 'drift', 4]] },
-      { name: 'The Unraveller ascendant', hint: 'Three spokes lock around your last position. Leave the violet lines, then strike the gold core while it rests.', events: [[0, 'boss', 1]] },
+      { name: 'Falling choir', hint: 'A Deacon tether wards its ally. Cross the thread with your chain or Star Cast through it while wardens pin recovery and the siphon feeds.', events: [[0, 'drift', 3], [1, 'deacon', 1], [2, 'warden', 1], [3, 'siphon', 1], [4, 'cross', 2], [6, 'drift', 4], [9, 'warden', 1]] },
+      { name: 'Splintered orbit', hint: 'Two wardens hold opposite poles while a siphon feeds. Break a harvest with Star Cast or deny its marked mote.', events: [[0, 'warden', 1], [.8, 'deacon', 1], [1, 'elite', 1], [2, 'siphon', 1], [3, 'warden', 1], [5, 'cross', 3], [8, 'drift', 4]] },
+      { name: 'The Unraveller ascendant', hint: 'Three spokes lock around your last position. At half health its Black Office calls two warding Deacons: sever them, then strike the open ivory core.', events: [[0, 'boss', 1]] },
     ];
     const ROUTE = options.veteran ? VETERAN_ROUTE : ROUTE_BASE;
     const startEncounter = clamp(Math.floor(Number(options.startEncounter) || 0), 0, ROUTE.length - 1);
@@ -72,12 +72,14 @@
     let invuln = 0, ward = 0, wardTime = 0, pulseTime = 0, moving = false, surge = false, orbitA = 0, tickN = 0;
     let relayTime = 0, relayCount = 0, attune = 0, attuned = false;
     let castTime = 0, castCount = 0, castRefunds = 0, castBursts = 0, siphonSteals = 0, siphonDenials = 0;
+    let dedication = options.veteran ? 1 : 0, latticeTime = 0, latticeCount = 0, latticeSevers = 0, latticeKills = 0, tetherSevers = 0, tetherRewards = 0, officeSevers = 0;
+    let routeVow = 'unsworn', routeBonus = 0, routeEventSpawned = false, bossTransitions = 0;
     let hazards = [], choices = [], relics = {}, draftCount = 0, shotsFired = 0, collected = 0, destroyed = false;
     const level = id => relics[id] || 0;
     const keys = new Set();
     let pointer = null;
     const g = frame(container, W, H, {
-      label: 'Constellation Chain. Five encounters and four relic drafts. Steer with the pointer, WASD or arrows. F changes formation. Space uses an equipped Pulse heart.' + (options.veteran ? ' Q casts away the tail link as a formation-specific weapon; kills refund a collectible mote. Interrupt siphon harvests by collecting their marked mote or destroying them.' : '') + ' P pauses. Choose relics with buttons or 1, 2, 3.',
+      label: 'Constellation Chain. Five encounters and four relic drafts. Steer with the pointer, WASD or arrows. F changes formation. Space uses an equipped Pulse heart.' + (options.veteran ? ' Q casts away the tail link as a formation-specific weapon. Cross Deacon tethers with your chain to expose their ally. E spends Dedication on Link Lattice: your formation damages contacts and severs hostile beams, but steering slows. After the second encounter choose the safer Ivory Via or the rewarded Oxblood Via.' : '') + ' P pauses. Choose relics with buttons or 1, 2, 3.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
@@ -87,18 +89,23 @@
     controls.setAttribute('aria-label', 'Constellation Chain controls');
     const status = document.createElement('p'); status.className = 'chain-status';
     status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+    let tacticalStatus;
     const formations = document.createElement('div'); formations.className = 'chain-formations';
     formations.setAttribute('role', 'group'); formations.setAttribute('aria-label', 'Formation');
     const draft = document.createElement('div'); draft.className = 'chain-draft';
     draft.setAttribute('role', 'group'); draft.setAttribute('aria-label', 'Safe refit: choose a relic');
     const build = document.createElement('p'); build.className = 'chain-build';
+    tacticalStatus = build; tacticalStatus.dataset.chainTactical = '';
     const pulseButton = document.createElement('button'); pulseButton.type = 'button';
     pulseButton.dataset.chainPulse = ''; pulseButton.textContent = 'Pulse · Space'; pulseButton.hidden = true;
     const castButton = document.createElement('button'); castButton.type = 'button';
     castButton.dataset.chainCast = ''; castButton.hidden = !options.veteran;
     castButton.title = 'Star Cast sacrifices your last link. Ribbon seeks, Halo bursts on impact, Spear pierces with heavy damage. Each cast kill leaves a mote so skilled recovery can repay the link.';
+    const latticeButton = document.createElement('button'); latticeButton.type = 'button';
+    latticeButton.dataset.chainLattice = ''; latticeButton.hidden = !options.veteran;
+    latticeButton.title = 'Spend one Dedication on a three-second Link Lattice. Every chain link damages touching enemies and severs live beams or scissor blades. Ribbon covers a long trail, Halo a close ring, Spear a heavy forward wedge. Steering slows while active.';
     controls.append(status, formations, build, pulseButton);
-    if (options.veteran) controls.append(castButton);
+    if (options.veteran) controls.append(castButton, latticeButton);
     controls.append(draft); container.append(controls);
     for (const [id, info] of Object.entries(FORMATIONS)) {
       const button = document.createElement('button'); button.type = 'button';
@@ -108,6 +115,7 @@
     }
     listen(pulseButton, 'click', () => { pulse(); canvas.focus({ preventScroll: true }); });
     listen(castButton, 'click', () => { starCast(); canvas.focus({ preventScroll: true }); });
+    listen(latticeButton, 'click', () => { linkLattice(); canvas.focus({ preventScroll: true }); });
     // Delegate draft events so a long endless run does not accumulate listeners.
     listen(draft, 'click', e => {
       const button = e.target.closest('button');
@@ -122,17 +130,20 @@
     g.resume = () => { frameResume(); syncControls(); };
     // Read-only diagnostics for the cabinet and browser regression runner.
     Object.defineProperty(g, 'state', { get: () => ({
-      phase, encounter: encounter + 1, circuit, elapsed, formation, relics: { ...relics },
+      phase, encounter: encounter + 1, circuit, elapsed, formation, veteran: !!options.veteran, relics: { ...relics },
       range: FORMATIONS[formation].range, draft: !draft.hidden,
       links: links.length, linkPositions: links.map(l => ({ x: l.x, y: l.y })), head: { ...head }, choices: [...choices],
-      enemies: shards.map(s => ({ x: s.x, y: s.y, hp: s.hp, kind: s.kind, mode: s.mode, r: s.r, slow: s.slow, timer: s.timer, aim: s.aim, maxHp: s.maxHp, harvests: s.harvests || 0, harvestTarget: s.targetMote && motes.includes(s.targetMote) ? { x: s.targetMote.x, y: s.targetMote.y } : null })),
+      enemies: shards.map(s => ({ x: s.x, y: s.y, hp: s.hp, kind: s.kind, mode: s.mode, r: s.r, slow: s.slow, timer: s.timer, aim: s.aim, maxHp: s.maxHp, stage: s.stage || 0, officeOpened: !!s.officeOpened, tetherBroken: s.tetherBroken || 0, severRewarded: !!s.severRewarded, officeSevered: !!s.officeSevered, tetherTarget: s.tetherTarget ? { x: s.tetherTarget.x, y: s.tetherTarget.y, kind: s.tetherTarget.kind } : null, warded: !!s.wardedBy, harvests: s.harvests || 0, harvestTarget: s.targetMote && motes.includes(s.targetMote) ? { x: s.targetMote.x, y: s.targetMote.y } : null })),
       boss: shards.find(s => s.kind === 'boss')?.hp ?? 0,
-      bossMode: shards.find(s => s.kind === 'boss')?.mode ?? '', bossPattern: options.veteran ? 'braid' : 'cross',
+      bossWarded: !!shards.find(s => s.kind === 'boss' && !s.officeOpened)?.wardedBy,
+      bossObjectiveOpen: !!shards.find(s => s.kind === 'boss')?.officeOpened,
+      bossMode: shards.find(s => s.kind === 'boss')?.mode ?? '', bossStage: shards.find(s => s.kind === 'boss')?.stage ?? 0, bossTransitions, bossPattern: options.veteran ? 'braid' : 'cross',
       hazards: hazards.map(h => ({ x: h.x, y: h.y, dx: h.dx, dy: h.dy, warning: h.warning, width: h.width, kind: h.kind || 'lane', life: h.life ?? 0, length: h.length ?? 0 })),
       motes: motes.map(m => ({ x: m.x, y: m.y, cast: !!m.cast })),
       bolts: bolts.map(b => ({ x: b.x, y: b.y, damage: b.damage, pierce: b.pierce, lodestar: !!b.lodestar, cast: b.cast || '' })),
       shotsFired, collected, draftCount, ward, pulseTime, broken, over, invuln,
       relayTime, relayCount, attune, attuned, castTime, castCount, castRefunds, castBursts, siphonSteals, siphonDenials, routeNames: ROUTE.map(r => r.name),
+      dedication, latticeTime, latticeCount, latticeSevers, latticeKills, tetherSevers, tetherRewards, officeSevers, routeVow, routeBonus,
     }) });
     // The same headline diagnostics mirrored onto the canvas as dataset
     // attributes so browser tests can wait on them without polling JS.
@@ -162,11 +173,19 @@
       canvas.dataset.chainCastCount = String(castCount); canvas.dataset.chainCastRefunds = String(castRefunds); canvas.dataset.chainCastBursts = String(castBursts);
       canvas.dataset.chainSiphons = String(shards.filter(s => s.kind === 'siphon').length);
       canvas.dataset.chainSiphonSteals = String(siphonSteals); canvas.dataset.chainSiphonDenials = String(siphonDenials);
+      canvas.dataset.chainDedication = String(dedication); canvas.dataset.chainLattice = latticeTime > 0 ? 'active' : dedication > 0 ? 'ready' : 'empty';
+      canvas.dataset.chainLatticeTime = latticeTime.toFixed(3); canvas.dataset.chainLatticeCount = String(latticeCount);
+      canvas.dataset.chainLatticeSevers = String(latticeSevers); canvas.dataset.chainLatticeKills = String(latticeKills);
+      canvas.dataset.chainTetherSevers = String(tetherSevers); canvas.dataset.chainTetherRewards = String(tetherRewards); canvas.dataset.chainDeacons = String(shards.filter(s => s.kind === 'deacon').length);
+      canvas.dataset.chainRouteVow = routeVow; canvas.dataset.chainRouteBonus = String(routeBonus);
+      canvas.dataset.chainBossStage = String(shards.find(s => s.kind === 'boss')?.stage || 0); canvas.dataset.chainBossTransitions = String(bossTransitions);
+      canvas.dataset.chainBossWarded = String(!!shards.find(s => s.kind === 'boss' && !s.officeOpened)?.wardedBy); canvas.dataset.chainBossObjective = shards.find(s => s.kind === 'boss')?.stage === 2 && !shards.find(s => s.kind === 'boss')?.officeOpened ? 'sever-both' : 'open';
+      canvas.dataset.chainOfficeSevers = String(officeSevers);
     }
     canvas.style.touchAction = 'none';
     try { canvas.focus({ preventScroll: true }); } catch { canvas.focus(); }
 
-    const score = () => broken * 100 + links.length * 20 + draftCount * 250 + (over > 0 ? 1000 : 0);
+    const score = () => broken * 100 + links.length * 20 + draftCount * 250 + routeBonus + (over > 0 ? 1000 : 0);
 
     function clearInput() { keys.clear(); pointer = null; }
     function syncControls() {
@@ -176,11 +195,29 @@
       pulseButton.textContent = pulseTime > 0 ? `Pulse · ${Math.ceil(pulseTime)}s` : 'Pulse ready · Space';
       castButton.disabled = !options.veteran || g.paused || phase !== 'combat' || castTime > 0 || links.length <= 1 || !!over;
       castButton.textContent = castTime > 0 ? `Star Cast · ${castTime.toFixed(1)}s` : `Q · Star Cast (${formation}) · spend 1 link`;
+      latticeButton.disabled = !options.veteran || g.paused || phase !== 'combat' || latticeTime > 0 || dedication < 1 || !!over;
+      latticeButton.setAttribute('aria-pressed', String(latticeTime > 0));
+      latticeButton.textContent = latticeTime > 0 ? `E · Link Lattice ${latticeTime.toFixed(1)}s` : `E · Link Lattice · ${dedication}/3 Dedication`;
       for (const button of formations.children) button.setAttribute('aria-pressed', String(button.dataset.chainFormation === formation));
       const arts = [];
       if (level('relay')) arts.push(`Counterpoint ${relayTime > 0 ? `${Math.ceil(relayTime)}s` : 'ready'}`);
       if (level('lodestar')) arts.push(attuned ? `${FORMATIONS[formation].name} attuned` : `Attunement ${Math.round(clamp(attune / (4 - .5 * level('lodestar')), 0, 1) * 100)}%`);
-      build.textContent = `Build: ${Object.entries(relics).map(([id, rank]) => `${RELICS[id][0]} ${rank}`).join(' · ') || 'Choose your formation; relics arrive after each encounter.'}${arts.length ? ` · ${arts.join(' · ')}` : ''}`;
+      const buildCopy = `Build: ${Object.entries(relics).map(([id, rank]) => `${RELICS[id][0]} ${rank}`).join(' · ') || 'Choose your formation; relics arrive after each encounter.'}${arts.length ? ` · ${arts.join(' · ')}` : ''}${options.veteran ? ` · ${routeVow === 'unsworn' ? 'Via unchosen' : `${routeVow} Via`} · Lattice ${dedication}/3` : ''}`;
+      const boss = shards.find(s => s.kind === 'boss');
+      tacticalStatus.textContent = [
+        `Chain ${links.length}/${LINK_CAP}`,
+        `${FORMATIONS[formation].name} formation`,
+        level('nova') ? pulseTime > 0 ? `Pulse ${pulseTime.toFixed(1)}s` : 'Pulse ready' : 'Gather motes to reweave',
+        ...(options.veteran ? [
+          `Dedication ${dedication}/3`,
+          latticeTime > 0 ? `Lattice ${latticeTime.toFixed(1)}s` : dedication > 0 ? 'Lattice ready (E)' : 'Lattice needs a sever/kill',
+          castTime > 0 ? `Star Cast ${castTime.toFixed(1)}s` : 'Star Cast ready (Q · costs 1 link)',
+          `${routeVow} Via · route bonus ${routeBonus}`,
+          `Tethers severed ${tetherSevers}`,
+        ] : []),
+        ...(boss ? [`Unraveller stage ${boss.stage || 1}/2 · ${boss.mode}${boss.wardedBy ? ' · Deacon ward' : ''}`] : []),
+      ].join(' · ');
+      tacticalStatus.textContent = `${buildCopy} · ${tacticalStatus.textContent}`;
       syncDataset();
     }
     function setFormation(id) {
@@ -207,12 +244,24 @@
       heading.textContent = initial ? 'Weave your constellation' : `Safe refit · encounter ${encounter + 1} cleared`;
       const description = document.createElement('p');
       description.textContent = initial
-        ? `Five authored encounters. Every link fires and shields you. Choose a formation, then launch. F switches formation in flight.${options.veteran ? ' Veteran: Q sacrifices a tail link for a Star Cast; its kills leave recovery motes. Siphons turn ignored motes into shards.' : ''}`
+        ? `Five authored encounters. Every link fires and shields you. Choose a formation, then launch. F switches formation in flight.${options.veteran ? ' Veteran: Q sacrifices a tail link for a Star Cast. Cross Deacon tethers with the chain; E spends Dedication on a beam-severing Link Lattice. A route vow follows the second encounter.' : ''}`
+        : options.veteran && encounter === 1 && routeVow === 'unsworn' ? 'Choose the next two encounters’ route. Ivory restores links and grants a shield; Oxblood adds a Deacon and two drift shards to each encounter, but every clear earns 250 bonus score.'
         : `Chain restored to ${links.length} links. No threats advance here. Choose one permanent relic, then face ${ROUTE[(encounter + 1) % ROUTE.length].name}.`;
       draft.append(heading, description);
       if (initial) {
         const button = document.createElement('button'); button.type = 'button'; button.dataset.chainStart = '';
         button.textContent = 'Launch · Enter'; draft.append(button); choices = [];
+      } else if (options.veteran && encounter === 1 && routeVow === 'unsworn') {
+        choices = ['via-ivory', 'via-oxblood'];
+        const vias = {
+          'via-ivory': ['Ivory Via', 'Restore three links and gain a reserve shield. Fewer threats, no route score bonus.'],
+          'via-oxblood': ['Oxblood Via', 'Each remaining non-boss encounter adds one Deacon and two drift shards. Every clear earns +250 score.'],
+        };
+        choices.forEach((id, i) => {
+          const button = document.createElement('button'); button.type = 'button'; button.dataset.chainChoice = id;
+          button.innerHTML = `<span class="upgrade-icon-wrap">${window.AetherIcons.upgrade(id === 'via-ivory' ? 'aegis' : 'needle')}</span><span class="upgrade-copy">${i + 1}. ${vias[id][0]} — ${vias[id][1]}</span>`;
+          draft.append(button);
+        });
       } else {
         const pool = Object.keys(RELICS).filter(id => level(id) < 3);
         // Fisher–Yates is deterministic and consumes no cosmetic randomness.
@@ -244,6 +293,8 @@
       else if (id === 'mend') addLinks(4);
       else if (id === 'guard') ward = 1;
       else if (id === 'surge') surge = true;
+      else if (id === 'via-ivory') { routeVow = 'ivory'; addLinks(3); ward = 1; wardTime = 0; }
+      else if (id === 'via-oxblood') routeVow = 'oxblood';
       if (id === 'ward') { ward = 1; wardTime = 0; }
       draftCount++; encounter++;
       if (encounter === ROUTE.length) { encounter = 0; circuit++; }
@@ -252,7 +303,7 @@
     function launch() {
       if (destroyed || g.paused || over || phase === 'combat') return;
       phase = 'combat'; elapsed = 0; eventIndex = 0; moteAt = 2.2; invuln = 1.5;
-      pulseTime = 0; relayTime = 0; castTime = 0; attune = 0; attuned = false; clearInput(); draft.hidden = true;
+      pulseTime = 0; relayTime = 0; castTime = 0; latticeTime = 0; routeEventSpawned = false; attune = 0; attuned = false; clearInput(); draft.hidden = true;
       head.x = 450; head.y = 320; head.dx = 1; head.dy = 0;
       links.forEach((l, i) => { l.x = head.x - (i + 1) * SP; l.y = head.y; l.cool = .1 * i; });
       status.textContent = `${circuit > 1 ? `Circuit ${circuit}. ` : ''}${encounter + 1}/5 · ${ROUTE[encounter].name}. ${ROUTE[encounter].hint}`;
@@ -260,13 +311,15 @@
     }
     function finishEncounter() {
       if (encounter === ROUTE.length - 1 && !options.endless) return end(true);
+      if (options.veteran && routeVow === 'oxblood') { routeBonus += 250; status.textContent = 'Oxblood Via cleared: +250 route score. The next procession carries another ward.'; }
       addLinks(Math.max(0, 4 - links.length) + 1 + Math.min(2, motes.length));
       surge = false; ward = level('ward') ? 1 : ward; wardTime = 0;
       showDraft();
     }
     function spawn(kind, count) {
-      const pressure = 1 + (circuit - 1) * .16;
+      const pressure = (1 + (circuit - 1) * .16) * (options.veteran && routeVow === 'ivory' ? .92 : 1);
       for (let i = 0; i < count; i++) {
+        if (kind !== 'cross' && kind !== 'boss' && shards.length >= 28) continue;
         // A scissor lane is a telegraphed hazard, not a shootable shard: a
         // dashed line locks in, then a blade runs its length.
         if (kind === 'cross') {
@@ -283,21 +336,36 @@
         let x = side === 0 ? -24 : side === 1 ? W + 24 : 80 + rand() * (W - 160);
         let y = side === 2 ? 65 : side === 3 ? H + 24 : 100 + rand() * (H - 190);
         if (kind === 'boss') { x = 680; y = 270; }
-        const hp = (kind === 'boss' ? 115 : kind === 'elite' ? 22 : kind === 'warden' ? 30 : kind === 'siphon' ? 14 : 2) * pressure;
-        const speed = (kind === 'elite' ? 95 : kind === 'siphon' ? 62 : 76 + encounter * 8) * scale * pressure;
+        const hp = (kind === 'boss' ? 115 : kind === 'elite' ? 22 : kind === 'warden' ? 30 : kind === 'deacon' ? 25 : kind === 'siphon' ? 14 : 2) * pressure;
+        const speed = (kind === 'elite' ? 95 : kind === 'siphon' ? 62 : kind === 'deacon' ? 68 : 76 + encounter * 8) * scale * pressure;
         const a = Math.atan2(head.y - y, head.x - x);
         const s = {
           x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-          r: kind === 'boss' ? 35 : kind === 'elite' ? 22 : kind === 'warden' ? 20 : kind === 'siphon' ? 18 : 14,
+          r: kind === 'boss' ? 35 : kind === 'elite' ? 22 : kind === 'warden' ? 20 : kind === 'deacon' ? 19 : kind === 'siphon' ? 18 : 14,
           hp, maxHp: hp, a: rand() * TAU, spin: rand() - .5, kind,
-          mode: 'arrive', timer: kind === 'boss' ? 2.5 : kind === 'warden' ? 1.4 : kind === 'siphon' ? 1.1 : 2, slow: 0, age: 0, aim: 0, sx: 0, sy: 0,
+          mode: 'arrive', timer: kind === 'boss' ? 2.5 : kind === 'warden' ? 1.4 : kind === 'deacon' ? 1.2 : kind === 'siphon' ? 1.1 : 2, slow: 0, age: 0, aim: 0, sx: 0, sy: 0,
+          stage: kind === 'boss' ? 1 : 0, officeOpened: false, tetherBroken: 0, tetherTarget: null, wardedBy: null, latticeCd: 0,
+          severRewarded: false, officeSevered: false, officeOwner: null,
           harvests: kind === 'siphon' ? 0 : undefined, targetMote: null,
         };
-        if (kind === 'elite' || kind === 'warden' || kind === 'siphon') { s.sx = 150 + rand() * (W - 300); s.sy = 130 + rand() * (H - 260); }
+        if (kind === 'elite' || kind === 'warden' || kind === 'deacon' || kind === 'siphon') { s.sx = 150 + rand() * (W - 300); s.sy = 130 + rand() * (H - 260); }
         shards.push(s);
+        // Stable Veteran fixture for focused Black Office regressions. Normal
+        // campaigns reach this state only through stage-I damage, never here.
+        if (kind === 'boss' && options.veteran && Number(options.startBossStage) === 2) {
+          s.stage = 2; s.hp = s.maxHp * .55; s.mode = 'procession'; s.timer = 2.2; bossTransitions = 1;
+          for (const side of [-1, 1]) {
+            spawn('deacon', 1);
+            const deacon = shards[shards.length - 1];
+            deacon.x = s.x + side * 105; deacon.y = s.y + 65; deacon.sx = deacon.x; deacon.sy = deacon.y;
+            deacon.tetherTarget = s; deacon.officeOwner = s;
+          }
+          status.textContent = 'BLACK OFFICE · two Deacons ward the Unraveller. Cross their threads, Star Cast through them, then strike the ivory core.';
+        }
         if (kind === 'siphon') { status.textContent = 'Mote siphon. Its dashed harvest line marks a target: gather that mote or break the siphon before it makes drift shards.'; tone(245, .18, 'sine', .035); }
         if (kind === 'warden') { status.textContent = 'Lattice warden. Violet tracks you; the locked line does not. Cross it after the lock, then punish its rest.'; tone(205, .22, 'triangle', .04); }
-        if (kind === 'boss') { status.textContent = options.veteran ? 'The Unraveller ascendant. Three spokes lock around your last position; leave them and strike the open core.' : 'The Unraveller. Dodge the marked cross; strike while the core is open.'; tone(98, .5, 'sawtooth', .06); }
+        if (kind === 'deacon') { status.textContent = 'Processional Deacon. Its brass thread wards one ally. Cross the thread with any link, use Star Cast, or kill the Deacon to expose it.'; tone(165, .25, 'triangle', .04); }
+        if (kind === 'boss') { status.textContent = options.veteran ? 'The Unraveller ascendant. Three spokes lock around your last position; leave them and strike the open core. Its half-health Black Office calls two warding Deacons.' : 'The Unraveller. Dodge the marked cross; strike while the core is open.'; tone(98, .5, 'sawtooth', .06); }
       }
     }
     function hurt(index = -1) {
@@ -309,9 +377,36 @@
       if (links.length) links.splice(index >= 0 ? index : links.length - 1, 1);
       else end(false);
     }
-    function radial(x, y, radius, amount, onKill = null) {
+    function radial(x, y, radius, amount, onKill = null, source = null) {
       arcs.push({ ring: true, x1: x, y1: y, radius, t: .35 });
-      for (const s of [...shards]) if (Math.hypot(s.x - x, s.y - y) < radius + s.r) damage(s, amount, onKill);
+      for (const s of [...shards]) if (Math.hypot(s.x - x, s.y - y) < radius + s.r) damage(s, amount, onKill, source);
+    }
+    function segmentDistance(x, y, a, b) {
+      const sx = b.x - a.x, sy = b.y - a.y;
+      const along = clamp(((x - a.x) * sx + (y - a.y) * sy) / (sx * sx + sy * sy || 1), 0, 1);
+      return Math.hypot(x - a.x - sx * along, y - a.y - sy * along);
+    }
+    function officeDeacons(boss) { return shards.filter(s => s.kind === 'deacon' && s.officeOwner === boss && s.hp > 0); }
+    function officeObjectiveMet(boss) {
+      const choir = officeDeacons(boss);
+      return choir.length === 0 || choir.every(deacon => deacon.officeSevered);
+    }
+    function severChainTether(deacon) {
+      if (!deacon || deacon.tetherBroken > 0) return false;
+      deacon.tetherBroken = 3; deacon.mode = 'rest'; deacon.timer = 1.2; tetherSevers++;
+      if (deacon.officeOwner?.kind === 'boss' && !deacon.officeSevered) {
+        deacon.officeSevered = true; officeSevers++;
+        if (officeObjectiveMet(deacon.officeOwner)) deacon.officeOwner.officeOpened = true;
+      }
+      const reward = !deacon.severRewarded;
+      if (reward) {
+        deacon.severRewarded = true; tetherRewards++;
+        dedication = Math.min(3, dedication + 1);
+      }
+      status.textContent = reward ? 'Processional thread severed. Its ally is exposed and one Dedication is restored.' : 'Processional thread severed again. The ward opens, but this Deacon’s Dedication bounty is already spent.';
+      arcs.push({ x1: deacon.x, y1: deacon.y, x2: deacon.tetherTarget?.x ?? deacon.x, y2: deacon.tetherTarget?.y ?? deacon.y, t: .28 });
+      tone(610, .13, 'triangle', .04); syncControls();
+      return true;
     }
     function spawnBeam(x, y, angle, warning = .9, width = 11, life = .75) {
       hazards.push({ kind: 'beam', x, y, dx: Math.cos(angle), dy: Math.sin(angle), warning, width, life, length: Math.hypot(W, H), speed: 0 });
@@ -324,6 +419,14 @@
       tone(380, .18, 'triangle', .05); syncControls();
     }
 
+    function linkLattice() {
+      if (!options.veteran || g.paused || destroyed || over || phase !== 'combat' || dedication < 1 || latticeTime > 0) return;
+      dedication--; latticeTime = 3; latticeCount++;
+      status.textContent = `${FORMATIONS[formation].name} Link Lattice: three seconds of consecrated links. Contact burns threats and cuts live beams; steering is slowed.`;
+      arcs.push({ ring: true, x1: head.x, y1: head.y, radius: formation === 'halo' ? 120 : 90, t: .35 });
+      tone(440, .24, 'triangle', .05); syncControls();
+    }
+
     function end(won) {
       if (over || destroyed) return; over = won ? 1 : -1; phase = won ? 'won' : 'lost';
       status.textContent = won ? 'The Unraveller is broken. The chain holds.' : 'The chain breaks. Refit and try a different formation.';
@@ -332,14 +435,44 @@
       g.after(() => { g.destroy(); onEnd({ won, score: score() }); }, 900);
     }
 
-    function damage(s, amount, onKill = null) {
+    function damage(s, amount, onKill = null, source = null) {
       if (!shards.includes(s)) return;
-      const exposure = s.kind === 'boss' && s.mode !== 'open' ? .25 : s.kind === 'warden' && s.mode === 'rest' ? 1.5 : s.kind === 'siphon' && (s.mode === 'harvest' || s.mode === 'rest') ? 1.35 : 1;
-      s.hp -= amount * exposure;
+      // Deacons get a readable arrival before incidental fire or contact can
+      // delete them. Their support objective becomes targetable with the channel.
+      if (s.kind === 'deacon' && s.mode === 'arrive') return;
+      const officeLocked = options.veteran && s.kind === 'boss' && s.stage === 2 && !s.officeOpened;
+      let exposure = s.kind === 'boss' && s.mode !== 'open' ? .25 : s.kind === 'warden' && s.mode === 'rest' ? 1.5 : s.kind === 'deacon' && s.tetherBroken > 0 ? 1.5 : s.kind === 'siphon' && (s.mode === 'harvest' || s.mode === 'rest') ? 1.35 : 1;
+      if (s.wardedBy && shards.includes(s.wardedBy) && s.wardedBy.tetherBroken <= 0) {
+        if (source?.cast || source?.lattice) severChainTether(s.wardedBy);
+        else if (!(s.kind === 'boss' && s.officeOpened)) exposure *= .35;
+      }
+      // Black Office damage is objective-gated, not a smaller number that can
+      // eventually leak a clear. Cast/Lattice may sever on this hit; their
+      // damage lands only after the choir has actually been opened.
+      if (officeLocked) return;
+      if (options.veteran && s.kind === 'boss' && s.stage === 1 && s.hp - amount * exposure <= s.maxHp * .55) s.hp = s.maxHp * .55;
+      else s.hp -= amount * exposure;
+      // The ascendant Unraveller's second objective is a destructible choir,
+      // not a larger health bar. Star Cast/Lattice can cut wards; ordinary
+      // formation fire must first cross or destroy the two Deacons.
+      if (options.veteran && s.kind === 'boss' && s.stage === 1 && s.hp > 0 && s.hp <= s.maxHp * .55) {
+        s.stage = 2; s.mode = 'procession'; s.timer = 2.2; bossTransitions++;
+        hazards = [];
+        for (const side of [-1, 1]) {
+          spawn('deacon', 1);
+          const deacon = shards[shards.length - 1]; deacon.x = s.x + side * 105; deacon.y = s.y + 65; deacon.sx = deacon.x; deacon.sy = deacon.y; deacon.tetherTarget = s; deacon.officeOwner = s;
+        }
+        status.textContent = 'BLACK OFFICE · two Deacons ward the Unraveller. Cross their threads, Star Cast through them, then strike the ivory core.';
+        burst(s.x, s.y, '#c6a76b', 24, 210); tone(104, .5, 'sawtooth', .055); syncControls();
+        return;
+      }
       if (s.hp > 0) { tone(320, .05, 'triangle', .03); return; }
       if (!shards.includes(s)) return;
       shards.splice(shards.indexOf(s), 1);
       broken++;
+      if (source?.lattice) latticeKills++;
+      if (s.kind === 'deacon' || s.kind === 'warden') dedication = Math.min(3, dedication + 1);
+      for (const other of shards) if (other.wardedBy === s || other.tetherTarget === s) { other.wardedBy = null; other.tetherTarget = null; }
       burst(s.x, s.y, '#d8c48b', 16, 190); tone(240 + Math.random() * 80, .1, 'triangle', .06);
       if (onKill) onKill(s);
       else if ((broken % 6 === 0 || (verbs.has('parallax') && broken % 5 === 0) || s.kind === 'elite' || s.kind === 'warden' || (s.kind === 'siphon' && s.mode === 'harvest')) && motes.length < (options.veteran ? 8 : 5))
@@ -413,6 +546,10 @@
         spawn(script.events[eventIndex][1], script.events[eventIndex][2]);
         eventIndex++;
       }
+      if (options.veteran && routeVow === 'oxblood' && encounter < ROUTE.length - 1 && !routeEventSpawned && elapsed >= 1.1) {
+        routeEventSpawned = true; spawn('deacon', 1); spawn('drift', 2);
+        status.textContent = 'Oxblood procession: an additional Deacon and two drift shards. Clear them for the 250-point route tithe.';
+      } else if (routeVow !== 'oxblood') routeEventSpawned = true;
       // The aegis recharges after absorbing a hit; the pulse label ticks down.
       if (!ward && level('ward')) {
         wardTime += dt;
@@ -433,6 +570,11 @@
         castTime = Math.max(0, castTime - dt);
         if (Math.ceil(castTime * 10) !== before || !castTime) syncControls();
       }
+      if (latticeTime > 0) {
+        const before = Math.ceil(latticeTime * 10);
+        latticeTime = Math.max(0, latticeTime - dt);
+        if (Math.ceil(latticeTime * 10) !== before || !latticeTime) syncControls();
+      }
       if (level('lodestar') && !attuned) {
         const before = Math.floor(attune * 4);
         attune += dt;
@@ -442,7 +584,7 @@
       }
       // Steer: keys win; otherwise glide toward the pointer. Haste speeds the
       // comet; the halo's tight orbit slows it.
-      const speedMul = (1 + .14 * level('haste')) * (formation === 'halo' ? .88 : 1);
+      const speedMul = (1 + .14 * level('haste')) * (formation === 'halo' ? .88 : 1) * (latticeTime > 0 ? .62 : 1);
       const kx = (keys.has('arrowright') || keys.has('d') ? 1 : 0) - (keys.has('arrowleft') || keys.has('a') ? 1 : 0);
       const ky = (keys.has('arrowdown') || keys.has('s') ? 1 : 0) - (keys.has('arrowup') || keys.has('w') ? 1 : 0);
       let mx = 0, my = 0;
@@ -488,11 +630,13 @@
         if (motes.length < 3) motes.push({ x: 60 + rand() * (W - 120), y: 60 + rand() * (H - 120), p: rand() * TAU });
       }
       // Enemies. Drift shards sail through; keepers aim, charge and rest;
-      // the Unraveller marks a cross, then opens its core.
+      // Deacons weave destructible protection, and the Unraveller changes
+      // objective at half health rather than merely gaining speed.
+      for (const s of shards) s.wardedBy = null;
       for (let i = shards.length - 1; i >= 0; i--) {
         const s = shards[i];
         const slowMul = s.slow > 0 ? .5 : 1;
-        s.slow = Math.max(0, s.slow - dt);
+        s.slow = Math.max(0, s.slow - dt); s.tetherBroken = Math.max(0, (s.tetherBroken || 0) - dt); s.latticeCd = Math.max(0, (s.latticeCd || 0) - dt);
         s.age += dt; s.a += s.spin * dt * slowMul;
         if (s.kind === 'elite') {
           s.timer -= dt * slowMul;
@@ -576,17 +720,56 @@
             s.x += dx / d * 92 * scale * slowMul * dt; s.y += dy / d * 92 * scale * slowMul * dt;
           }
           s.x = clamp(s.x, 24, W - 24); s.y = clamp(s.y, 56, H - 24);
+        } else if (s.kind === 'deacon') {
+          s.timer -= dt * slowMul;
+          if (s.mode === 'arrive') {
+            const dx = s.sx - s.x, dy = s.sy - s.y, d = Math.hypot(dx, dy) || 1;
+            if (d > 8) { s.x += dx / d * 105 * scale * slowMul * dt; s.y += dy / d * 105 * scale * slowMul * dt; }
+            if (s.timer <= 0) s.mode = 'channel';
+          } else if (s.mode === 'rest') {
+            if (s.timer <= 0) s.mode = 'channel';
+          } else {
+            const candidates = shards.filter(o => o !== s && o.kind !== 'deacon' && o.hp > 0);
+            if (!candidates.includes(s.tetherTarget)) {
+              s.tetherTarget = candidates.reduce((best, o) => {
+                const d = Math.hypot(o.x - s.x, o.y - s.y);
+                return !best || d < best.d ? { o, d } : best;
+              }, null)?.o || null;
+            }
+            if (s.tetherTarget) {
+              const dx = s.tetherTarget.x - s.x, dy = s.tetherTarget.y - s.y, d = Math.hypot(dx, dy) || 1;
+              if (d > 185) { s.x += dx / d * 48 * scale * slowMul * dt; s.y += dy / d * 48 * scale * slowMul * dt; }
+              if (s.tetherBroken <= 0) {
+                s.tetherTarget.wardedBy = s;
+                if (links.some(link => segmentDistance(link.x, link.y, s, s.tetherTarget) < 10) || segmentDistance(head.x, head.y, s, s.tetherTarget) < 10) severChainTether(s);
+              }
+            }
+          }
+          s.x = clamp(s.x, 24, W - 24); s.y = clamp(s.y, 56, H - 24);
         } else if (s.kind === 'boss') {
           const pressure = 1 + (circuit - 1) * .16;
           s.timer -= dt * slowMul;
           if (s.mode === 'arrive') {
             s.x += (680 - s.x) * Math.min(1, dt * 1.6); s.y += (270 - s.y) * Math.min(1, dt * 1.6);
             if (s.timer <= 0) { s.mode = 'aim'; s.timer = options.veteran ? 1.5 : 1.2; }
+          } else if (s.mode === 'procession') {
+            s.x += (650 - s.x) * Math.min(1, dt * 1.4); s.y += (270 - s.y) * Math.min(1, dt * 1.4);
+            const objectiveMet = officeObjectiveMet(s);
+            if (objectiveMet) {
+              s.officeOpened = true; s.mode = 'open'; s.timer = 3.2; hazards = [];
+              status.textContent = 'The Black Office is severed. The ivory core is fully open for 3.2 seconds.';
+              tone(590, .25, 'sine', .05);
+            } else if (s.timer <= 0) {
+              s.aim = Math.atan2(head.y - s.y, head.x - s.x);
+              spawnBeam(s.x, s.y, s.aim, 1.15, 12, .8); spawnBeam(s.x, s.y, s.aim + Math.PI / 2, 1.15, 12, .8);
+              s.timer = 2.7; tone(126, .28, 'sawtooth', .045);
+            }
           } else if (s.mode === 'aim') {
             s.x = 680 + Math.sin(s.age * .7) * 36; s.y = 270 + Math.sin(s.age * 1.1) * 24;
             if (s.timer <= 0 && options.veteran) {
               s.aim = Math.atan2(head.y - s.y, head.x - s.x);
-              for (let spoke = 0; spoke < 3; spoke++) spawnBeam(s.x, s.y, s.aim + spoke * TAU / 3, 1.1, 12, .85);
+              const spokes = s.stage === 2 ? 4 : 3;
+              for (let spoke = 0; spoke < spokes; spoke++) spawnBeam(s.x, s.y, s.aim + spoke * TAU / spokes, 1.1, 12, .85);
               tone(130, .35, 'sawtooth', .05);
               s.mode = 'sweep'; s.timer = 2.15;
             } else if (s.timer <= 0) {
@@ -610,11 +793,31 @@
           if (s.x < -100 || s.x > W + 100 || s.y < -100 || s.y > H + 100) { shards.splice(i, 1); continue; }
         }
       }
+      // Link Lattice turns the chosen formation's actual geometry into the
+      // weapon. Halo ticks quickly in a close ring; Spear hits hardest ahead;
+      // Ribbon sacrifices speed for the longest cutting thread.
+      if (latticeTime > 0) {
+        for (const s of [...shards]) {
+          if (s.latticeCd > 0) continue;
+          if (!links.some(link => Math.hypot(link.x - s.x, link.y - s.y) < s.r + 11)) continue;
+          s.latticeCd = formation === 'halo' ? .2 : formation === 'spear' ? .38 : .3;
+          damage(s, formation === 'spear' ? 8 : formation === 'halo' ? 4 : 5, null, { lattice: true, formation });
+        }
+      }
       // Scissor lanes move a blade along a dashed lock. Veteran beams instead
       // hold a fixed ray for a short active window after their longer warning.
       for (let i = hazards.length - 1; i >= 0; i--) {
         const h = hazards[i];
         if (h.warning > 0) { h.warning -= dt; if (h.warning <= 0) tone(310, .08, 'square', .04); continue; }
+        if (latticeTime > 0) {
+          const end = h.kind === 'beam' ? { x: h.x + h.dx * h.length, y: h.y + h.dy * h.length } : h;
+          const cut = links.some(link => h.kind === 'beam' ? segmentDistance(link.x, link.y, h, end) < h.width + 10 : Math.hypot(link.x - h.x, link.y - h.y) < h.width + 20);
+          if (cut) {
+            hazards.splice(i, 1); latticeSevers++; arcs.push({ ring: true, x1: h.x, y1: h.y, radius: 42, t: .35 });
+            status.textContent = 'Link Lattice severed a live hostile line. Reposition before the next lock.';
+            tone(690, .1, 'triangle', .04); continue;
+          }
+        }
         if (h.kind === 'beam') {
           h.life -= dt;
           if (h.life <= 0) { hazards.splice(i, 1); continue; }
@@ -672,9 +875,9 @@
             b.struck.push(s);
             burst(b.x, b.y, b.cast ? '#a7ebde' : '#f2d38a', 6, 90);
             const onCastKill = b.cast ? starCastRefund : null;
-            damage(s, b.damage, onCastKill);
+            damage(s, b.damage, onCastKill, b);
             if (b.cast === 'halo' && !b.detonated) {
-              b.detonated = true; castBursts++; radial(s.x, s.y, 74, 4, onCastKill); tone(480, .13, 'sine', .035);
+              b.detonated = true; castBursts++; radial(s.x, s.y, 74, 4, onCastKill, b); tone(480, .13, 'sine', .035);
             }
             if (level('frost') && shards.includes(s)) s.slow = Math.max(s.slow, .4 + .3 * level('frost'));
             if (verbs.has('chain')) {
@@ -696,6 +899,7 @@
         for (let j = 0; j < links.length; j++) if (Math.hypot(links[j].x - s.x, links[j].y - s.y) < s.r + 9) { struck = j; break; }
         const headHit = Math.hypot(head.x - s.x, head.y - s.y) < s.r + 11;
         if (struck < 0 && !headHit) continue;
+        if (s.kind === 'deacon' && s.mode === 'arrive') continue;
         if (struck >= 0 && !headHit && formation === 'halo' && attuned && s.kind === 'drift') {
           damage(s, s.hp + 1); tone(690, .08, 'triangle', .035); continue;
         }
@@ -738,9 +942,19 @@
     function draw(ctx, dt, clock) {
       ctx.save();
       if (shake > 0 && !reduced()) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
-      ctx.fillStyle = '#0b1624'; ctx.fillRect(-14, -14, W + 28, H + 28);
+      ctx.fillStyle = '#070c16'; ctx.fillRect(-14, -14, W + 28, H + 28);
       stars();
-      // Scissor lanes: rose dashes while they lock, a bright blade once live.
+      // A ruined armillary chapel: midnight enamel, oxblood recesses and
+      // hairline brass tracery behind (never across) the playable constellation.
+      ctx.save(); ctx.fillStyle = '#4b182415'; ctx.strokeStyle = '#aa8b5222'; ctx.lineWidth = 1.5;
+      for (const x of [90, W - 90]) {
+        ctx.beginPath(); ctx.moveTo(x - 48, H); ctx.lineTo(x - 48, 185); ctx.quadraticCurveTo(x, 82, x + 48, 185); ctx.lineTo(x + 48, H); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, 126); ctx.lineTo(x, H); ctx.moveTo(x - 46, 280); ctx.lineTo(x + 46, 280); ctx.stroke();
+      }
+      ctx.translate(W / 2, H / 2); ctx.beginPath(); ctx.arc(0, 0, 205, 0, TAU); ctx.stroke();
+      for (let n = 0; n < 12; n++) { ctx.rotate(TAU / 12); ctx.beginPath(); ctx.moveTo(190, 0); ctx.lineTo(205, 0); ctx.stroke(); }
+      ctx.restore();
+      // Scissor lanes: rose dashes while they lock, an ivory blade once live.
       for (const h of hazards) {
         ctx.save();
         if (h.kind === 'beam') {
@@ -791,17 +1005,23 @@
       ctx.globalAlpha = 1;
       // The constellation thread through the links.
       if (links.length) {
-        ctx.strokeStyle = '#c4ac7938'; ctx.lineWidth = 1.5;
+        ctx.strokeStyle = latticeTime > 0 ? '#eee1c2aa' : '#c4ac7938'; ctx.lineWidth = latticeTime > 0 ? 3 : 1.5;
+        if (latticeTime > 0) ctx.setLineDash([12, 5]);
         ctx.beginPath(); ctx.moveTo(head.x, head.y);
         for (const l of links) ctx.lineTo(l.x, l.y);
-        ctx.stroke();
+        ctx.stroke(); ctx.setLineDash([]);
       }
-      // Links: warm star-motes.
+      // Links: warm star-motes; Lattice adds a fixed ivory etching rather than
+      // a bloom, keeping hit geometry readable with reduced motion.
       for (const l of links) {
         const lg = ctx.createRadialGradient(l.x, l.y, .5, l.x, l.y, 11);
-        lg.addColorStop(0, '#fff6dd'); lg.addColorStop(.45, '#f2d38a'); lg.addColorStop(1, '#f2d38a00');
+        lg.addColorStop(0, '#fff6dd'); lg.addColorStop(.45, latticeTime > 0 ? '#eee1c2' : '#f2d38a'); lg.addColorStop(1, '#f2d38a00');
         ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(l.x, l.y, 11, 0, TAU); ctx.fill();
         ctx.fillStyle = '#f8e9bd'; ctx.beginPath(); ctx.arc(l.x, l.y, 3.2, 0, TAU); ctx.fill();
+        if (latticeTime > 0) {
+          ctx.strokeStyle = '#eee1c2'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(l.x, l.y, 13, 0, TAU); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(l.x - 17, l.y); ctx.lineTo(l.x + 17, l.y); ctx.moveTo(l.x, l.y - 17); ctx.lineTo(l.x, l.y + 17); ctx.stroke();
+        }
       }
       // The comet head and its short teal breath (blinking while invulnerable).
       if (invuln <= 0 || Math.floor(clock * 12) % 2 === 0) {
@@ -819,6 +1039,10 @@
       // Shards: dark spinning flint; keepers aim in rose, the Unraveller's
       // core gilds while open, frost pales whatever it chills.
       for (const s of shards) {
+        if (s.kind === 'deacon' && s.tetherTarget && shards.includes(s.tetherTarget)) {
+          ctx.save(); ctx.strokeStyle = s.tetherBroken > 0 ? '#756d5b44' : '#c0a064aa'; ctx.lineWidth = s.tetherBroken > 0 ? 1 : 2.5;
+          ctx.setLineDash(s.tetherBroken > 0 ? [2, 10] : [9, 6]); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.tetherTarget.x, s.tetherTarget.y); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+        }
         if (s.kind === 'siphon' && s.mode === 'harvest' && s.targetMote && motes.includes(s.targetMote)) {
           ctx.save(); ctx.strokeStyle = '#c4a7e7'; ctx.lineWidth = 2; ctx.setLineDash([4, 8]);
           ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.targetMote.x, s.targetMote.y); ctx.stroke(); ctx.setLineDash([]);
@@ -852,14 +1076,14 @@
         }
         ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.a);
         ctx.beginPath();
-        const points = s.kind === 'boss' ? 12 : s.kind === 'warden' ? 6 : s.kind === 'siphon' ? 4 : 8;
+        const points = s.kind === 'boss' ? 12 : s.kind === 'warden' || s.kind === 'deacon' ? 6 : s.kind === 'siphon' ? 4 : 8;
         for (let i = 0; i < points; i++) {
           const a = i / points * TAU, w = s.r * (0.82 + Math.sin(i * 2.7 + s.r) * .2);
           i ? ctx.lineTo(Math.cos(a) * w, Math.sin(a) * w) : ctx.moveTo(Math.cos(a) * w, Math.sin(a) * w);
         }
         ctx.closePath();
-        ctx.fillStyle = s.kind === 'boss' ? '#2c2530' : s.kind === 'warden' || s.kind === 'siphon' ? '#282338' : '#33302a'; ctx.fill();
-        ctx.strokeStyle = s.slow > 0 ? '#9ec7d4' : s.kind === 'elite' ? '#c9846a' : s.kind === 'warden' || s.kind === 'siphon' ? '#c4a7e7' : s.kind === 'boss' ? '#a88950' : s.hp < 2 ? '#f58e9b' : '#8d7f5c';
+        ctx.fillStyle = s.kind === 'boss' ? '#21131c' : s.kind === 'deacon' ? '#431c28' : s.kind === 'warden' || s.kind === 'siphon' ? '#282338' : '#33302a'; ctx.fill();
+        ctx.strokeStyle = s.slow > 0 ? '#9ec7d4' : s.kind === 'elite' ? '#c9846a' : s.kind === 'deacon' ? s.tetherBroken > 0 ? '#eee1c2' : '#c0a064' : s.kind === 'warden' || s.kind === 'siphon' ? '#b88b91' : s.kind === 'boss' ? s.stage === 2 ? '#e4d3ac' : '#a88950' : s.hp < 2 ? '#f58e9b' : '#8d7f5c';
         ctx.lineWidth = 2; ctx.stroke();
         if (s.kind === 'warden') {
           ctx.fillStyle = s.mode === 'rest' ? '#f2d38a' : s.mode === 'lock' || s.mode === 'channel' ? '#eadcff' : '#826b9e';
@@ -872,17 +1096,27 @@
           ctx.strokeStyle = '#c4a7e7'; ctx.lineWidth = 1.5;
           for (let n = 0; n < 2 - s.harvests; n++) { ctx.beginPath(); ctx.arc(-5 + n * 10, s.r + 7, 2, 0, TAU); ctx.stroke(); }
         }
+        if (s.kind === 'deacon') {
+          ctx.strokeStyle = '#e4d3ac'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-7, -s.r - 4); ctx.lineTo(0, -s.r - 14); ctx.lineTo(7, -s.r - 4); ctx.stroke();
+          ctx.fillStyle = s.tetherBroken > 0 ? '#eee1c2' : '#0b101a'; ctx.fillRect(-8, -3, 16, 6);
+        }
         if (s.hp < 2 && s.kind === 'drift') {
           ctx.strokeStyle = '#f58e9b88'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.moveTo(-s.r * .5, -s.r * .3); ctx.lineTo(s.r * .2, s.r * .1); ctx.lineTo(-s.r * .1, s.r * .55); ctx.stroke();
         }
         if (s.kind === 'boss') {
           const open = s.mode === 'open';
-          ctx.fillStyle = open ? '#f2d38a' : '#6b5a3e';
+          ctx.fillStyle = open ? '#eee1c2' : s.stage === 2 ? '#7b2c3b' : '#6b5a3e';
           ctx.beginPath(); ctx.arc(0, 0, open ? 11 : 7, 0, TAU); ctx.fill();
+          if (s.stage === 2) {
+            ctx.strokeStyle = '#c0a06488'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.ellipse(0, 0, s.r + 10, 12, .5, 0, TAU); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(0, 0, s.r + 10, 12, -.5, 0, TAU); ctx.stroke();
+          }
           if (open) {
             ctx.strokeStyle = '#f2d38a88'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(0, 0, 16 + Math.sin(clock * 6) * 3, 0, TAU); ctx.stroke();
+            ctx.beginPath(); ctx.arc(0, 0, 16 + (reduced() ? 0 : Math.sin(clock * 6) * 3), 0, TAU); ctx.stroke();
           }
         }
         ctx.restore();
@@ -917,6 +1151,7 @@
         ctx.fillStyle = level('relay') && relayTime <= 0 || attuned || options.veteran && castTime <= 0 ? '#9ed7c6' : '#b7bda4'; ctx.font = SMALL;
         const arts = [];
         if (options.veteran) arts.push(`Q STAR CAST ${castTime > 0 ? `${castTime.toFixed(1)}s` : links.length > 1 ? 'READY · COST 1 LINK' : 'NEED 2 LINKS'}`);
+        if (options.veteran) arts.push(`E LATTICE ${latticeTime > 0 ? `${latticeTime.toFixed(1)}s` : `${dedication}/3`} · ${routeVow.toUpperCase()} VIA`);
         if (level('relay')) arts.push(`COUNTERPOINT ${relayTime > 0 ? `${Math.ceil(relayTime)}s` : 'READY'}`);
         if (level('lodestar')) arts.push(attuned ? `${FORMATIONS[formation].name.toUpperCase()} ATTUNED` : `ATTUNE ${Math.round(clamp(attune / (4 - .5 * level('lodestar')), 0, 1) * 100)}%`);
         ctx.fillText(arts.join(' · '), 20, 48); ctx.font = HUD;
@@ -941,7 +1176,7 @@
         ctx.fillText(phase === 'ready' ? 'Weave your constellation' : 'Safe refit — the sky waits', W / 2, 120);
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText(options.veteran ? `Steer / WASD · F formation (${FORMATIONS[formation].name}) · Q Star Cast costs 1 link · deny siphon marks · P pauses` : `Steer with the pointer or WASD · F formation (${FORMATIONS[formation].name})${level('nova') ? ' · Space pulse' : ''} · gather star-motes · P pauses`, W / 2, H - 16);
+      ctx.fillText(options.veteran ? `Steer / WASD · F formation (${FORMATIONS[formation].name}) · Q cast · E Lattice cuts live lines · cross brass Deacon threads · P pauses` : `Steer with the pointer or WASD · F formation (${FORMATIONS[formation].name})${level('nova') ? ' · Space pulse' : ''} · gather star-motes · P pauses`, W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd']);
@@ -961,6 +1196,7 @@
       const k = e.key.toLowerCase();
       if (GAMEKEYS.has(k)) { e.preventDefault(); keys.add(k); return; }
       if (k === 'f') { e.preventDefault(); setFormation(FORMATION_IDS[(FORMATION_IDS.indexOf(formation) + 1) % FORMATION_IDS.length]); return; }
+      if (k === 'e') { e.preventDefault(); if (!e.repeat) linkLattice(); return; }
       if (k === 'q') { e.preventDefault(); if (!e.repeat) starCast(); return; }
       if (k === ' ') { e.preventDefault(); pulse(); return; }
       if (k === 'enter') { if (phase === 'ready') { e.preventDefault(); launch(); } return; }
@@ -969,7 +1205,7 @@
     // The same digit shortcuts work while a draft button holds focus.
     listen(draft, 'keydown', draftKey);
     listen(window, 'keyup', e => keys.delete(e.key.toLowerCase()));
-    listen(window, 'blur', () => keys.clear());
+    listen(window, 'blur', () => { clearInput(); });
     listen(canvas, 'pointerdown', e => { if (phase !== 'combat') return; pointer = point(e); try { canvas.setPointerCapture(e.pointerId); } catch {} });
     listen(canvas, 'pointermove', e => { pointer = point(e); });
     showDraft(true);
@@ -992,41 +1228,70 @@
     let gates = [], passed = 0, over = 0, invuln = 0, forgiven = false, shake = 0, gateTimer = 0, pointerHeld = false;
     let gateIndex = 0, patternCounts = {}, tickN = 0;
     let corona = veteran ? 1 : 0, coronaEarned = 0, preciseThreads = 0, brakeTime = 0, brakesUsed = 0;
-    // Classic keeps its original random stream. Veteran uses a separate,
-    // seeded stream for its authored gate grammar and daily determinism.
+    let wingTime = 0, wingovers = 0, wingPhases = 0, obstacles = [], forks = [], vow = 'unsworn', routeChoices = 0, routeBonus = 0;
+    let bossPhase = 0, bossPhaseSeen = 0, bossAttackTimer = 0, bossClears = 0, forkOne = false, forkTwo = false;
+    const timeOffset = veteran ? clamp(Number(options.startAt) || 0, 0, 48) : 0;
+    forkOne = timeOffset >= 18; forkTwo = timeOffset >= 38;
+    // Classic free play keeps its original Math.random stream. Daily Classic
+    // and every Veteran route use the seeded gameplay stream; cosmetics never
+    // consume it. The two modes remain isolated from one another.
     let seed = 307;
     for (const c of String(options.seed ?? (options.daily ? new Date().toISOString().slice(0, 10) : 307))) seed = Math.imul(seed ^ c.charCodeAt(0), 16777619) >>> 0;
     const rand = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-    const random = () => veteran ? rand() : Math.random();
+    const random = () => veteran || options.daily ? rand() : Math.random();
     const keys = new Set();
     const g = frame(container, W, H, {
-      label: veteran ? 'Perihelion Run Veteran Sky. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Teal rails mark drifting gates and numbered golden rings arrive in pairs. Cross a gate within its teal centre mark to earn a Corona charge. E or right-click spends one charge on a 1.8 second aerobrake: gates slow, but the run timer continues and braking threads earn no replacement charge. Survive sixty seconds. Press P to pause.' : 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
+      label: veteran ? 'Perihelion Run Veteran Sky. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Centre threads earn Corona. E or right-click spends one charge on an aerobrake. Q or the Wingover button spends one charge to reverse vertical motion and phase through one rim, censer, beam or tail edge. At route forks, the upper Ivory Via grants a charge and gentler patterns; the lower Oxblood Via narrows gates, adds censers and awards score. Survive the three-stage Solar Verger at 48 seconds and reach perihelion at sixty. Press P to pause.' : 'Perihelion Run. Hold Space, W, Up Arrow, or press and hold the canvas to dive; release to climb. Thread the golden rings and survive sixty seconds. Press P to pause.',
       sound: options.sound, step, draw,
     });
     const { canvas, listen, tone, burst, starfield } = g;
     const stars = starfield(311, 60);
+    const runTime = () => g.clock + timeOffset;
+    const status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+    status.style.cssText = 'margin:8px auto 0;max-width:calc(100% - 16px);color:#e5ddc8;font:600 14px/1.5 "DM Sans",sans-serif;text-align:center';
+    status.textContent = veteran ? 'Hold to dive, release to climb. Q Wingover and E Aerobrake share Corona; choose a Via at each armillary fork.' : 'Hold to dive, release to climb. Thread the golden rings.';
+    container.appendChild(status);
+    const tacticalStatus = document.createElement('p'); tacticalStatus.dataset.perihelionTactical = '';
+    tacticalStatus.style.cssText = 'margin:8px auto 0;max-width:calc(100% - 16px);padding:9px 12px;border:1px solid #a98c5744;background:#090f1a;color:#d8c494;font:600 14px/1.55 "DM Sans",sans-serif;text-align:center';
+    container.appendChild(tacticalStatus);
     const brakeButton = document.createElement('button'); brakeButton.type = 'button';
     brakeButton.dataset.perihelionBrake = ''; brakeButton.hidden = !veteran;
     brakeButton.style.cssText = 'display:block;margin:8px auto;max-width:calc(100% - 16px);min-height:44px;padding:9px 16px;border:1px solid #9ed7c6;background:#0f2034;color:#e5efdf;font:600 14px/1.5 "DM Sans",sans-serif;cursor:pointer';
     brakeButton.title = 'Spend one precision-earned Corona charge to slow gates for 1.8 seconds. The 60-second run clock does not slow and braking threads cannot refund a charge.';
     if (veteran) container.appendChild(brakeButton);
     listen(brakeButton, 'click', () => { aerobrake(); canvas.focus({ preventScroll: true }); });
+    const wingButton = document.createElement('button'); wingButton.type = 'button';
+    wingButton.dataset.perihelionWingover = ''; wingButton.hidden = !veteran;
+    wingButton.style.cssText = brakeButton.style.cssText;
+    wingButton.title = 'Spend one Corona to reverse vertical motion. For 0.55 seconds, the first rim, censer, beam or tail-edge impact is phased instead of fatal. Shares the same charge bank as Aerobrake.';
+    if (veteran) container.appendChild(wingButton);
+    listen(wingButton, 'click', () => { wingover(); canvas.focus({ preventScroll: true }); });
     const frameDestroy = g.destroy;
-    g.destroy = () => { brakeButton.remove(); frameDestroy(); };
+    g.destroy = () => { brakeButton.remove(); wingButton.remove(); status.remove(); tacticalStatus.remove(); frameDestroy(); };
     const framePause = g.pause, frameResume = g.resume;
     g.pause = () => { framePause(); keys.clear(); pointerHeld = false; syncDataset(); };
     g.resume = () => { frameResume(); syncDataset(); };
     canvas.style.touchAction = 'none';
     try { canvas.focus({ preventScroll: true }); } catch { canvas.focus(); }
 
-    const speed = () => (230 + g.clock * 3.2) * scale * (brakeTime > 0 ? .58 : 1);
-    const score = () => passed * 120 + (veteran ? preciseThreads * 40 : 0);
+    const speed = () => (230 + runTime() * 3.2) * scale * (brakeTime > 0 ? .58 : 1);
+    const score = () => passed * 120 + (veteran ? preciseThreads * 40 + routeBonus : 0);
     function aerobrake() {
       if (!veteran || g.paused || over || corona < 1 || brakeTime > 0) return;
       corona--; brakesUsed++; brakeTime = 1.8;
+      status.textContent = 'Aerobrake: gates and censers slow, but the sixty-second clock and boss liturgy continue.';
       tone(260, .22, 'sine', .045); syncDataset();
     }
-    const routeName = () => !veteran ? 'classic' : g.clock < 18 ? 'Wayward tail' : g.clock < 40 ? 'Braided tail' : 'Solar crown';
+    function wingover() {
+      if (!veteran || g.paused || over || corona < 1 || wingTime > 0) return;
+      corona--; wingovers++; wingTime = .55;
+      const holding = pointerHeld || keys.size > 0;
+      const direction = Math.abs(skiff.vy) > 1 ? -Math.sign(skiff.vy) : holding ? -1 : 1;
+      skiff.vy = direction * 285;
+      status.textContent = 'Wingover: vertical motion reversed. The next impact within 0.55 seconds is phased; no Corona is refunded.';
+      tone(520, .16, 'triangle', .045); syncDataset();
+    }
+    const routeName = () => !veteran ? 'classic' : runTime() < 18 ? 'Wayward tail' : runTime() < 40 ? 'Braided tail' : 'Solar crown';
     function syncDataset() {
       canvas.dataset.perihelionVeteran = String(veteran);
       canvas.dataset.perihelionRoute = routeName();
@@ -1038,26 +1303,79 @@
       canvas.dataset.perihelionCorona = String(corona); canvas.dataset.perihelionCoronaEarned = String(coronaEarned);
       canvas.dataset.perihelionThreads = String(preciseThreads); canvas.dataset.perihelionBrakes = String(brakesUsed);
       canvas.dataset.perihelionBrakeTime = brakeTime.toFixed(3);
+      canvas.dataset.perihelionWingTime = wingTime.toFixed(3); canvas.dataset.perihelionWingovers = String(wingovers);
+      canvas.dataset.perihelionWingPhases = String(wingPhases); canvas.dataset.perihelionCensers = String(obstacles.filter(o => o.kind === 'censer').length);
+      canvas.dataset.perihelionBeams = String(obstacles.filter(o => o.kind === 'beam').length);
+      canvas.dataset.perihelionVow = vow; canvas.dataset.perihelionRouteChoices = String(routeChoices); canvas.dataset.perihelionRouteBonus = String(routeBonus);
+      canvas.dataset.perihelionBossPhase = String(bossPhase); canvas.dataset.perihelionBossClears = String(bossClears);
+      canvas.dataset.perihelionClock = runTime().toFixed(3);
       brakeButton.disabled = !veteran || g.paused || !!over || corona < 1 || brakeTime > 0;
       brakeButton.textContent = brakeTime > 0 ? `Aerobrake · ${brakeTime.toFixed(1)}s · charge bank paused` : `E · Aerobrake · ${corona}/3 Corona`;
+      wingButton.disabled = !veteran || g.paused || !!over || corona < 1 || wingTime > 0;
+      wingButton.setAttribute('aria-pressed', String(wingTime > 0));
+      wingButton.textContent = wingTime > 0 ? `Q · Wingover ${wingTime.toFixed(2)}s` : `Q · Wingover · ${corona}/3 Corona`;
+      tacticalStatus.textContent = [
+        `${Math.max(0, Math.ceil(WIN - runTime()))}s remaining`, `Gates ${passed}`, `Score ${score()}`,
+        ...(veteran ? [
+          `Corona ${corona}/3`,
+          brakeTime > 0 ? `Aerobrake ${brakeTime.toFixed(1)}s` : 'Aerobrake ready (E)',
+          wingTime > 0 ? `Wingover ${wingTime.toFixed(2)}s · next impact phased` : 'Wingover ready (Q)',
+          `${vow} Via · route bonus ${routeBonus}`,
+          `Precision threads ${preciseThreads}`,
+          bossPhase ? `Solar Verger liturgy ${bossPhase}/3` : `Next Verger at 48s`,
+          `Censers ${obstacles.filter(o => o.kind === 'censer').length} · beams ${obstacles.filter(o => o.kind === 'beam').length}`,
+        ] : []),
+      ].join(' · ');
     }
     Object.defineProperty(g, 'state', { get: () => ({
       veteran, route: routeName(), passed, over, gateTimer, gateIndex, patternCounts: { ...patternCounts },
-      clock: g.clock, speed: speed(), skiff: { ...skiff }, score: score(),
+      clock: runTime(), speed: speed(), skiff: { ...skiff }, score: score(),
       corona, coronaEarned, preciseThreads, brakeTime, brakesUsed,
-      gates: gates.map(gt => ({ x: gt.x, y: gt.y, baseY: gt.baseY, age: gt.age, pattern: gt.pattern, pairOrder: gt.pairOrder, scored: gt.scored, threaded: !!gt.threaded, vy: gt.pattern === 'drift' ? Math.cos(gt.age * 1.25 + gt.driftPhase) * 58 * 1.25 : 0 })),
+      wingTime, wingovers, wingPhases, vow, routeChoices, routeBonus, bossPhase, bossClears,
+      obstacles: obstacles.map(o => ({ kind: o.kind, x: o.x, y: o.y, baseY: o.baseY, warning: o.warning || 0, life: o.life || 0, r: o.r || 0, width: o.width || 0 })),
+      forks: forks.map(f => ({ x: f.x, upper: f.upper, lower: f.lower, resolved: f.resolved })),
+      gates: gates.map(gt => ({ x: gt.x, y: gt.y, baseY: gt.baseY, age: gt.age, pattern: gt.pattern, pairOrder: gt.pairOrder, scored: gt.scored, threaded: !!gt.threaded, gap: gt.gap || gapHalf, vy: gt.pattern === 'drift' ? Math.cos(gt.age * 1.25 + gt.driftPhase) * 58 * 1.25 : 0 })),
     }) });
 
     function addGate(x, y, pattern = 'ring', pairOrder = 0) {
-      gates.push({ x, y, baseY: y, age: 0, driftPhase: veteran ? rand() * TAU : 0, pattern, pairOrder, scored: false, prevDx: null });
+      const gap = veteran && vow === 'oxblood' ? gapHalf * .86 : veteran && vow === 'ivory' ? Math.min(66, gapHalf * 1.08) : gapHalf;
+      gates.push({ x, y, baseY: y, age: 0, driftPhase: veteran ? rand() * TAU : 0, pattern, pairOrder, gap, scored: false, prevDx: null });
       patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
+    }
+    function spawnCenser(x = W + 46, y = TOP + 100 + rand() * (BOT - TOP - 200)) {
+      if (!veteran || obstacles.length >= 12) return;
+      obstacles.push({ kind: 'censer', x, y, baseY: y, age: 0, phase: rand() * TAU, r: 18, warning: .9 });
+      patternCounts.censer = (patternCounts.censer || 0) + 1;
+    }
+    function spawnSolarBeam(y = clamp(skiff.y + skiff.vy * .25, TOP + 30, BOT - 30)) {
+      if (!veteran || obstacles.length >= 12) return;
+      obstacles.push({ kind: 'beam', x: 0, y, baseY: y, warning: 1.15, life: .68, width: 15 });
+      patternCounts.beam = (patternCounts.beam || 0) + 1; tone(174, .18, 'triangle', .035);
+    }
+    function spawnFork() {
+      if (forks.length >= 2) return;
+      // Fold the current gate pattern into a clean route interlude. Without
+      // this explicit breather a random drift rim can overlap the lower vow
+      // and make an otherwise legible route choice geometrically unfair.
+      gates = [];
+      gateTimer = Math.max(gateTimer, (W + 70 - skiff.x) / speed() + 1.2);
+      forks.push({ x: W + 70, upper: TOP + 100, lower: BOT - 100, prevDx: null, resolved: false });
+      status.textContent = 'The armillary folds the old gates into a safe route interlude. Upper IVORY grants a Corona and gentler gates; lower OXBLOOD narrows gates, adds censers and pays score.';
     }
     function spawnGate() {
       if (!veteran) {
-        addGate(W + R + 40, TOP + 95 + Math.random() * (BOT - TOP - 190));
+        addGate(W + R + 40, TOP + 95 + random() * (BOT - TOP - 190));
         gateIndex++; syncDataset(); return 'ring';
       }
-      const sequences = {
+      const sequences = vow === 'oxblood' ? {
+        'Wayward tail': ['drift', 'pair', 'ring'],
+        'Braided tail': ['pair', 'drift', 'pair'],
+        'Solar crown': ['pair', 'drift', 'pair'],
+      } : vow === 'ivory' ? {
+        'Wayward tail': ['drift', 'pair', 'ring'],
+        'Braided tail': ['ring', 'drift', 'pair'],
+        'Solar crown': ['ring', 'drift', 'ring'],
+      } : {
         'Wayward tail': ['drift', 'pair', 'ring'],
         'Braided tail': ['pair', 'drift', 'pair'],
         'Solar crown': ['drift', 'pair', 'drift'],
@@ -1072,7 +1390,9 @@
         const echoY = clamp(clamp(TOP + BOT - y, y - 140, y + 140), TOP + 95, BOT - 95);
         addGate(x + PAIR_GAP, echoY, 'pair', 1);
       }
-      gateIndex++; syncDataset(); return pattern;
+      gateIndex++;
+      if (vow === 'oxblood' && gateIndex % 2 === 0) spawnCenser(x + 170);
+      syncDataset(); return pattern;
     }
     const firstPattern = spawnGate();
     gateTimer = (520 + random() * 90 + (firstPattern === 'pair' ? PAIR_GAP : 0)) / speed();
@@ -1080,6 +1400,8 @@
 
     function end(won) {
       if (over) return; over = won ? 1 : -1;
+      if (won && veteran && bossPhaseSeen === 3) bossClears = 1;
+      status.textContent = won ? veteran && bossClears ? 'The Solar Verger is outlasted. Perihelion reached through all three liturgies.' : 'Perihelion reached.' : 'The skiff is lost to the light.';
       syncDataset();
       if (won) { burst(skiff.x, skiff.y, '#f2d38a', 30, 240); tone(660, .3, 'sine', .06); tone(990, .45, 'sine', .05); }
       g.after(() => { g.destroy(); onEnd({ won, score: score() }); }, 850);
@@ -1099,12 +1421,95 @@
       end(false);
     }
 
+    function phaseImpact(x = skiff.x, y = skiff.y) {
+      if (wingTime <= 0) return false;
+      wingTime = 0; wingPhases++; invuln = Math.max(invuln, .18);
+      burst(x, y, '#eee1c2', 10, 130); tone(740, .1, 'triangle', .04); syncDataset();
+      return true;
+    }
+    function updateBoss(dt) {
+      const t = runTime();
+      bossPhase = veteran && t >= 48 ? t < 52 ? 1 : t < 56 ? 2 : 3 : 0;
+      if (bossPhase && bossPhase !== bossPhaseSeen) {
+        bossPhaseSeen = bossPhase; bossAttackTimer = .75;
+        // Each liturgy folds away the random slalom before dealing its own
+        // authored pressure. Boss survival must never depend on an unlucky rim
+        // overlapping a locked beam or route censer.
+        gates = []; obstacles = [];
+        gateTimer = bossPhase === 1 ? 2.4 : bossPhase === 2 ? 4.5 : 5;
+        const names = ['', 'I · Procession of Censers', 'II · The Locked Nave', 'III · Crown of Perihelion'];
+        status.textContent = `SOLAR VERGER ${names[bossPhase]}. ${bossPhase === 1 ? 'Read the vertical rails and Wingover through one censer if trapped.' : bossPhase === 2 ? 'Oxblood lanes lock your predicted height; climb or dive before the ivory beam.' : 'Censers and beams alternate. Spend Corona now; survival clears the Verger.'}`;
+        if (bossPhase === 1) spawnCenser(W + 45, TOP + 115);
+        if (bossPhase === 2) spawnSolarBeam();
+        if (bossPhase === 3) { spawnSolarBeam(TOP + 85); spawnCenser(W + 55, BOT - 105); }
+        tone(92 + bossPhase * 24, .45, 'sawtooth', .05);
+      }
+      if (!bossPhase) return;
+      bossAttackTimer -= dt;
+      if (bossAttackTimer > 0) return;
+      if (bossPhase === 1) { spawnCenser(); bossAttackTimer = 3.4; }
+      else if (bossPhase === 2) { spawnSolarBeam(); bossAttackTimer = 2.35; }
+      else {
+        if ((patternCounts.beam || 0) % 2) spawnCenser(); else spawnSolarBeam();
+        bossAttackTimer = 1.8;
+      }
+    }
+    function updateForks(dt, sp) {
+      if (veteran && runTime() >= 18 && !forkOne) { forkOne = true; spawnFork(); }
+      if (veteran && runTime() >= 38 && !forkTwo) { forkTwo = true; spawnFork(); }
+      for (let i = forks.length - 1; i >= 0; i--) {
+        const fork = forks[i]; fork.x -= sp * dt;
+        const dx = fork.x - skiff.x;
+        if (!fork.resolved && fork.prevDx !== null && fork.prevDx > 0 && dx <= 0) {
+          fork.resolved = true; routeChoices++;
+          vow = Math.abs(skiff.y - fork.upper) <= Math.abs(skiff.y - fork.lower) ? 'ivory' : 'oxblood';
+          if (vow === 'ivory') {
+            corona = Math.min(3, corona + 1);
+            status.textContent = 'Ivory Via sworn: one Corona restored; future gates widen and favour steady rings.';
+          } else {
+            routeBonus += 200; spawnCenser(fork.x + 170);
+            status.textContent = 'Oxblood Via sworn: +200 route score; gates narrow and every second gate adds a censer.';
+          }
+          tone(vow === 'ivory' ? 620 : 184, .22, 'triangle', .045); syncDataset();
+        }
+        fork.prevDx = dx;
+        if (fork.x < -100) forks.splice(i, 1);
+      }
+    }
+    function updateObstacles(dt, sp) {
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        if (o.warning > 0) o.warning -= dt;
+        if (o.kind === 'censer') {
+          o.age += dt * (brakeTime > 0 ? .58 : 1); o.x -= sp * dt;
+          o.y = clamp(o.baseY + Math.sin(o.age * 1.45 + o.phase) * 76, TOP + 32, BOT - 32);
+          if (o.x < -60) { obstacles.splice(i, 1); continue; }
+          if (o.warning <= 0 && invuln <= 0 && Math.hypot(skiff.x - o.x, skiff.y - o.y) < o.r + SK) {
+            if (phaseImpact(o.x, o.y)) { obstacles.splice(i, 1); continue; }
+            return crash('censer', o.y);
+          }
+        } else {
+          if (o.warning <= 0) o.life -= dt;
+          if (o.life <= 0) { obstacles.splice(i, 1); continue; }
+          if (o.warning <= 0 && invuln <= 0 && Math.abs(skiff.y - o.y) < o.width + SK) {
+            if (phaseImpact(skiff.x, o.y)) { obstacles.splice(i, 1); continue; }
+            return crash('beam', o.y);
+          }
+        }
+      }
+    }
+
     function step(dt) {
       if (over) return;
-      if (g.clock >= WIN) return end(true);
+      if (runTime() >= WIN) return end(true);
       if ((++tickN & 7) === 0) syncDataset();
       shake = Math.max(0, shake - dt * 16);
       invuln = Math.max(0, invuln - dt);
+      if (wingTime > 0) {
+        const before = Math.ceil(wingTime * 100);
+        wingTime = Math.max(0, wingTime - dt);
+        if (Math.ceil(wingTime * 100) !== before || !wingTime) syncDataset();
+      }
       if (brakeTime > 0) {
         const before = Math.ceil(brakeTime * 10);
         brakeTime = Math.max(0, brakeTime - dt);
@@ -1115,6 +1520,7 @@
       skiff.vy = clamp(skiff.vy + (holding ? 620 : -560) * dt, -250, 260);
       skiff.y += skiff.vy * dt;
       const sp = speed();
+      updateBoss(dt); updateForks(dt, sp);
       gateTimer -= dt;
       if (gateTimer <= 0) {
         const pattern = spawnGate();
@@ -1128,7 +1534,7 @@
         if (gt.x < -R - 60) { gates.splice(i, 1); continue; }
         const dx = gt.x - skiff.x, dy = skiff.y - gt.y, d = Math.hypot(dx, dy) || 1;
         // Threading the gate: cross its plane inside the gap.
-        if (gt.prevDx !== null && gt.prevDx > 0 && dx <= 0 && !gt.scored && Math.abs(dy) < gapHalf - 4) {
+        if (gt.prevDx !== null && gt.prevDx > 0 && dx <= 0 && !gt.scored && Math.abs(dy) < (gt.gap || gapHalf) - 4) {
           gt.scored = true; passed++;
           if (veteran && Math.abs(dy) <= 22) {
             gt.threaded = true; preciseThreads++;
@@ -1140,16 +1546,22 @@
         }
         gt.prevDx = dx;
         if (invuln > 0) continue;
-        // The rim: on the circle, outside the gap's arc.
-        if (Math.abs(d - R) < SK + 3.5 && Math.abs(dy) / d > gapHalf / R) return crash('rim', gt.y);
-        // The gilt finials at the gap's corners bite too.
-        for (const a of ENDS) {
-          if (Math.hypot(skiff.x - (gt.x + Math.cos(a) * R), skiff.y - (gt.y + Math.sin(a) * R)) < SK + 3) return crash('rim', gt.y);
+        // The rim and its finials use this gate's Via width, not a global gap.
+        const localGap = gt.gap || gapHalf, localAlpha = Math.asin(localGap / R);
+        const localEnds = [localAlpha, Math.PI - localAlpha, Math.PI + localAlpha, TAU - localAlpha];
+        const rim = Math.abs(d - R) < SK + 3.5 && Math.abs(dy) / d > localGap / R;
+        const finial = localEnds.some(a => Math.hypot(skiff.x - (gt.x + Math.cos(a) * R), skiff.y - (gt.y + Math.sin(a) * R)) < SK + 3);
+        if ((rim || finial) && invuln <= 0) {
+          if (phaseImpact(skiff.x, skiff.y)) continue;
+          return crash('rim', gt.y);
         }
       }
-      // The tail's edges are the last way to fall.
+      updateObstacles(dt, sp);
+      if (over) return;
+      // The tail's edges are the last way to fall; Wingover can phase one edge.
       if (skiff.y < TOP + SK || skiff.y > BOT - SK) {
-        if (invuln > 0) { skiff.y = clamp(skiff.y, TOP + SK, BOT - SK); skiff.vy *= -.5; }
+        if (wingTime > 0) { phaseImpact(); skiff.y = clamp(skiff.y, TOP + SK, BOT - SK); skiff.vy *= -.5; }
+        else if (invuln > 0) { skiff.y = clamp(skiff.y, TOP + SK, BOT - SK); skiff.vy *= -.5; }
         else return crash('edge');
       }
     }
@@ -1157,8 +1569,21 @@
     function draw(ctx, dt, clock) {
       ctx.save();
       if (shake > 0 && !reduced()) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
-      ctx.fillStyle = '#0b1725'; ctx.fillRect(-14, -14, W + 28, H + 28);
+      ctx.fillStyle = '#070c16'; ctx.fillRect(-14, -14, W + 28, H + 28);
       stars();
+      // Cathedral rails and an oxblood solar rose replace the generic neon
+      // dashboard while preserving the exact one-button flight silhouette.
+      ctx.save(); ctx.strokeStyle = '#aa8b5224'; ctx.fillStyle = '#4b182418'; ctx.lineWidth = 1.5;
+      for (const x of [82, W - 82]) {
+        ctx.beginPath(); ctx.moveTo(x - 42, BOT + 40); ctx.lineTo(x - 42, 170); ctx.quadraticCurveTo(x, 72, x + 42, 170); ctx.lineTo(x + 42, BOT + 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      if (bossPhase) {
+        ctx.translate(760, 112); ctx.strokeStyle = '#c0a06455'; ctx.fillStyle = '#4b182466';
+        ctx.beginPath(); ctx.arc(0, 0, 58, 0, TAU); ctx.fill(); ctx.stroke();
+        for (let n = 0; n < 3; n++) { ctx.save(); ctx.rotate(n * TAU / 3 + (reduced() ? 0 : clock * .05)); ctx.beginPath(); ctx.ellipse(0, 0, 76, 21, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
+        ctx.fillStyle = '#e5d5ae'; ctx.beginPath(); ctx.arc(0, 0, 7 + bossPhase * 2, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
       // The comet's tail: dark beyond the rails, a gilt haze within.
       ctx.fillStyle = '#07111e'; ctx.fillRect(0, 0, W, TOP - 40); ctx.fillRect(0, BOT + 40, W, H - BOT - 40);
       const hazeT = ctx.createLinearGradient(0, TOP - 40, 0, TOP);
@@ -1205,14 +1630,47 @@
           ctx.fillStyle = '#9ed7c6'; ctx.font = SMALL; ctx.textAlign = 'center';
           ctx.fillText(gt.pairOrder ? 'II' : 'I', gt.x - R - 18, gt.y + 4);
         }
+        const gateAlpha = Math.asin((gt.gap || gapHalf) / R);
+        const gateEnds = [gateAlpha, Math.PI - gateAlpha, Math.PI + gateAlpha, TAU - gateAlpha];
         ctx.strokeStyle = '#c4ac7926'; ctx.lineWidth = 10;
-        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, alpha, Math.PI - alpha); ctx.stroke();
-        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, Math.PI + alpha, TAU - alpha); ctx.stroke();
+        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, gateAlpha, Math.PI - gateAlpha); ctx.stroke();
+        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, Math.PI + gateAlpha, TAU - gateAlpha); ctx.stroke();
         ctx.strokeStyle = '#e9dcae'; ctx.lineWidth = 3.5;
-        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, alpha, Math.PI - alpha); ctx.stroke();
-        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, Math.PI + alpha, TAU - alpha); ctx.stroke();
+        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, gateAlpha, Math.PI - gateAlpha); ctx.stroke();
+        ctx.beginPath(); ctx.arc(gt.x, gt.y, R, Math.PI + gateAlpha, TAU - gateAlpha); ctx.stroke();
         ctx.fillStyle = '#f2d38a';
-        for (const a of ENDS) { ctx.beginPath(); ctx.arc(gt.x + Math.cos(a) * R, gt.y + Math.sin(a) * R, 3.4, 0, TAU); ctx.fill(); }
+        for (const a of gateEnds) { ctx.beginPath(); ctx.arc(gt.x + Math.cos(a) * R, gt.y + Math.sin(a) * R, 3.4, 0, TAU); ctx.fill(); }
+      }
+      // Route forks are nonlethal armillary portals. Their labels are echoed in
+      // the 14px DOM tactical readout on narrow screens.
+      for (const fork of forks) {
+        ctx.save(); ctx.font = SMALL; ctx.textAlign = 'center';
+        for (const [label, y, colour] of [['IVORY · SAFE', fork.upper, '#eee1c2'], ['OXBLOOD · +200', fork.lower, '#b86a72']]) {
+          ctx.strokeStyle = colour; ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]);
+          ctx.beginPath(); ctx.arc(fork.x, y, 55, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+          ctx.beginPath(); ctx.ellipse(fork.x, y, 66, 20, .55, 0, TAU); ctx.stroke();
+          ctx.fillStyle = colour; ctx.fillText(label, fork.x, y - 66);
+        }
+        ctx.restore();
+      }
+      // Censers telegraph a vertical travel rail. Verger beams lock a full
+      // oxblood lane before becoming a thin, readable ivory cutting line.
+      for (const o of obstacles) {
+        ctx.save();
+        if (o.kind === 'censer') {
+          ctx.strokeStyle = '#b89b6255'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 8]);
+          ctx.beginPath(); ctx.moveTo(o.x, o.baseY - 88); ctx.lineTo(o.x, o.baseY + 88); ctx.stroke(); ctx.setLineDash([]);
+          ctx.translate(o.x, o.y); ctx.fillStyle = '#481c28'; ctx.strokeStyle = o.warning > 0 ? '#a96a70' : '#e1c896'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(0, 0, o.r, 0, TAU); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(0, 0, o.r + 7, 6, .5, 0, TAU); ctx.stroke();
+          ctx.fillStyle = '#eee1c2'; ctx.beginPath(); ctx.moveTo(0, -o.r - 8); ctx.lineTo(5, -o.r + 1); ctx.lineTo(-5, -o.r + 1); ctx.closePath(); ctx.fill();
+        } else {
+          const live = o.warning <= 0;
+          ctx.strokeStyle = live ? '#eee1c2' : '#a6535e'; ctx.lineWidth = live ? o.width * 2 : 3; ctx.globalAlpha = live ? .72 : reduced() ? .85 : .55 + Math.sin(clock * 12) * .2;
+          ctx.setLineDash(live ? [] : [12, 9]); ctx.beginPath(); ctx.moveTo(0, o.y); ctx.lineTo(W, o.y); ctx.stroke(); ctx.setLineDash([]);
+          if (!live) { ctx.fillStyle = '#e1c896'; ctx.font = SMALL; ctx.textAlign = 'left'; ctx.fillText('LOCKED NAVE', 22, o.y - 10); }
+        }
+        ctx.restore();
       }
       // The skiff: a gilt dart with a teal wake.
       if (invuln <= 0 || Math.floor(clock * 10) % 2 === 0) {
@@ -1220,6 +1678,7 @@
         ctx.strokeStyle = '#e9dcae'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -7); ctx.lineTo(-16, 0); ctx.lineTo(-10, 7); ctx.closePath(); ctx.stroke();
         ctx.fillStyle = '#f2d38a'; ctx.beginPath(); ctx.arc(2, 0, 2.6, 0, TAU); ctx.fill();
+        if (wingTime > 0) { ctx.strokeStyle = '#eee1c2'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(0, 0, 25, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
         ctx.strokeStyle = '#9ed7c688'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-26 - Math.random() * 6, 0); ctx.stroke();
         ctx.restore();
@@ -1229,20 +1688,20 @@
       ctx.fillStyle = '#e9dcae'; ctx.font = HUD; ctx.textAlign = 'left';
       ctx.fillText(`GATES ${passed} · ${score()}`, 20, 28);
       ctx.textAlign = 'right';
-      ctx.fillText(over ? (over > 0 ? 'PERIHELION REACHED' : 'LOST TO THE LIGHT') : `${Math.ceil(WIN - g.clock)}s`, W - 20, 28);
+      ctx.fillText(over ? (over > 0 ? 'PERIHELION REACHED' : 'LOST TO THE LIGHT') : `${Math.ceil(WIN - runTime())}s`, W - 20, 28);
       if (veteran) {
-        ctx.fillStyle = '#9ed7c6'; ctx.textAlign = 'center'; ctx.font = SMALL;
-        ctx.fillText(`VETERAN · ${routeName().toUpperCase()}`, W / 2, 28);
-        ctx.fillText(brakeTime > 0 ? `AEROBRAKE ${brakeTime.toFixed(1)}s · CORONA BANK PAUSED` : `CORONA ${corona}/3 · CENTRE THREADS CHARGE · E BRAKES`, W / 2, 48); ctx.font = HUD;
+        ctx.fillStyle = '#d8c494'; ctx.textAlign = 'center'; ctx.font = SMALL;
+        ctx.fillText(`${bossPhase ? `SOLAR VERGER · LITURGY ${bossPhase}/3` : `VETERAN · ${routeName().toUpperCase()}`} · ${vow.toUpperCase()} VIA`, W / 2, 28);
+        ctx.fillText(brakeTime > 0 ? `AEROBRAKE ${brakeTime.toFixed(1)}s · CORONA BANK PAUSED` : wingTime > 0 ? `WINGOVER ${wingTime.toFixed(2)}s · NEXT IMPACT PHASED` : `CORONA ${corona}/3 · E BRAKE · Q WINGOVER`, W / 2, 48); ctx.font = HUD;
       }
-      if (g.clock < 4.2 && !over) {
+      if (runTime() - timeOffset < 4.2 && !over) {
         ctx.globalAlpha = clamp((4.2 - g.clock) / 1.2, 0, 1);
         ctx.fillStyle = '#e9dcae'; ctx.font = SERIF; ctx.textAlign = 'center';
         ctx.fillText(veteran ? `Perihelion · ${routeName()}` : 'Perihelion Run', W / 2, 120);
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = '#b7bda4'; ctx.font = SMALL; ctx.textAlign = 'center';
-      ctx.fillText(veteran ? 'Hold to dive · centre diamonds earn Corona · E / right-click brakes gates, not the timer · no charge refund while braking' : 'Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
+      ctx.fillText(veteran ? 'Hold to dive · E brake / right-click · Q Wingover phases one impact · choose Ivory or Oxblood at forks · P pauses' : 'Hold to dive — release to climb · thread the golden rings · P pauses', W / 2, H - 16);
     }
 
     const GAMEKEYS = new Set([' ', 'w', 'arrowup']);
@@ -1250,6 +1709,7 @@
       const k = e.key.toLowerCase();
       if (k === 'p') { syncDataset(); return; }
       if (veteran && (k === 'e' || k === 'shift')) { e.preventDefault(); if (!e.repeat) aerobrake(); return; }
+      if (veteran && k === 'q') { e.preventDefault(); if (!e.repeat) wingover(); return; }
       if (!GAMEKEYS.has(k)) return;
       e.preventDefault(); keys.add(k);
     });

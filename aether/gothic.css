@@ -1,0 +1,552 @@
+/* ÆTHER / THE MIDNIGHT CHAPTER
+   Final shared presentation layer: Gothic Victorian observatory furniture.
+   Local vector artwork only; gameplay canvases keep their own silhouettes. */
+
+:root {
+  --bg: #060d18;
+  --sidebar: #160d13;
+  --panel: #0b1b2c;
+  --text: #f1e6cf;
+  --muted: #bdb9ac;
+  --gold: #c5a365;
+  --gold-bright: #f0d69a;
+  --line: #c5a3654a;
+  --ink-deep: #030810;
+  --ink: #071421;
+  --ink-raised: #0d2034;
+  --vellum: #f1e6cf;
+  --brass: #c5a365;
+  --brass-light: #f0d69a;
+  --spectral: #9dbbc0;
+  --veil: #c5a36510;
+  --edge: #c5a36558;
+  --oxblood: #5c2430;
+  --mahogany: #1b0e14;
+  --paper: #d8c6a1;
+  --paper-ink: #30271b;
+  --paper-muted: #58482f;
+  --exp-muted: #c2bdaf;
+  --exp-border: #c5a36558;
+  color-scheme: dark;
+}
+
+html { scrollbar-color: #8c6e3e #060d18; }
+body { background: #060d18; color: var(--vellum); font-size: 16px; }
+body::after {
+  background: linear-gradient(#060d18f2, #060d18fa), url('assets/celestial-eagle-chart.webp') center 0 / 1150px repeat;
+  opacity: .18;
+}
+::selection { background: #744552; color: #fff3d6; }
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #f6d58f;
+  outline-offset: 4px;
+}
+
+/* The room beyond the cabinet: blue-black enamel and a distant lancet. */
+.workspace {
+  background:
+    radial-gradient(ellipse at 86% -8%, #85434f1c, transparent 38%),
+    radial-gradient(ellipse at 15% 70%, #284c651c, transparent 44%),
+    linear-gradient(125deg, #060d18, #081727 56%, #050c16);
+}
+.workspace::before {
+  background:
+    linear-gradient(90deg, #060d1800, #060d18),
+    url('assets/gothic-window.svg') right -62px top 38px / 360px 540px no-repeat,
+    url('assets/gothic-arch.svg') right -4vw top -90px / 650px auto no-repeat;
+  opacity: .14;
+}
+
+/* Oxblood mahogany navigation, inset like a cathedral instrument cabinet. */
+.sidebar {
+  background:
+    repeating-linear-gradient(94deg, #ffffff02 0 1px, transparent 1px 7px),
+    radial-gradient(ellipse at 50% 0, #a1544924, transparent 36%),
+    linear-gradient(155deg, #211017, #100b11 70%);
+  border-right-color: #a8854e;
+  box-shadow: 5px 0 0 #35202a, 6px 0 0 #a8854e, 16px 0 42px #0009;
+}
+.sidebar::before { border-color: #c5a36538; box-shadow: inset 0 0 0 3px #08070a77; }
+.brand { background-image: url('assets/gothic-frame.svg'); }
+.brand::before { border-color: #c5a36568; background: repeating-conic-gradient(#c5a36520 0 .6deg, transparent .6deg 9deg); }
+.brand-name { color: #f2e3c4; text-shadow: 0 2px #000, 0 0 25px #c59a4b16; }
+.brand-caption { color: #d0ae70; }
+.ornament-rule { opacity: .8; }
+.nav-label,
+.sidebar .nav-label { color: #d2b47c; font-size: 13px; letter-spacing: 1.05px; }
+.nav-label-secondary { border-top-color: #c5a36538; }
+.primary-nav a { color: #d3c8b4; font-size: 16px; }
+.primary-nav a > svg { color: #d4b371; background: radial-gradient(circle at 35% 25%, #51313a, #18121a 72%); border-color: #a8854e; }
+.primary-nav a::after { content: ''; right: 9px; width: 5px; height: 12px; background: #d6b675; clip-path: polygon(50% 0, 100% 35%, 70% 100%, 30% 100%, 0 35%); }
+.primary-nav a:hover { color: #fff0d1; background: #c5a3650b; border-color: #c5a36528; }
+.primary-nav a[aria-current='page'] {
+  color: #ffe2aa;
+  border-color: #c5a3656b;
+  background: linear-gradient(90deg, #7c35485c, #c5a3650a);
+  box-shadow: inset 3px 0 #d9b76f, inset 0 0 24px #c5a36508;
+}
+.primary-nav a[aria-current='page'] > svg { color: #ffe2aa; background: radial-gradient(circle at 35% 25%, #875347, #27141e 72%); }
+.nav-count { color: #d6b675; }
+.ambience-toggle { min-height: 44px; color: #c9bfae; font-size: 14px; border-top-color: #c5a36538; }
+.profile { border-top-color: #c5a36550; background: #0d0910bb; }
+.profile-copy strong { color: #e6d8bc; font-size: 14px; }
+.profile-copy small { color: #b9ad9e; font-size: 12px; }
+.avatar { background: radial-gradient(circle at 35% 25%, #7e4546, #25121c 72%); }
+
+.topbar {
+  background: #071423f5;
+  border-bottom-color: #c5a36558;
+  box-shadow: 0 4px 0 #040a12, 0 5px 0 #c5a36524;
+}
+.breadcrumb { color: #c3bdaf; font-size: 14px; }
+.breadcrumb #breadcrumb-current { color: #ead9b8; font-size: 16px; }
+.location-button { color: #d0c5b1; font-size: 14px; }
+.icon-button { background: radial-gradient(circle at 35% 25%, #29334a, #0a1423 70%); border-color: #c5a36555; }
+.page-footer { color: #b7b0a1; font-size: 12px; }
+.page-footer button { color: #c9bda7; font-size: 12px; min-height: 36px; }
+
+/* Shared illuminated headers: pointed arches replace generic dashboard bands. */
+.view-header,
+.exp-heading,
+.cabinet-intro {
+  border: 1px solid #ad884c;
+  background:
+    linear-gradient(90deg, #071525 0%, #09192bf2 52%, #09192b8c 78%, #09192b66),
+    url('assets/gothic-window.svg') right -38px center / 300px 450px no-repeat,
+    #071525;
+  box-shadow: 0 5px 0 #210f18, 0 6px 0 #806239, 0 17px 34px #0006;
+  color: var(--vellum);
+}
+.view-header::before,
+.exp-heading::before { background-image: url('assets/gothic-frame.svg'); opacity: .78; }
+.view-header h1,
+.exp-heading h1,
+.cabinet-intro h1,
+.tour-page .cabinet-intro h1 { color: #f2e3c4; text-shadow: 0 2px 18px #0005; }
+.view-header h1 em,
+.exp-heading h1 em,
+.tour-page .cabinet-intro h1 em { color: #dfb972; }
+.view-header p,
+.exp-subtitle,
+.cabinet-intro > div:first-child > p:last-child { color: #c8c2b3; font-size: 16px; line-height: 1.6; }
+.view-header .eyebrow,
+.exp-heading .eyebrow { color: #d9b77a; }
+.cabinet-edition { border-color: #d3af6c; background: radial-gradient(circle at 35% 25%, #843c4b, #30131f 75%); box-shadow: 0 5px 0 #170a11, 0 8px 24px #0007; }
+.cabinet-edition small { color: #e3c9a0; }
+
+/* Tarnished brass keys with readable labels. */
+.button { min-height: 44px; font-size: 14px; line-height: 1.5; letter-spacing: .45px; }
+.button::before { background: linear-gradient(110deg, #172c43, #091827 55%, #12253a); }
+.button:hover { color: #fff0cd; }
+.button-primary,
+.button:not(.button-primary).button-primary { color: #25180f; }
+.button-primary::before {
+  background: linear-gradient(105deg, #c39b55, #e3c27f 45%, #bd914b 80%);
+  box-shadow: inset 0 1px #fff0c080, inset 0 -2px #79562540;
+}
+.hero-cta .button,
+.atlas-actions .button,
+.cartridge-modes .button { font-size: 14px; }
+.text-link { color: #e0c79a; font-size: 14px; min-height: 36px; }
+.atlas-actions .text-link { font-size: 14px; }
+.eyebrow,
+.section-label { color: #d8b577; font-size: 12px; letter-spacing: 1.65px; }
+
+/* Overview frontispiece: ivory etching behind a Gothic brass frame. */
+.welcome { background-image: url('assets/filigree.svg'); }
+.welcome h1 { color: #f2e3c4; }
+.welcome p { color: #c4beaf; font-size: 14px; }
+.welcome-kicker { color: #d5b171 !important; font-size: 14px !important; }
+.playground-hero {
+  background:
+    radial-gradient(ellipse at 12% 20%, #6b314833, transparent 45%),
+    radial-gradient(ellipse at 80% 15%, #335a7040, transparent 42%),
+    repeating-linear-gradient(118deg, transparent 0 8px, #c5a36503 8px 9px),
+    #08192b;
+  border-color: #c5a365;
+  box-shadow: 0 22px 55px #0008, 0 0 0 5px #060d18, 0 0 0 6px #c5a36542;
+}
+.playground-hero::before { background-image: url('assets/gothic-frame.svg'); }
+.playground-hero h2 { color: #f3e5c8; }
+.playground-hero h2 em { color: #e2bc74; }
+.playground-hero .hero-description { color: #d0c9b9; font-size: 18px; }
+.playground-hero .eyebrow { color: #ddbc7e; font-size: 12px; }
+.hero-engraving {
+  border: 1px solid #d0aa63;
+  background: linear-gradient(145deg, #351825, #0a192b 45%, #07111f);
+  box-shadow: 0 0 0 1px #e1c07c, 0 0 0 6px #071426, 0 0 0 7px #c5a36560, 10px 14px 30px #0008;
+}
+.hero-engraving::before { background-image: url('assets/gothic-frame.svg'); }
+.engraving-mat { border-color: #b49155; background: #d3c09a; }
+.instrument-figure { color: #d8bb82; }
+.instrument-figure span { color: #b8a789; }
+.hero-engraving figcaption { color: #ead9b8; }
+.hero-engraving figcaption span { color: #d1ae6d; }
+.hero-colophon { color: #c9b997; background: #091626; border-top-color: #c5a365; }
+.hero-colophon > span > span { color: #d5b371; }
+.hero-colophon i { background: #c5a365; }
+
+.stats-grid {
+  border-color: #a9854d;
+  background: linear-gradient(110deg, #121a29, #0a1828 55%, #21121d);
+  box-shadow: 0 8px 26px #0006;
+  color: var(--vellum);
+}
+.stat { color: var(--vellum); border-right-color: #a9854d55; }
+.stat:hover { background: #c5a3650b; }
+.stat-label { color: #d0b784; font-size: 12px; }
+.stat-value { color: #f1e3c6; }
+.stat-detail { color: #c0baac; font-size: 14px; }
+.stat-icon { color: #ddbd7c; border-color: #b69255; background: repeating-conic-gradient(#c5a36516 0 .7deg, transparent .7deg 15deg); }
+.stat-detail .tiny-dot { background: #b7cbaa; }
+
+/* Atlas plates retain their ivory etching, now inside pointed lancets. */
+.atlas-card { border-color: #aa8749; box-shadow: 3px 5px 0 #160c14, 4px 6px 0 #8d6d39, 8px 13px 25px #0006; }
+.atlas-card::before {
+  border: 1px solid #b89558;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 18%, 100% 100%, 0 100%, 0 18%);
+  background:
+    linear-gradient(#0a1a2bd9, #0a1a2bf2),
+    url('assets/gothic-window.svg') center / 100% 100% no-repeat;
+}
+.atlas-card::after { content: ''; top: 177px; left: calc(50% - 4px); right: auto; width: 8px; height: 12px; background: #8d6c39; clip-path: polygon(50% 0, 100% 40%, 70% 100%, 30% 100%, 0 40%); }
+.atlas-card-number { font-size: 16px; }
+.atlas-card-number > span { font-size: 12px; }
+.atlas-card > p { color: #584832; font-size: 16px; line-height: 1.5; }
+.atlas-card > small { color: #625239; font-size: 14px; line-height: 1.5; }
+.atlas-card-game { font-size: 16px; }
+.destination-card { box-shadow: 3px 5px 0 #160c14, 4px 6px 0 #8d6d39, 8px 13px 25px #0006; }
+.destination-card p { color: #584832; font-size: 16px; }
+
+/* The cartridge cabinet is a set of occult instruments, not web tiles. */
+.cabinet-filters { border-block-color: #c5a36550; }
+.cabinet-filters button { min-height: 44px; color: #d1c5ae; background: #0b1b2d; font-size: 14px; }
+.cabinet-filters button span { color: #ddbd7c; border-color: #c5a36555; font-size: 12px; }
+.cabinet-filters button[aria-pressed='true'] { color: #2c1d14; background: #d5bb87; }
+.cabinet-filters button[aria-pressed='true'] span { color: #55351e; }
+.cartridge-card,
+.cartridge-choice:last-child .cartridge-card {
+  min-height: 410px;
+  border-color: #b18c4e;
+  background:
+    url('assets/gothic-frame.svg') center / 100% 100% no-repeat,
+    radial-gradient(ellipse at 15% 0, #74324633, transparent 43%),
+    linear-gradient(150deg, #10263c, #071421 70%);
+  box-shadow: 4px 6px 0 #180c14, 5px 7px 0 #856737, 10px 18px 32px #0007;
+  color: var(--vellum);
+}
+.cartridge-card:hover { border-color: #e0bd79; box-shadow: 4px 6px 0 #180c14, 5px 7px 0 #c09a58, 12px 23px 36px #0008; }
+.cartridge-card:focus-visible,
+.trial-frame canvas:focus-visible,
+.tour-hunt-frame canvas:focus-visible { outline: 3px solid #f6d58f; outline-offset: 4px; }
+.cartridge-engraving {
+  margin: 29px 0 29px 25px;
+  border: 0;
+  outline: 0;
+  clip-path: polygon(50% 0, 100% 13%, 100% 100%, 0 100%, 0 13%);
+  background: #c9b78f;
+  box-shadow: inset 0 0 0 1px #856638;
+}
+.cartridge-engraving img { filter: sepia(.16) saturate(.72) contrast(1.08); }
+.cartridge-emblem,
+.cartridge-choice:last-child .cartridge-emblem { color: #edcc8c; border-color: #d0ac68; background: repeating-conic-gradient(#c5a36525 0 .7deg, transparent .7deg 15deg), #3a1926; }
+.cartridge-copy > p { color: #d9b87c; font-size: 14px; letter-spacing: 1.15px; line-height: 1.5; }
+.cartridge-card h2 { color: #f1e2c3; }
+.cartridge-card .cartridge-brief { color: #cbc5b5; font-family: var(--sans); font-size: 16px; line-height: 1.6; }
+.cartridge-card .cartridge-features b { color: #c6bfae; border-color: #c5a36548; background: #c5a36508; font-size: 14px; line-height: 1.45; }
+.cartridge-card footer { color: #e0bd79; border-top-color: #c5a36548; font-size: 14px; letter-spacing: .45px; }
+.cartridge-card footer small { color: #c1b9a7; font-size: 14px; }
+.cartridge-daily-link,
+.cartridge-contract-note { min-height: 44px; color: #e1c58f; background: #0a1a2b; border-color: #b18c4e; font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+.cartridge-contract-note { color: #bfb6a5; }
+.cartridge-daily-link:hover { color: #ffe2a6; background: #35202a; }
+.cartridge-veteran-link { min-height: 44px; color: #e5c28c; background: #351522; font-size: 14px; }
+.cartridge-veteran-link.locked { color: #b9a98f; background: #18131c; }
+.arcade-cabinet-link {
+  border-color: #b18c4e;
+  background: url('assets/gothic-frame.svg') center / 100% 100% no-repeat, linear-gradient(110deg, #351824, #0b1b2d 60%);
+  box-shadow: 4px 6px 0 #180c14, 5px 7px 0 #856737;
+  color: var(--vellum);
+}
+.arcade-cabinet-link > span:first-child,
+.arcade-cabinet-link strong { color: #eddbb9; }
+.arcade-cabinet-link small { color: #c7beac; font-size: 14px; }
+
+/* Working game furniture: ornament stays outside the canvas. */
+.panel,
+.instrument-panel,
+.room-card,
+.home-creation,
+.keepsake,
+.tour-manifest,
+.cabinet-passport { border-color: #c5a36558; }
+:is(.instrument-stage,.game-cabinet,.trial-frame,.tour-hunt-frame,.starforge-shell,.df-console,.room-play,.world-stage,.orchestra-stage,.history-stage,.signal-stage,.darkroom-stage)::after {
+  background:
+    radial-gradient(circle at 8px 8px, #d8b877 0 1px, #47331d 1.5px 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 8px) 8px, #d8b877 0 1px, #47331d 1.5px 2px, transparent 2.5px),
+    radial-gradient(circle at 8px calc(100% - 8px), #d8b877 0 1px, #47331d 1.5px 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), #d8b877 0 1px, #47331d 1.5px 2px, transparent 2.5px),
+    url('assets/gothic-frame.svg') center / calc(100% - 8px) calc(100% - 8px) no-repeat,
+    url('assets/rococo-frame.svg') center / 100% 100% no-repeat;
+  opacity: .52;
+}
+:is(.trial-frame,.tour-hunt-frame,.game-screen,.room-play,.world-stage,.orchestra-stage,.history-stage,.signal-stage,.darkroom-stage) canvas { filter: none; }
+.cartridge-stage,
+.tour-stage,
+.game-cabinet,
+.instrument-stage { border-color: #c5a36568; background-color: #081626; }
+.cartridge-header h1 { color: #f1e2c3; }
+.veteran-rule {
+  color: #e3c28d !important;
+  font-family: var(--sans);
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0;
+}
+.cartridge-playbill { background: linear-gradient(90deg, #321722, #0a192a 50%, #321722); border-color: #c5a36558; }
+.cartridge-playbill span,
+.cartridge-footer { color: #c5bdac; }
+.cartridge-detail { color: #cbc4b3 !important; font-size: 16px !important; }
+.flight-brief,
+.flight-legend { color: #d1c7b3; }
+.flight-controls { color: #c3bdaf; }
+.standalone-game .tour-standalone-nav { font-size: 12px; }
+.cartridge-record span,
+.cartridge-playbill span,
+.cartridge-footer,
+.cartridge-clears,
+.flight-brief,
+.flight-legend { font-size: 14px; line-height: 1.5; }
+.choice-copy small { color: #c9bda7; font-size: 14px; line-height: 1.4; letter-spacing: .04em; }
+.choice-copy strong { line-height: 1.15; }
+.game-tools .button { font-size: 14px; }
+.game-scoreboard small { color: #c7bfae; font-size: 14px; line-height: 1.45; }
+.game-next strong { font-size: 16px; line-height: 1.4; }
+.game-bottom > p,
+.game-bottom > p > span,
+.game-tip p,
+.instrument-panel > p,
+.tiny-note,
+.instrument-panel .tiny-note { font-size: 14px; line-height: 1.6; }
+.passport-pill small,
+.passport-rank { font-size: 14px; line-height: 1.4; }
+
+/* Atlas reading room and puzzle folio. */
+.atlas-intro,
+.atlas-chapters p { color: #c5c0b2; font-size: 16px; }
+.atlas-heading > .eyebrow { font-size: 12px; }
+.atlas-heading > .eyebrow span { color: #c2b8a4; font-size: 12px; }
+.atlas-game-caption { color: #d8b577; font-size: 14px; }
+.atlas-game-caption span { color: #c0baac; }
+.planet-plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('assets/gothic-window.svg') center / 100% 100% no-repeat;
+  opacity: .2;
+}
+.atlas-facts { border-color: #a88345; background-color: #d8c6a1; }
+.atlas-facts dt { color: #604729; font-size: 14px; }
+.puzzle-heading p:not(.eyebrow) { color: #c5c0b2; font-size: 16px; }
+.puzzle-readout { color: #c6bfaf; font-size: 14px; }
+.puzzle-course { color: #e0c18a; font-size: 14px; white-space: normal; }
+.puzzle-levels button > span:nth-child(2) { color: #c9c2b1; font-size: 14px; }
+.puzzle-guide p { color: #4f412d; font-size: 16px; line-height: 1.65; }
+.puzzle-guide details p,
+.puzzle-guide .puzzle-record small,
+.puzzle-guide .puzzle-save-note,
+.puzzle-guide .puzzle-keyboard { color: #58482f; font-size: 14px; }
+.puzzle-guide summary { color: #453620; font-size: 14px; min-height: 36px; }
+.puzzle-instruction { color: #ded2b6; font-size: 16px; }
+.puzzle-lesson { color: #c2b9a7; font-size: 12px; }
+
+/* Relic drafts: preserve the audited 16/14px reading layer and parchment ink. */
+.relic-dialog {
+  border: 1px solid #b18c4e;
+  background: url('assets/gothic-frame.svg') center / 100% 100% no-repeat, url('assets/parchment.svg');
+  background-color: #d8c6a1;
+  color: #30271b;
+}
+.relic-dialog h2 { color: #3c2023; }
+.relic-dialog-heading > p:last-child,
+.relic-dialog-footer,
+.relic-choice-pair { color: #58482f; }
+.relic-dialog .eyebrow,
+.relic-choice-tag,
+.relic-choice-number { color: #60461f; }
+.relic-discovery-mark {
+  width: 68px;
+  height: 81px;
+  margin: 0 auto;
+  background: url('assets/relic-seal.svg') center / contain no-repeat;
+  font-size: 0;
+  text-shadow: none;
+}
+.relic-choice {
+  border-color: #9a773e;
+  background: url('assets/gothic-frame.svg') center / 100% 100% no-repeat, #d8c6a1;
+  color: #30271b;
+}
+.relic-choice:hover,
+.relic-choice:focus-visible { border-color: #6f4c24; background-color: #e2d1af; }
+.relic-choice-art {
+  width: 64px;
+  height: 74px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  clip-path: polygon(50% 0, 100% 17%, 100% 100%, 0 100%, 0 17%);
+  background: linear-gradient(155deg, #6b303d, #241522 72%);
+  color: #f0d69a;
+}
+.relic-choice strong { color: #30271b; }
+.relic-choice-effect { color: #40362a; font-size: 16px; line-height: 1.65; }
+.relic-choice-pair { font-size: 14px; line-height: 1.6; }
+.relic-choice-pair.ready,
+.relic-choice-pair.ready::before { color: #214f3c; }
+.relic-choice:focus-visible { outline: 3px solid #49331c; outline-offset: 4px; box-shadow: 0 0 0 7px #f0dfba; }
+.relic-dialog-footer .button:focus-visible,
+.relic-field-guide summary:focus-visible { outline: 3px solid #49331c; outline-offset: 4px; }
+.relic-glyph {
+  width: 42px;
+  height: 50px;
+  background: url('assets/relic-seal.svg') center / contain no-repeat;
+  font-size: 0;
+}
+.arcade-aside .relic-entry p { color: #40362a; font-size: 16px; }
+.arcade-aside .relic-entry small { color: #58482f; font-size: 14px; }
+.arcade-aside .relic-field-guide summary,
+.arcade-aside .relic-field-guide summary > span { color: #40362a; }
+
+.modal { border-color: #b18c4e; }
+.toast { border-color: #c5a365; }
+
+/* Short desktop cabinets keep every route reachable by scrolling. */
+@media (min-width: 1001px) and (max-height: 950px) {
+  .nav-label,
+  .sidebar .nav-label { font-size: 11px; }
+  .profile-copy strong { font-size: 12px; }
+  .profile-copy small { font-size: 11px; }
+}
+
+@media (max-width: 1250px) {
+  .cartridge-card,
+  .cartridge-choice:last-child .cartridge-card { min-height: 430px; }
+  .cartridge-copy { padding-inline: 26px 20px; }
+  .cartridge-card footer { margin-inline: 26px 20px; }
+}
+
+@media (max-width: 1000px) and (min-width: 721px) {
+  .sidebar { box-shadow: 3px 0 0 #35202a, 4px 0 0 #a8854e, 10px 0 30px #0008; }
+  .primary-nav a[aria-current='page'] > span:first-of-type {
+    display: block !important;
+    font-size: 10px;
+    line-height: 1.25;
+    letter-spacing: .25px;
+    text-align: center;
+  }
+  .view-header,
+  .exp-heading,
+  .cabinet-intro { background-size: auto, 250px 375px, auto; }
+}
+
+@media (max-width: 850px) {
+  .cartridge-card,
+  .cartridge-choice:last-child .cartridge-card { min-height: 390px; }
+  .view-header,
+  .exp-heading,
+  .cabinet-intro { background-size: auto, 230px 345px, auto; }
+}
+
+@media (max-width: 720px) {
+  .workspace::before { left: 0; opacity: .09; }
+  .topbar { min-height: 64px; height: 64px; }
+  .topbar .icon-button { width: 40px; height: 40px; }
+  .breadcrumb { font-size: 12px; }
+  .breadcrumb #breadcrumb-current { font-size: 14px; }
+  .view-header,
+  .exp-heading,
+  .cabinet-intro {
+    background:
+      linear-gradient(90deg, #071525f5, #09192bdc),
+      url('assets/gothic-window.svg') right -60px top -30px / 220px 330px no-repeat,
+      #071525;
+  }
+  .view-header p,
+  .exp-subtitle,
+  .cabinet-intro > div:first-child > p:last-child { font-size: 16px; }
+  .eyebrow,
+  .section-label { font-size: 12px; letter-spacing: 1.2px; }
+  .button { font-size: 14px; }
+  .standalone-game .cartridge-header .cartridge-modes .button { font-size: 14px; }
+  .cartridge-card,
+  .cartridge-choice:last-child .cartridge-card { min-height: 0; }
+  .cartridge-copy > p { font-size: 14px; }
+  .cartridge-card .cartridge-features b { font-size: 14px; }
+  .cartridge-card footer { font-size: 14px; }
+  .cartridge-daily-link,
+  .cartridge-contract-note,
+  .cartridge-veteran-link { font-size: 14px; }
+  .cabinet-filters button { font-size: 14px; }
+  .stat-label { font-size: 12px; }
+  .stat-detail { font-size: 14px; }
+  .relic-discovery-mark { display: block; width: 48px; height: 57px; }
+  .relic-choice-art { width: 44px; height: 52px; }
+  .relic-choice { padding-left: 72px; }
+  .relic-choice-art { left: 15px; top: 17px; }
+  .relic-dialog-footer { font-size: 14px; }
+  .puzzle-guide p { font-size: 16px; }
+  .page-footer { font-size: 11px; line-height: 1.6; }
+}
+
+@media (max-width: 480px) {
+  .welcome p { font-size: 14px; }
+  .welcome-kicker { font-size: 14px !important; }
+  .playground-hero .eyebrow { font-size: 11px; }
+  .hero-engraving { background: linear-gradient(145deg, #351825, #081827 55%); }
+  .instrument-figure { color: #d8bb82; font-size: 10px; }
+  .hero-colophon { font-size: 10px; }
+  .cartridge-engraving { height: 245px; margin: 20px 20px 0; }
+  .cartridge-emblem,
+  .cartridge-choice:last-child .cartridge-emblem { top: 215px; right: 26px; }
+  .cartridge-copy { padding: 26px 23px 10px; }
+  .cartridge-card footer { margin: 14px 23px 24px; }
+  .cartridge-card .cartridge-brief { font-size: 16px; }
+  .arcade-cabinet-link { align-items: flex-start; flex-wrap: wrap; }
+  .atlas-card-number > span { font-size: 12px; }
+  .atlas-card > small { font-size: 14px; }
+  .topbar-actions { gap: 3px; }
+  .standalone-game .tour-standalone-nav { font-size: 12px; }
+  .tour-standalone-nav > span { display: none; }
+  .welcome p.welcome-kicker { letter-spacing: .35px; }
+  .relic-dialog-heading .eyebrow { font-size: 12px; }
+}
+
+@media (pointer: coarse) {
+  .icon-button,
+  .topbar .icon-button { width: 44px; height: 44px; }
+  .primary-nav a,
+  .cabinet-filters button,
+  .button,
+  .text-link { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .workspace::before { opacity: .09; }
+  .cartridge-card:hover,
+  .atlas-card:hover,
+  .destination-card:hover,
+  .relic-choice:hover,
+  .relic-choice:focus-visible { transform: none; }
+}

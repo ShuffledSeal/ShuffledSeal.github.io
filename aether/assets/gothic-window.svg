@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 720" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">The midnight armillary window</title>
+  <desc id="desc">An original Gothic lancet window in blue enamel and oxblood glass, with ivory stars, brass tracery and an occult armillary sphere.</desc>
+  <defs>
+    <linearGradient id="night" x1="80" y1="40" x2="400" y2="690" gradientUnits="userSpaceOnUse"><stop stop-color="#18395a"/><stop offset=".48" stop-color="#09192d"/><stop offset="1" stop-color="#030810"/></linearGradient>
+    <linearGradient id="wine" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8a3f4d"/><stop offset=".55" stop-color="#491b2a"/><stop offset="1" stop-color="#1b101c"/></linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0d9a0"/><stop offset=".28" stop-color="#8d6d3f"/><stop offset=".55" stop-color="#d0ae6a"/><stop offset="1" stop-color="#574128"/></linearGradient>
+    <radialGradient id="sun" cx="35%" cy="28%"><stop stop-color="#fff0c4"/><stop offset=".35" stop-color="#d7b673"/><stop offset="1" stop-color="#604426"/></radialGradient>
+    <radialGradient id="glass"><stop stop-color="#46738c" stop-opacity=".48"/><stop offset="1" stop-color="#102238" stop-opacity="0"/></radialGradient>
+    <pattern id="leading" width="46" height="64" patternUnits="userSpaceOnUse" patternTransform="rotate(18)"><path d="M0 0 46 64M46 0 0 64" stroke="#c5a568" stroke-opacity=".09" stroke-width=".7"/></pattern>
+    <path id="lancet" d="M38 680V246C38 159 117 99 240 22c123 77 202 137 202 224v434Z"/>
+    <path id="star" d="m0-7 1.8 5.2L7 0 1.8 1.8 0 7-1.8 1.8-7 0-1.8-1.8Z"/>
+    <g id="minorStar" fill="#eee2bf"><path d="m0-4 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></g>
+    <clipPath id="clip"><use href="#lancet"/></clipPath>
+  </defs>
+  <use href="#lancet" fill="#02060d" stroke="#05070d" stroke-width="24"/>
+  <use href="#lancet" fill="url(#night)" stroke="url(#brass)" stroke-width="5"/>
+  <g clip-path="url(#clip)">
+    <path d="M38 680V245C38 170 93 116 181 57L113 680Z" fill="url(#wine)"/>
+    <path d="M442 680V245c0-75-55-129-143-188l68 623Z" fill="url(#wine)"/>
+    <path d="M147 680V280c0-65 37-115 93-158 56 43 93 93 93 158v400Z" fill="url(#night)" stroke="#b6975d" stroke-width="2"/>
+    <path d="M38 680h96V280c0-60-24-101-48-127-31 40-48 74-48 111Zm308 0h96V264c0-37-17-71-48-111-24 26-48 67-48 127Z" fill="#102c43" stroke="#a88852" stroke-width="2"/>
+    <path d="M38 420h96m212 0h96M38 544h96m212 0h96M143 488h194M143 606h194" stroke="#b4945b" stroke-width="3"/>
+    <path d="M45 428h82v108H45Zm308 0h82v108h-82ZM45 552h82v120H45Zm308 0h82v120h-82Z" fill="url(#wine)" opacity=".7"/>
+    <ellipse cx="240" cy="388" rx="161" ry="203" fill="url(#glass)"/>
+    <rect x="25" y="20" width="430" height="670" fill="url(#leading)"/>
+    <g fill="#eee3c3">
+      <use href="#minorStar" transform="translate(81 298)"/><use href="#minorStar" transform="translate(398 322) scale(.8)"/>
+      <use href="#minorStar" transform="translate(176 228) scale(.8)"/><use href="#minorStar" transform="translate(307 240)"/>
+      <use href="#minorStar" transform="translate(167 536) scale(.7)"/><use href="#minorStar" transform="translate(316 566) scale(.7)"/>
+      <circle cx="206" cy="291" r="1.3"/><circle cx="277" cy="263" r="1"/><circle cx="291" cy="494" r="1.4"/><circle cx="192" cy="456" r="1"/><circle cx="221" cy="576" r="1.2"/>
+    </g>
+    <g stroke="url(#brass)" fill="none">
+      <circle cx="240" cy="179" r="62" stroke-width="3"/>
+      <circle cx="240" cy="179" r="51" stroke-width="1"/>
+      <path d="M240 117c-29 23-29 101 0 124 29-23 29-101 0-124Zm0 0c29 23 29 101 0 124-29-23-29-101 0-124ZM178 179h124M240 117v124" stroke-width="1.4"/>
+      <path d="m240 128 12 38 39 13-39 12-12 39-12-39-39-12 39-13Z" fill="#6e2939" fill-opacity=".7" stroke-width="1.5"/>
+      <circle cx="240" cy="179" r="17" fill="url(#sun)" stroke-width="2"/>
+    </g>
+    <g transform="translate(240 405)" stroke="url(#brass)" fill="none">
+      <circle r="132" stroke-width="2" opacity=".7"/>
+      <circle r="122" stroke-width=".7" stroke-dasharray="1 8"/>
+      <ellipse rx="126" ry="42" transform="rotate(-20)" stroke-width="5"/>
+      <ellipse rx="126" ry="42" transform="rotate(-20)" stroke="#ead49b" stroke-width="1"/>
+      <ellipse rx="45" ry="126" transform="rotate(30)" stroke-width="4"/>
+      <ellipse rx="45" ry="126" transform="rotate(30)" stroke="#ead49b" stroke-width=".8"/>
+      <ellipse rx="108" ry="77" transform="rotate(19)" stroke-width="1.2" opacity=".8"/>
+      <path d="M-139 0h278M0-139v278M-97-97 97 97M97-97-97 97" stroke-width=".7" opacity=".6"/>
+      <path d="m0-150 5 12-5 8-5-8Zm0 300 5-12-5-8-5 8ZM-150 0l12-5 8 5-8 5Zm300 0-12-5-8 5 8 5Z" fill="#c5a464" stroke="none"/>
+      <circle r="48" fill="url(#sun)" stroke-width="2"/>
+      <ellipse rx="17" ry="48" stroke="#513a24" stroke-width="1" opacity=".65"/>
+      <path d="M-48 0h96M-42-17q42 15 84 0M-42 17q42-15 84 0" stroke="#513a24" stroke-width="1" opacity=".65"/>
+      <g transform="translate(94 -70)"><circle r="17" fill="#8babb0" stroke-width="1.3"/><ellipse rx="35" ry="9" transform="rotate(-24)" stroke-width="3"/><path d="M-10-5q10-7 20 0M-13 4q13-6 26 0" stroke="#233e4c" stroke-width="2"/></g>
+    </g>
+    <g stroke="url(#brass)" fill="none">
+      <path d="M196 680v-91c0-27 18-48 44-67 26 19 44 40 44 67v91M209 680v-87c0-20 12-36 31-51 19 15 31 31 31 51v87" stroke-width="2"/>
+      <path d="M176 680h128M184 668h112M240 545v123" stroke-width="3"/>
+      <path d="m240 521 6 13-6 11-6-11Z" fill="#c8a767" stroke="none"/>
+    </g>
+  </g>
+  <use href="#lancet" stroke="#d2b375" stroke-opacity=".65" stroke-width="2"/>
+  <path d="M25 680h430M17 692h446M38 704h404M240 4v17m-7-11h14" stroke="url(#brass)" stroke-width="3"/>
+  <g fill="#d5b674"><use href="#star" transform="translate(240 13) scale(.8)"/><use href="#star" transform="translate(23 687) scale(.65)"/><use href="#star" transform="translate(457 687) scale(.65)"/></g>
+</svg>

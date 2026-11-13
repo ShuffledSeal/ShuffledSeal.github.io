@@ -146,7 +146,8 @@ window.AetherArcade = (() => {
     let catcher, falling, spawn, remaining, wave, dashTime, magnet;
     let dashStageIndex = -2, missionProgress = 0, missionDone = false, lastHitTime = -99, giftCollected = false, whale = null, breathLanes = [];
     let paddle, comets, bricks, launchTimer, slowTime;
-    let dropArmed = false, hueCache;
+    let dropArmed = false, hueCache, hudFrame = null;
+    const ESSENTIAL_HUD_CSS_PX = 14;
     let notifyTimer = 0, releases = 0;
     // Feel channels: hit-stop/slow-mo timescale and a camera micro-zoom.
     let timeScale = 1, timeKick = 0, zoom = 1;
@@ -174,6 +175,12 @@ window.AetherArcade = (() => {
     let umbraLumen = 0, umbraRein = false, eclipseCatches = 0, shadesSpawned = 0, shadesBroken = 0;
     let cathedralFocusReturns = 0, cathedralFocusBreaks = 0, paddleHush = 0;
     let choirTimer = 5.5, choirSource = null, choirCharge = 0, choirBolts = [], choirShots = 0, choirParries = 0, choirHushes = 0;
+    // Deep Masterwork systems. These are deliberately separate from the daily
+    // streams: standard cartridges never allocate or advance any of them.
+    let mergeShelves = [], mergeEnemies = [], mergeResonance = 0, mergeEnemyTimer = 0, mergeKills = 0, mergeShelfContacts = 0, mergeTunedDrops = 0, mergeTuneQueued = false, mergeBoss = null;
+    let surfCurrents = [], surfHunters = [], surfVeil = 0, surfHunterTimer = 0, surfCurrentTime = 0, surfVeilBreaks = 0, surfHunterReflections = 0, regentHunterCrown = 0, surfBoss = null, surfBossRings = 0;
+    let dashTide = 0, dashTideName = '', dashAnchor = false, dashMothTimer = 0, dashBanks = 0, dashBankedStars = 0, dashMothsBroken = 0, dashMothThefts = 0;
+    let censerTime = 0, censerBanishes = 0, cathedralSentries = [], sentryBreaks = 0, litanyTarget = 0, litanyProgress = 0, litanyCompletions = 0, cathedralFocusHeartBreaks = 0, cathedralBoss = null;
     const veteran = options.veteran === true;
     const expedition = options.game === 'dash' && options.expedition === true;
     const veteranExpedition = veteran && expedition;
@@ -185,7 +192,7 @@ window.AetherArcade = (() => {
     const dangerLimit = () => has('deep-cradle') ? 5.2 : 3.4;
     const basketWidth = () => has('wide-halo') ? 55 : 39;
     const cometRadius = () => has('dense-core') ? 11 : 8;
-    const paddleHalf = () => Math.max(.27, (slowTime > 0 ? .8 : .55) + (has('crescent-crown') ? .22 : 0) - (veteran && paddleHush > 0 ? .16 : 0));
+    const paddleHalf = () => Math.max(.27, (slowTime > 0 ? .8 : .55) + (has('crescent-crown') ? .22 : 0) - (veteran && paddleHush > 0 ? .16 : 0) - (veteran && censerTime > 0 ? .06 : 0));
     const tetherReach = () => (options.relaxed ? 270 : 235) + (has('longwave-tether') ? 80 : 0);
     const ringReach = () => has('ring-compass') ? (has('solar-spool') && flightBoost > 0 ? 340 : 150) : 0;
     const magnetReach = () => magnet > 0 ? (has('lodestone') ? 300 : 260) : has('lodestone') ? 180 : 0;
@@ -194,7 +201,11 @@ window.AetherArcade = (() => {
     const pactReady = () => phase === 'running' && !suspended && !pactUsed && progressValue() >= pactThreshold[options.game];
     const stats = () => ({ simulationTime: time, totalMerges, totalCatches, crystalHits, ringsCaught, maxMetres: Math.floor(maxMetres), comets: comets.length, shields, shieldCharge, orbitCharge, ward, draftFallbacks, draftTimes: draftTimes.slice(),
       mergeGrip: Math.round(mergeGrip), anchorDrops, anchorMerges, anchorShelters, surfCharge: Math.round(surfCharge), surfSwaps, surfHooks,
-      umbraLumen: Math.round(umbraLumen), eclipseCatches, shadesSpawned, shadesBroken, cathedralFocusReturns, cathedralFocusBreaks, choirShots, choirParries, choirHushes });
+      umbraLumen: Math.round(umbraLumen), eclipseCatches, shadesSpawned, shadesBroken, cathedralFocusReturns, cathedralFocusBreaks, choirShots, choirParries, choirHushes,
+      mergeResonance: Math.round(mergeResonance), mergeKills, mergeShelfContacts, mergeTunedDrops,
+      surfVeil: Number(surfVeil.toFixed(2)), surfCurrentTime: Number(surfCurrentTime.toFixed(2)), surfVeilBreaks, surfHunterReflections, regentHunterCrown, surfBossRings,
+      dashBanks, dashBankedStars, dashMothsBroken, dashMothThefts, censerBanishes, sentryBreaks, litanyCompletions, cathedralFocusHeartBreaks,
+      finale: (mergeBoss || surfBoss || cathedralBoss)?.stage ?? (whale?.finaleStage ?? -1) });
 
     function measureControls() {
       const rect = canvas.getBoundingClientRect();
@@ -208,35 +219,49 @@ window.AetherArcade = (() => {
       const minW = Math.min(W - 32, 48 * W / Math.max(1, canvasCssWidth));
       const minH = Math.min(H - 32, 48 * H / Math.max(1, canvasCssHeight));
       const size = (w, h) => ({ w: Math.max(w, minW), h: Math.max(h, minH) });
-      if (options.game === 'merge') return { brace: { x: 14, y: 10, ...size(112, 58) } };
-      if (options.game === 'hop') return { ability: { x: 16, y: 16, ...size(138, 56) } };
+      if (options.game === 'merge') {
+        const brace = size(112, 58), tune = size(112, 58);
+        return { brace: { x: 14, y: 10, ...brace }, tune: { x: W - 14 - tune.w, y: 10, ...tune } };
+      }
+      if (options.game === 'hop') {
+        const abilitySize = size(138, 56), veilSize = size(138, 56);
+        return { ability: { x: 16, y: 16, ...abilitySize }, veil: { x: 16, y: 26 + abilitySize.h, ...veilSize } };
+      }
       if (options.game === 'dash' && veteranExpedition) {
-        const dashSize = size(104, 54), controls = { dash: { x: 16, y: H - 16 - dashSize.h, ...dashSize } };
-        if (stageCatalog()[dashStageIndex]?.umbra) {
-          const reinSize = size(112, 54); controls.rein = { x: W - 16 - reinSize.w, y: H - 16 - reinSize.h, ...reinSize };
-        }
+        const dashSize = size(104, 54), bankSize = size(112, 54), reinSize = size(112, 54);
+        const controls = {
+          dash: { x: 16, y: H - 16 - dashSize.h, ...dashSize },
+          bank: { x: W - 16 - bankSize.w, y: H - 16 - bankSize.h, ...bankSize },
+          rein: { x: W - 16 - reinSize.w, y: H - 24 - bankSize.h - reinSize.h, ...reinSize },
+        };
         return controls;
       }
       return {};
+    }
+    function censerTouchRect() {
+      if (!veteran || options.game !== 'breaker') return null;
+      const minW = Math.min(W - 32, 48 * W / Math.max(1, canvasCssWidth)), minH = Math.min(H - 32, 48 * H / Math.max(1, canvasCssHeight));
+      const w = Math.max(142, minW), h = Math.max(54, minH);
+      return { x: 16, y: H - 16 - h, w, h };
     }
     function masterworkGuidance() {
       if (!veteran) return null;
       if (options.game === 'merge') return {
         mechanic: mergeBracing ? 'COUNTERWEIGHT BRACE' : mergeForecast?.telegraph ? 'ANCHOR WINDOW' : 'PENDULUM CRAFT',
-        hint: mergeBracing ? 'Brace holds the pile, but makes worlds fall faster. Release S or the brace pad to recover grip.' : mergeForecast?.telegraph ? 'Drop during the forecast to cast an anchor that resists this front. Hold S / ↓ or the brace pad to spend grip.' : 'Hold S / ↓ or the on-canvas brace pad. Drop during a forecast to shelter the pile with an anchor.',
+        hint: mergeBracing ? 'Brace levels the reliquary shelves and holds the pile, but makes worlds fall faster. Release S or the brace pad to recover grip.' : mergeForecast?.telegraph ? 'Drop during the forecast to cast an anchor. E / Tune spends 30 resonance to match the world nearest your aim; shelves and gargoyles change the landing.' : 'Hold S / ↓ to brace and level the shelves. Aim at a world and press E / Tune to match it for 30 resonance; merge shockwaves break gargoyles.',
       };
       if (options.game === 'hop') return {
         mechanic: tether?.planet?.binary ? 'TWIN SWAP' : 'STARHOOK', charge: Math.floor(surfCharge),
-        hint: tether?.planet?.binary ? 'Press X or tap the twinlight pad to swap to the other twin for 25 twinlight. Rings and clean gates refill it.' : 'Press X or tap the twinlight pad in free flight to starhook a planet within 430 pixels for 50 twinlight. Rings and clean gates refill it.',
+        hint: tether?.planet?.binary ? 'X swaps twins for 25 twinlight. E / Veil spends 25 and slows the orbit while reflecting hunters and gates.' : 'X starhooks for 50 twinlight. E / Veil spends 25 to reflect hunters and terrain, but slows orbit or free flight. Ride currents to rings and clean gates to refill it.',
       };
       if (options.game === 'dash') return {
         mechanic: umbraRein ? 'LANTERN REIN' : 'ECLIPSE DASH', lumen: Math.floor(umbraLumen),
-        hint: stageCatalog()[dashStageIndex]?.umbra ? 'Hold S / ↓ or the Rein pad to tow the lantern; lit catches refill lumen. Press X or tap Eclipse, then cross an unlit star to catch it and wake a shade; dash through that shade to break it.' : 'The lantern rests beyond the veil. Spend dashes carefully when the Umbra weather returns.',
+        hint: stageCatalog()[dashStageIndex]?.umbra ? 'Hold S / ↓ to rein the lantern. E / Bank cashes the streak before moths steal it and banks whale breath. X / Eclipse catches unlit stars and breaks shades.' : 'E / Bank converts three or more streak stars into a bonus and lumen, but resets the multiplier. Hold S / ↓ to sea-anchor against the tide; dash through streak-stealing moths.',
       };
       const focused = Math.max(0, ...comets.map(c => c.focus || 0));
       return {
         mechanic: choirSource ? 'CHOIR TELEGRAPH' : choirBolts.length ? 'DISCORD INCOMING' : focused >= 2 ? 'FOCUS BREAK READY' : 'CATHEDRAL FOCUS', focus: focused,
-        hint: choirSource ? 'The marked keystone is charging. Break it to silence the shot, or drag the paddle onto its radial line to parry.' : choirBolts.length ? 'Drag the paddle into the discord mote at the paddle ring. A miss briefly narrows the paddle.' : focused >= 2 ? 'The centred comet will pierce its next unsealed crystal and deal two damage.' : 'Drag pointer or touch to land two centred returns in a row, charging a piercing Focus Break. Gold keystones silence the choir.',
+        hint: choirSource ? 'The marked keystone is charging. Break it, parry its radial line, or press E / Censer for 40 charge to bend the shot into the rose.' : choirBolts.length ? 'Drag the paddle into the discord mote, or spend 40 charge with E / Censer. Follow the glowing glass order to complete a Litany.' : focused >= 2 ? 'The centred comet will pierce its next crystal and deal two damage. Sentries break only to Focus or the Censer.' : 'Drag pointer or touch for centred Focus returns. E / Censer spends 40 charge to curve comets and capture discord; strike the glowing glass order for a Litany.',
       };
     }
     function notify() {
@@ -246,6 +271,7 @@ window.AetherArcade = (() => {
       canvas.dataset.suspended = String(suspended);
       canvas.dataset.releases = releases; canvas.dataset.tethered = String(!!tether);
       canvas.dataset.veteran = String(veteran);
+      canvas.dataset.hudScale = hudScale().toFixed(3); canvas.dataset.hudCompact = String(compactHUD()); canvas.dataset.canvasCssWidth = Math.round(canvasCssWidth);
       canvas.dataset.expeditionName = !veteran ? '' : ({ merge: 'Pendulum Orrery', hop: 'Twin-Star Route', dash: veteranExpedition ? 'Umbra Veil' : '', breaker: 'Crystal Cathedral' })[options.game];
       if (options.game === 'merge') {
         canvas.dataset.gravityX = mergeGravityX.toFixed(2); canvas.dataset.gravityScale = gravityScale.toFixed(2);
@@ -258,6 +284,15 @@ window.AetherArcade = (() => {
         canvas.dataset.activeAnchors = activeAnchors.length;
         canvas.dataset.anchorVelocity = activeAnchors.length ? (activeAnchors.reduce((sum, b) => sum + Math.abs(b.vx), 0) / activeAnchors.length).toFixed(2) : '';
         canvas.dataset.anchorX = activeAnchors[0] ? activeAnchors[0].x.toFixed(1) : ''; canvas.dataset.anchorY = activeAnchors[0] ? activeAnchors[0].y.toFixed(1) : '';
+        const tuneTarget = balls.filter(b => b.age > .25 && b.tier <= 4).sort((a, b) => Math.abs(a.x - aim) - Math.abs(b.x - aim) || b.y - a.y)[0];
+        canvas.dataset.mergeResonance = Math.round(mergeResonance); canvas.dataset.mergeTunedDrops = mergeTunedDrops; canvas.dataset.mergeKills = mergeKills;
+        canvas.dataset.mergeShelfContacts = mergeShelfContacts; canvas.dataset.mergeEnemies = mergeEnemies.length;
+        const dropTarget = balls.filter(b => b.age > .25 && b.tier === queue[0]).sort((a, b) => b.y - a.y)[0];
+        canvas.dataset.mergeDropTargetX = dropTarget ? Math.round(dropTarget.x) : ''; canvas.dataset.mergeDropTargetY = dropTarget ? Math.round(dropTarget.y) : '';
+        canvas.dataset.mergeEnemyX = mergeEnemies[0] ? Math.round(mergeEnemies[0].x) : ''; canvas.dataset.mergeEnemyY = mergeEnemies[0] ? Math.round(mergeEnemies[0].y) : '';
+        canvas.dataset.mergeEnemyState = mergeEnemies[0]?.state || ''; canvas.dataset.tuneTargetX = tuneTarget ? Math.round(tuneTarget.x) : ''; canvas.dataset.tuneTargetTier = tuneTarget?.tier ?? '';
+        canvas.dataset.mergeBossStage = mergeBoss?.stage ?? ''; canvas.dataset.mergeBossProgress = mergeBoss?.progress ?? ''; canvas.dataset.mergeBossTarget = mergeBoss ? [1, 2, 3][mergeBoss.stage] ?? 0 : '';
+        canvas.dataset.mergeBossTelegraph = mergeBoss?.telegraph > 0 ? 'true' : 'false';
       } else if (options.game === 'hop') {
         const gate = surfGates.find(g => g.x > ship.x - 30);
         canvas.dataset.binarySystems = binarySystems.length; canvas.dataset.surfGate = gate?.label || '';
@@ -265,10 +300,21 @@ window.AetherArcade = (() => {
         canvas.dataset.surfGatesPassed = surfGatesPassed; canvas.dataset.surfGateHits = surfGateHits;
         canvas.dataset.surfGateX = gate ? Math.round(gate.x - camera) : ''; canvas.dataset.surfGateY = gate ? Math.round(gate.gapY) : '';
         canvas.dataset.surfGateGap = gate ? Math.round(gate.currentGap || gate.gap) : '';
-        canvas.dataset.shipX = (ship.x - camera).toFixed(1); canvas.dataset.shipY = ship.y.toFixed(1);
+        canvas.dataset.shipX = (ship.x - camera).toFixed(1); canvas.dataset.shipY = ship.y.toFixed(1); canvas.dataset.shipVX = ship.vx.toFixed(1); canvas.dataset.shipVY = ship.vy.toFixed(1);
         canvas.dataset.surfCharge = Math.round(surfCharge); canvas.dataset.surfSwaps = surfSwaps; canvas.dataset.surfHooks = surfHooks;
         canvas.dataset.twinSwapReady = String(!!tether?.planet?.binary && surfCharge >= 25);
         canvas.dataset.starhookReady = String(!tether && surfCharge >= 50 && worlds.some(w => w.x > ship.x - 50 && Math.hypot(w.x - ship.x, w.y - ship.y) < 430));
+        const hunter = surfHunters[0], current = surfCurrents.find(c => ship.x >= c.x && ship.x <= c.x + c.width && Math.abs(ship.y - c.y) < c.height / 2);
+        const nearestWorld = worlds.filter(w => w.x > ship.x - 20).sort((a, b) => Math.hypot(a.x - ship.x, a.y - ship.y) - Math.hypot(b.x - ship.x, b.y - ship.y))[0];
+        canvas.dataset.surfPlanetX = nearestWorld ? Math.round(nearestWorld.x - camera) : ''; canvas.dataset.surfPlanetY = nearestWorld ? Math.round(nearestWorld.y) : ''; canvas.dataset.surfPlanetR = nearestWorld ? Math.round(nearestWorld.r) : '';
+        const nextRing = rings.filter(r => !r.taken && r.x > ship.x - 20).sort((a, b) => a.x - b.x)[0];
+        canvas.dataset.surfVeil = surfVeil.toFixed(2); canvas.dataset.surfVeilBreaks = surfVeilBreaks; canvas.dataset.surfHunterReflections = surfHunterReflections; canvas.dataset.regentHunterCrown = regentHunterCrown; canvas.dataset.surfCurrentTime = surfCurrentTime.toFixed(2);
+        canvas.dataset.surfCurrentDirection = current?.direction || 0; canvas.dataset.surfCurrentY = current ? Math.round(current.y) : '';
+        canvas.dataset.surfHunters = surfHunters.length; canvas.dataset.hunterState = hunter?.state || '';
+        canvas.dataset.hunterX = hunter ? Math.round(hunter.x - camera) : ''; canvas.dataset.hunterY = hunter ? Math.round(hunter.y) : '';
+        canvas.dataset.nextRingX = nextRing ? Math.round(nextRing.x - camera) : ''; canvas.dataset.nextRingY = nextRing ? Math.round(nextRing.y) : '';
+        canvas.dataset.surfBossStage = surfBoss?.stage ?? ''; canvas.dataset.surfBossProgress = surfBoss?.progress ?? ''; canvas.dataset.surfBossTarget = surfBoss ? [2, 2, 3][surfBoss.stage] ?? 0 : '';
+        canvas.dataset.surfBossRings = surfBossRings;
       } else if (options.game === 'dash') {
         const darkStar = falling.find(f => f.umbra && !f.taken);
         let nextStar = null, nextMeteor = null;
@@ -290,6 +336,12 @@ window.AetherArcade = (() => {
         canvas.dataset.eclipseCatches = eclipseCatches; canvas.dataset.shadesSpawned = shadesSpawned; canvas.dataset.shadesBroken = shadesBroken;
         canvas.dataset.activeShades = falling.filter(f => f.shade && !f.taken).length;
         canvas.dataset.shadeX = shade ? Math.round(shade.x) : ''; canvas.dataset.shadeY = shade ? Math.round(shade.y) : '';
+        const moth = falling.filter(f => f.moth && !f.taken).sort((a, b) => b.y - a.y)[0];
+        canvas.dataset.dashTide = dashTide.toFixed(2); canvas.dataset.dashTideName = dashTideName; canvas.dataset.dashAnchor = String(dashAnchor);
+        canvas.dataset.dashBanks = dashBanks; canvas.dataset.dashBankedStars = dashBankedStars; canvas.dataset.dashMothsBroken = dashMothsBroken; canvas.dataset.dashMothThefts = dashMothThefts;
+        canvas.dataset.activeMoths = falling.filter(f => f.moth && !f.taken).length; canvas.dataset.mothX = moth ? Math.round(moth.x) : ''; canvas.dataset.mothY = moth ? Math.round(moth.y) : '';
+        canvas.dataset.whaleStage = whale?.finaleStage ?? ''; canvas.dataset.whaleBanked = whale?.banked ?? 0; canvas.dataset.whaleCaught = whale?.caught ?? 0;
+        canvas.dataset.whaleTarget = whale && veteranExpedition ? [3, 4, 5][whale.finaleStage] ?? 0 : '';
       } else {
         const moving = bricks.filter(b => b.hp > 0 && b.motion);
         canvas.dataset.cathedralPattern = veteran ? cathedralPatterns[(level - 1) % cathedralPatterns.length] : '';
@@ -298,6 +350,8 @@ window.AetherArcade = (() => {
         canvas.dataset.cathedralSealBlocks = cathedralSealBlocks; canvas.dataset.cathedralArmourDents = cathedralArmourDents;
         canvas.dataset.cathedralMotion = moving.reduce((sum, b) => sum + Math.hypot(b.x - b.baseX, b.y - b.baseY), 0).toFixed(2);
         canvas.dataset.cometX = comets[0] ? comets[0].x.toFixed(1) : ''; canvas.dataset.cometY = comets[0] ? comets[0].y.toFixed(1) : '';
+        canvas.dataset.cometVX = comets[0] ? comets[0].vx.toFixed(1) : ''; canvas.dataset.cometVY = comets[0] ? comets[0].vy.toFixed(1) : '';
+        canvas.dataset.cathedralAlive = bricks.filter(b => b.hp > 0).length;
         const bolt = choirBolts[0];
         canvas.dataset.cometFocus = Math.max(0, ...comets.map(c => c.focus || 0));
         canvas.dataset.cathedralFocusReturns = cathedralFocusReturns; canvas.dataset.cathedralFocusBreaks = cathedralFocusBreaks;
@@ -306,6 +360,22 @@ window.AetherArcade = (() => {
         canvas.dataset.choirBoltX = bolt ? Math.round(bolt.x) : ''; canvas.dataset.choirBoltY = bolt ? Math.round(bolt.y) : '';
         canvas.dataset.choirShots = choirShots; canvas.dataset.choirParries = choirParries; canvas.dataset.choirHushes = choirHushes;
         canvas.dataset.paddleHush = paddleHush.toFixed(2);
+        const sentry = cathedralSentries[0], litanyBrick = bricks.find(b => b.hp > 0 && b.order === litanyTarget && !b.key && !b.bossCore && (!b.sealed || !bricks.some(k => k.key && k.hp > 0)));
+        canvas.dataset.censerTime = censerTime.toFixed(2); canvas.dataset.censerBanishes = censerBanishes;
+        canvas.dataset.cathedralSentries = cathedralSentries.length; canvas.dataset.sentryX = sentry ? Math.round(sentry.x) : ''; canvas.dataset.sentryY = sentry ? Math.round(sentry.y) : '';
+        canvas.dataset.sentryBreaks = sentryBreaks; canvas.dataset.litanyTarget = litanyTarget; canvas.dataset.litanyProgress = litanyProgress; canvas.dataset.litanyCompletions = litanyCompletions;
+        canvas.dataset.cathedralFocusHeartBreaks = cathedralFocusHeartBreaks; canvas.dataset.cathedralHeartHP = bricks.find(b => b.bossCore)?.hp ?? '';
+        canvas.dataset.litanyBrickX = litanyBrick ? Math.round(litanyBrick.x) : ''; canvas.dataset.litanyBrickY = litanyBrick ? Math.round(litanyBrick.y) : '';
+        const naturalBounce = comets[0] ? Math.atan2(comets[0].y - H / 2, comets[0].x - W / 2) + Math.PI : 0;
+        const aimScore = b => Math.abs(angleDiff(Math.atan2(b.y - H / 2, b.x - W / 2), naturalBounce)) || 0;
+        const aimSort = (a, b) => aimScore(a) - aimScore(b) || Math.hypot(a.x - (comets[0]?.x || W / 2), a.y - (comets[0]?.y || H / 2)) - Math.hypot(b.x - (comets[0]?.x || W / 2), b.y - (comets[0]?.y || H / 2));
+        const eligibleAim = bricks.filter(b => b.hp > 0 && !b.bossCore && (!b.sealed || !bricks.some(k => k.key && k.hp > 0)));
+        const keyAim = eligibleAim.filter(b => b.key).sort(aimSort)[0];
+        const litanyAim = eligibleAim.filter(b => !b.key && b.order === litanyTarget).sort(aimSort)[0];
+        const aimBrick = keyAim || (cathedralBoss?.stage === 2 ? bricks.find(b => b.hp > 0 && b.bossCore) : litanyAim || eligibleAim[0]);
+        canvas.dataset.cathedralAimX = aimBrick ? Math.round(aimBrick.x) : ''; canvas.dataset.cathedralAimY = aimBrick ? Math.round(aimBrick.y) : '';
+        canvas.dataset.cathedralAimOffset = aimBrick && comets[0] ? (angleDiff(naturalBounce, Math.atan2(aimBrick.y - H / 2, aimBrick.x - W / 2)) / .8).toFixed(3) : '';
+        canvas.dataset.cathedralBossStage = cathedralBoss?.stage ?? ''; canvas.dataset.cathedralBossProgress = cathedralBoss?.progress ?? ''; canvas.dataset.cathedralBossTarget = cathedralBoss ? [3, 2, 2][cathedralBoss.stage] : '';
       }
       const incomingPickup = options.game === 'dash' ? falling.find(g => g.kind === 'pickup' && !g.taken) : null;
       const incomingDef = incomingPickup && powerUps.dash.find(p => p.id === incomingPickup.pickupId);
@@ -318,7 +388,7 @@ window.AetherArcade = (() => {
         pickup: activePower ? { id: activePower.id, name: activePower.name, glyph: activePower.glyph, remaining: activePower.remaining, total: activePower.duration } : null,
         incoming: incomingDef ? { id: incomingDef.id, name: incomingDef.name, x: Math.round(incomingPickup.x) } : null,
         mission: currentMission() ? { ...currentMission(), progress: Math.floor(missionProgress), done: missionDone } : null,
-        masterwork: guidance ? { ...guidance, controls: controlRects() } : null,
+        masterwork: guidance ? { ...guidance, controls: controlRects(), censerControl: censerTouchRect() } : null,
       });
     }
     function relicField(x, y, radius, colour = '#bba7ed', life = .6) { fields.push({ x, y, radius, colour, life, max: life }); }
@@ -500,7 +570,7 @@ window.AetherArcade = (() => {
     function clearInput() {
       const captured = pointerId, controlCaptured = controlPointer?.id ?? null;
       keys.clear(); pointerHeld = false; pointerId = null; pointerAim = null; dropArmed = false; aimVelocity = 0; aimStamp = 0;
-      controlPointer = null; pointerBrace = false; pointerRein = false; mergeBracing = false; umbraRein = false;
+      controlPointer = null; pointerBrace = false; pointerRein = false; mergeBracing = false; umbraRein = false; dashAnchor = false;
       if (paddle) paddle.target = paddle.angle;
       if (tether) tetherAwaitingPress = true;
       if (captured !== null && canvas.hasPointerCapture?.(captured)) canvas.releasePointerCapture(captured);
@@ -555,6 +625,9 @@ window.AetherArcade = (() => {
       const b = { x: x - Math.cos(angle) * radius, y: y - Math.sin(angle) * radius, r: 27, tier: 2, binary: true };
       worlds.push(a, b); binarySystems.push({ x, y, radius, angle, speed: def.spin, a, b });
       rings.push({ x, y, taken: false, twin: true });
+      // Authored solar currents are route terrain, not decorative weather. Their
+      // vertical shear bends free flight and hastens/delays a binary orbit.
+      surfCurrents.push({ x: x + 62, width: 260, y: clamp(y + (index % 2 ? -118 : 118), 85, H - 85), height: 104, direction: index % 2 ? -1 : 1, strength: 125 + cycle * 8, phase: index * .7 });
       const addGate = (gx, baseY, suffix = 0) => {
         const gate = { x: gx, baseY, gapY: baseY, gap: def.gap, pattern: def.gate, label: def.label + (suffix ? ' · RETURN' : ''), phase: index * .83 + suffix * Math.PI, passed: false, struck: false, cooldown: 0, suffix };
         surfGates.push(gate);
@@ -584,22 +657,53 @@ window.AetherArcade = (() => {
       for (const ring of rings) if (ring.gate && !ring.attracted) ring.y = ring.gate.gapY + ring.lane * 61;
       binarySystems = binarySystems.filter(s => s.x > camera - 350 || tether?.planet === s.a || tether?.planet === s.b);
       surfGates = surfGates.filter(g => g.x > camera - 80);
+      surfCurrents = surfCurrents.filter(c => c.x + c.width > camera - 100);
     }
     function surfGateSafe(gate, y) {
       const inside = Math.abs(y - gate.gapY) < gate.currentGap / 2 - 7;
       // The crown's centre is solid; its two side lanes are the meaningful choice.
       return inside && (gate.pattern !== 'crown' || Math.abs(y - gate.gapY) > 28);
     }
+    function initialiseSentries(count) {
+      cathedralSentries = Array.from({ length: Math.min(3, count) }, (_, i) => {
+        const angle = i / Math.max(1, count) * TAU + .4;
+        return { angle, radius: 188, x: W / 2 + Math.cos(angle) * 188, y: H / 2 + Math.sin(angle) * 188, timer: 4.5 + i * 1.3, cooldown: 0, taken: false };
+      });
+    }
+    function setupCathedralBoss(add, cx, cy) {
+      cathedralBoss ||= { stage: 0, progress: 0, rebuild: 0 };
+      choirSource = null; choirCharge = 0; choirBolts = []; choirTimer = cathedralBoss.stage === 1 ? .65 : 5.5;
+      litanyProgress = 0; litanyTarget = 0; cathedralBoss.progress = 0; cathedralBoss.rebuild = 0;
+      if (cathedralBoss.stage === 0) {
+        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; add(cx + Math.cos(a) * 125, cy + Math.sin(a) * 125, { order: i % 3, motion: 'rose', orbitR: 125, orbitA: a }); }
+        initialiseSentries(1);
+        banner('FINAL CATHEDRAL · I · THE LITANY', '#edf19b', 19);
+        popups.push({ x: cx, y: cy + 170, text: 'STRIKE THE GLOWING ORDER THREE TIMES', colour: '#d9c7f3', life: 2.2, size: 11 });
+      } else if (cathedralBoss.stage === 1) {
+        for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; add(cx + Math.cos(a) * 156, cy + Math.sin(a) * 156, { key: true, motion: 'rose', orbitR: 156, orbitA: a }); }
+        initialiseSentries(3);
+        banner('FINAL CATHEDRAL · II · THE DISCORD', '#e29eb7', 19);
+        popups.push({ x: cx, y: cy + 190, text: 'PARRY OR CENSER TWO DISCORD MOTES', colour: '#d9c7f3', life: 2.2, size: 11 });
+      } else {
+        add(cx, cy, { bossCore: true, order: 0 }); initialiseSentries(2);
+        banner('FINAL CATHEDRAL · III · THE ROSE HEART', '#edf19b', 19);
+        popups.push({ x: cx, y: cy + 92, text: 'TWO FOCUS BREAKS · ORDINARY GLASS CANNOT MARK IT', colour: '#d9c7f3', life: 2.2, size: 11 });
+      }
+      oneCrystal = false; launchTimer = 1.5;
+    }
     function makeCathedralBricks() {
       choirSource = null; choirCharge = 0; choirBolts = []; choirTimer = 5.5; paddleHush = 0;
       const pattern = (level - 1) % cathedralPatterns.length, cx = W / 2, cy = H / 2;
       let serial = 0;
       const add = (x, y, options = {}) => {
-        const key = !!options.key, armour = !key && !!options.armour;
-        bricks.push({ x, y, baseX: x, baseY: y, r: 15, hp: armour ? 2 : 1, tier: (serial++ + level * 2) % 8,
-          hit: 0, angle: Math.atan2(y - cy, x - cx), family: null, key, sealed: !key && !!options.sealed,
-          motion: options.motion || null, phase: options.phase || 0, orbitR: options.orbitR || 0, orbitA: options.orbitA || 0 });
+        const key = !!options.key, armour = !key && !options.bossCore && !!options.armour;
+        const brick = { x, y, baseX: x, baseY: y, r: options.r || (options.bossCore ? 29 : 15), hp: options.bossCore ? 4 : armour ? 2 : 1, tier: (serial++ + level * 2) % 8,
+          hit: 0, angle: Math.atan2(y - cy, x - cx), family: null, key, sealed: !key && !!options.sealed, bossCore: !!options.bossCore, order: options.order ?? serial % 3,
+          motion: options.motion || null, phase: options.phase || 0, orbitR: options.orbitR || 0, orbitA: options.orbitA || 0 };
+        bricks.push(brick); return brick;
       };
+      if (level >= 4 || cathedralBoss) { setupCathedralBoss(add, cx, cy); return; }
+      initialiseSentries(level >= 2 ? Math.min(3, level) : 0);
       if (pattern === 0) {
         // Four aisles, a rounded arch and a small rose: a readable silhouette.
         for (const x of [-132, -88, 88, 132]) for (const y of [-65, -15, 35, 85]) {
@@ -702,6 +806,11 @@ window.AetherArcade = (() => {
       umbraLumen = veteranExpedition ? 35 : 0; umbraRein = false; eclipseCatches = 0; shadesSpawned = 0; shadesBroken = 0;
       cathedralFocusReturns = 0; cathedralFocusBreaks = 0; paddleHush = 0;
       choirTimer = 5.5; choirSource = null; choirCharge = 0; choirBolts = []; choirShots = 0; choirParries = 0; choirHushes = 0;
+      mergeShelves = veteran && options.game === 'merge' ? [{ x: 105, y: 350, half: 58, side: -1, slope: 0 }, { x: 362, y: 292, half: 72, side: 1, slope: 0 }] : [];
+      mergeEnemies = []; mergeResonance = veteran && options.game === 'merge' ? 60 : 0; mergeEnemyTimer = 10; mergeKills = 0; mergeShelfContacts = 0; mergeTunedDrops = 0; mergeTuneQueued = false; mergeBoss = null;
+      surfCurrents = []; surfHunters = []; surfVeil = 0; surfHunterTimer = 7; surfCurrentTime = 0; surfVeilBreaks = 0; surfHunterReflections = 0; regentHunterCrown = 0; surfBoss = null; surfBossRings = 0;
+      dashTide = 0; dashTideName = ''; dashAnchor = false; dashMothTimer = 9; dashBanks = 0; dashBankedStars = 0; dashMothsBroken = 0; dashMothThefts = 0;
+      censerTime = 0; censerBanishes = 0; cathedralSentries = []; sentryBreaks = 0; litanyTarget = 0; litanyProgress = 0; litanyCompletions = 0; cathedralFocusHeartBreaks = 0; cathedralBoss = null;
       owned = []; offer = null; suspended = false; draftIndex = 0; lastDraftTime = 0; draftFallbacks = 0;
       maxMetres = 0; totalCatches = 0; crystalHits = 0; ringsCaught = 0; shields = 0; shieldCharge = 0;
       orbitCharge = 0; flightBoost = 0; reactorRings = 0; clockCatches = 0; splitHits = 0; ward = 0; wardReturns = 0; tetherAwaitingPress = false; releases = 0; routeMod = null;
@@ -798,6 +907,7 @@ window.AetherArcade = (() => {
       charge = 0;
       if (options.game === 'merge') {
         balls.forEach(b => { b.vx += aim < W / 2 ? -110 : 110; b.vy -= has('pulse-dynamo') ? 190 : 130; });
+        if (veteran) for (const enemy of mergeEnemies) if (enemy.state !== 'telegraph') killMergeEnemy(enemy);
         if (has('pulse-dynamo')) { danger *= .5; relicField(W / 2, H - 40, 215, '#9ed7c6'); }
         burst(W / 2, H - 40, '#bba7ed', 30); shake = 6; light('187,167,237', .08, .4);
         motif([[329.63, 0, .22, 'sine', .06], [164.81, 0, .3, 'triangle', .05]]);
@@ -820,6 +930,52 @@ window.AetherArcade = (() => {
       }
       notify();
     }
+    // Second Masterwork verb: one key and one equally large canvas pad per
+    // cartridge. Each spends a resource already earned through the core loop.
+    function masterAbility() {
+      if (!veteran || phase !== 'running' || suspended) return false;
+      if (options.game === 'merge') {
+        if (mergeResonance < 30) return false;
+        const target = balls.filter(b => b.age > .25 && b.tier <= 4).sort((a, b) => Math.abs(a.x - aim) - Math.abs(b.x - aim) || b.y - a.y)[0];
+        if (!target) return false;
+        mergeResonance -= 30; queue[0] = target.tier; mergeTuneQueued = true; aim = clamp(target.x, radii[target.tier] + 24, W - radii[target.tier] - 24);
+        relicField(target.x, target.y, radii[target.tier] + 24, '#edf19b', .5); banner(`TUNED TO ${names[target.tier].toUpperCase()} · DROP TO CONDUCT`, '#edf19b', 12);
+        tone(659.25, .14, 'triangle', .04); notify(); return true;
+      }
+      if (options.game === 'hop') {
+        if (surfVeil > 0 || surfCharge < 25) return false;
+        surfCharge -= 25; surfVeil = 1.55;
+        if (tether) orbitCharge = Math.max(0, orbitCharge - .35); else ship.vx *= .82;
+        invulnerable = Math.max(invulnerable, .12);
+        relicField(ship.x - camera, ship.y, 60, '#d9c7f3', .7); banner('MIRROR VEIL · REFLECT, BUT LOSE SPEED', '#d9c7f3', 13);
+        tone(880, .2, 'sine', .045); notify(); return true;
+      }
+      if (options.game === 'dash') {
+        if (!veteranExpedition || combo < 3 && !whale?.caught) return false;
+        const offered = combo;
+        if (offered) {
+          dashBanks++; dashBankedStars += offered; umbraLumen = Math.min(100, umbraLumen + offered * 2); charge = Math.min(100, charge + offered * 1.5);
+          scoreAt(offered * 12, catcher.x, H - 124, `BANK ${offered} · +${offered * 12}`); combo = 0; comboTimer = 0;
+        }
+        if (whale && veteranExpedition && whale.caught > 0 && whale.finaleStage < 3) {
+          const target = [3, 4, 5][whale.finaleStage], deposit = Math.min(whale.caught, target - whale.banked);
+          whale.caught -= deposit; whale.banked += deposit; dashBanks++; dashBankedStars += deposit;
+          scoreAt(deposit * 45, W / 2, 150, `BREATH OFFERED · ${whale.banked}/${target}`);
+          if (whale.banked >= target) {
+            whale.finaleStage++; whale.banked = 0; whale.timer = 1.2; whale.telegraph = 0; breathLanes = [];
+            burst(W / 2, 110, '#edf19b', 35); motif([[523.25, 0, .15], [783.99, .12, .25]], .05);
+            if (whale.finaleStage >= 3) { finish('The Umbra Whale carries your three offerings beyond dawn.', 1.6, true); return true; }
+            banner(`WHALE CHOIR ${whale.finaleStage + 1} · THE BREATH QUICKENS`, '#9ed7c6', 17);
+          }
+        }
+        for (const f of falling) if (f.moth && !f.taken && Math.abs(f.x - catcher.x) < 210) { f.fleeing = true; f.wait = 0; f.speed = -190; }
+        relicField(catcher.x, H - 72, 115, '#edf19b', .55); tone(523.25, .18, 'triangle', .05); notify(); return true;
+      }
+      if (charge < 40 || censerTime > 0) return false;
+      charge -= 40; censerTime = 5.2; choirSource && (choirCharge += .8);
+      relicField(W / 2, H / 2, 145, '#d9c7f3', .7); banner('ROSE CENSER · GRAVITY BENDS BOTH WAYS', '#d9c7f3', 13);
+      tone(293.66, .35, 'sine', .05); notify(); return true;
+    }
     function action() {
       if (destroyed || suspended) return;
       if (phase === 'ready' || phase === 'over') { start(); return; }
@@ -829,6 +985,7 @@ window.AetherArcade = (() => {
         const tier = queue.shift(); queue.push(Math.floor(random() * 4));
         // Deliberate aiming supplies momentum; a stationary drop is predictable.
         guidedBall = { x: clamp(aim, radii[tier] + 24, W - radii[tier] - 24), y: 46, vx: clamp(aimVelocity * .28, -125, 125), vy: 30, tier, age: 0, angle: 0, squash: -.3, born: .2 };
+        if (veteran && mergeTuneQueued) { guidedBall.tuned = true; mergeTunedDrops++; mergeTuneQueued = false; }
         if (veteran && mergeForecast?.telegraph) {
           guidedBall.anchorKey = mergeForecastKey; anchorDrops++;
           popups.push({ x: guidedBall.x, y: 92, text: 'ANCHOR CAST · HOLDS THROUGH THIS FRONT', colour: '#d9c7f3', life: 1.8, size: 11 });
@@ -865,8 +1022,94 @@ window.AetherArcade = (() => {
       mergeForecast ||= {};
       Object.assign(mergeForecast, { name: def.name, hint: def.hint, telegraph, remaining: telegraph ? def.at - local : def.at + def.duration - local });
     }
+    function spawnMergeEnemy(x = W / 2 + Math.sin(time * 1.73) * 150) {
+      if (mergeEnemies.length >= 3) return false;
+      mergeEnemies.push({ x: clamp(x, 48, W - 48), y: 96, vy: 0, r: 16, state: 'telegraph', timer: 1.35, target: null, phase: mergeEnemies.length * 1.7 });
+      return true;
+    }
+    function killMergeEnemy(enemy) {
+      if (!enemy || enemy.taken || enemy.state === 'telegraph') return false;
+      enemy.taken = true; mergeKills++; mergeResonance = Math.min(100, mergeResonance + 22);
+      scoreAt(120, enemy.x, enemy.y - 24, 'GARGOYLE UNMADE +120'); burst(enemy.x, enemy.y, '#d9c7f3', 18); relicField(enemy.x, enemy.y, 58, '#edf19b', .45);
+      tone(740, .13, 'triangle', .05); return true;
+    }
+    function startMergeBoss() {
+      if (mergeBoss) return;
+      mergeBoss = { stage: 0, progress: 0, timer: 4.5, telegraph: 0, tolls: 0 };
+      mergeEnemies = []; mergeEnemyTimer = 2.5;
+      banner('FINALE · THE HOROLOGIST WAKES', '#edf19b', 21);
+      popups.push({ x: W / 2, y: H * .3 + 35, text: 'THREE MOVEMENTS · MERGE THROUGH THE TOLLS', colour: '#d9c7f3', life: 2.4, size: 11 });
+      motif([[196, 0, .35, 'triangle', .05], [293.66, .18, .4, 'sine', .04]], .05);
+    }
+    function mergeBossMerge(x, y) {
+      if (!mergeBoss || phase !== 'running') return;
+      mergeBoss.progress++; scoreAt(100 * (mergeBoss.stage + 1), x, y - 48, `HOROLOGIST SEAL ${mergeBoss.progress}/${[1, 2, 3][mergeBoss.stage]}`);
+      if (mergeBoss.progress < [1, 2, 3][mergeBoss.stage]) return;
+      mergeBoss.stage++; mergeBoss.progress = 0; mergeBoss.timer = 3.2; mergeBoss.telegraph = 0;
+      if (mergeBoss.stage >= 3) {
+        for (const enemy of mergeEnemies) if (enemy.state !== 'telegraph') killMergeEnemy(enemy);
+        finish('The Horologist strikes a thirteenth, impossible hour: yours.', 1.7, true); return;
+      }
+      banner(`HOROLOGIST · MOVEMENT ${mergeBoss.stage + 1}`, '#d9c7f3', 18);
+      popups.push({ x: W / 2, y: H * .3 + 32, text: mergeBoss.stage === 1 ? 'GARGOYLES WEIGH THE GLASS · SHOCK THEM FREE' : 'THE FINAL TOLL · BRACE, TUNE, AND ANCHOR', colour: '#edf19b', life: 2.1, size: 11 });
+      spawnMergeEnemy(W / 2 - 110); spawnMergeEnemy(W / 2 + 110);
+    }
+    function updateMergeDeep(dt) {
+      if (!veteran) return;
+      if (!mergeBoss && (totalMerges >= 6 || time >= 70)) startMergeBoss();
+      mergeEnemyTimer -= dt;
+      if (time > 11 && mergeEnemyTimer <= 0 && mergeEnemies.length < (mergeBoss ? 3 : 2)) {
+        spawnMergeEnemy(); mergeEnemyTimer = mergeBoss ? 7.5 : 12;
+      }
+      for (const shelf of mergeShelves) {
+        const target = mergeBracing ? 0 : clamp(mergeGravityX / 520 + Math.sin(time * .65 + shelf.side) * .11, -.32, .32);
+        shelf.slope += (target - shelf.slope) * (1 - Math.exp(-4 * dt));
+      }
+      for (const enemy of mergeEnemies) {
+        if (enemy.taken) continue;
+        if (enemy.state === 'telegraph') {
+          enemy.timer -= dt;
+          if (enemy.timer <= 0) { enemy.state = 'descending'; enemy.vy = 20; tone(130.81, .2, 'square', .035); }
+          continue;
+        }
+        if (enemy.state === 'descending') {
+          enemy.vy += 250 * dt; enemy.y += enemy.vy * dt;
+          let landing = H - 45;
+          for (const b of balls) if (Math.abs(b.x - enemy.x) < radii[b.tier] + enemy.r) landing = Math.min(landing, b.y - radii[b.tier] - enemy.r + 5);
+          for (const shelf of mergeShelves) if (Math.abs(shelf.x - enemy.x) < shelf.half) landing = Math.min(landing, shelf.y + (enemy.x - shelf.x) * shelf.slope - enemy.r);
+          if (enemy.y >= landing) { enemy.y = landing; enemy.state = 'latched'; enemy.target = null; }
+        } else {
+          if (!balls.includes(enemy.target)) enemy.target = balls.slice().sort((a, b) => Math.hypot(a.x - enemy.x, a.y - enemy.y) - Math.hypot(b.x - enemy.x, b.y - enemy.y))[0] || null;
+          const target = enemy.target;
+          if (target) {
+            enemy.x += clamp(target.x - enemy.x, -75 * dt, 75 * dt); enemy.y += clamp(target.y - radii[target.tier] - enemy.r - enemy.y, -95 * dt, 95 * dt);
+            target.vy += 115 * dt; target.vx += clamp(enemy.x - target.x, -25, 25) * dt;
+            if (target.anchorKey) target.vx += mergeGravityX * .45 * dt; // Gargoyles worry at anchors rather than ignoring them.
+          } else enemy.y = Math.min(H - 45, enemy.y + 45 * dt);
+        }
+      }
+      mergeEnemies = mergeEnemies.filter(e => !e.taken);
+      if (mergeBoss) {
+        mergeBoss.timer -= dt;
+        if (mergeBoss.timer <= 0 && mergeBoss.telegraph <= 0) { mergeBoss.telegraph = 1.45; mergeBoss.timer = Math.max(4.2, 7 - mergeBoss.stage * .8); tone(146.83, .35, 'triangle', .045); }
+        if (mergeBoss.telegraph > 0) {
+          mergeBoss.telegraph -= dt;
+          if (mergeBoss.telegraph <= 0) {
+            mergeBoss.tolls++;
+            const direction = mergeBoss.tolls % 2 ? 1 : -1;
+            for (const b of balls) {
+              const anchored = b.anchorKey && b.anchorKey === mergeForecastKey && mergeForecast;
+              b.vx += direction * (mergeBracing ? 42 : anchored ? 55 : 185) * (1 + mergeBoss.stage * .18); b.vy -= mergeBracing ? 15 : 55;
+            }
+            if (mergeBoss.stage > 0) spawnMergeEnemy(direction > 0 ? 70 : W - 70);
+            shake = Math.max(shake, 7); banner('THE HOROLOGIST TOLLS', '#f5a08c', 15); tone(98, .45, 'sine', .07);
+          }
+        }
+      }
+    }
     function mergeStep(dt) {
       updateMergeForecast();
+      updateMergeDeep(dt);
       const shocks = [];
       cooldown -= dt; comboTimer -= dt;
       if (comboTimer <= 0) combo = 0;
@@ -889,7 +1132,8 @@ window.AetherArcade = (() => {
       const anchors = veteran ? balls.filter(b => b.anchorKey && b.anchorKey === mergeForecastKey && mergeForecast) : [];
       anchorShelters = 0;
       balls.forEach(b => {
-        b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt);
+        const previousY = b.y;
+        b.age += dt; b.born = Math.max(0, b.born - dt); b.squash *= Math.exp(-12 * dt); b.shelfCooldown = Math.max(0, (b.shelfCooldown || 0) - dt);
         const anchored = anchors.includes(b), sheltered = !anchored && anchors.some(a => Math.hypot(a.x - b.x, a.y - b.y) < 105 + radii[b.tier]);
         if (sheltered) anchorShelters++;
         const forecastForce = mergeBracing ? .12 : anchored ? .08 : sheltered ? .45 : 1;
@@ -897,6 +1141,14 @@ window.AetherArcade = (() => {
         b.vy += (400 * gravityScale * (mergeBracing ? 1.25 : 1) + Math.min(140, danger * 50)) * dt;
         b.vx *= Math.exp(-(.38 + (mergeBracing ? 3.5 : 0) + (anchored ? 5 : sheltered ? 1.5 : 0)) * dt);
         b.x += b.vx * dt; b.y += b.vy * dt; b.angle += b.vx / radii[b.tier] * dt * .35;
+        if (veteran && b.vy >= 0 && !b.shelfCooldown) for (const shelf of mergeShelves) {
+          if (Math.abs(b.x - shelf.x) > shelf.half + radii[b.tier] * .25) continue;
+          const surface = shelf.y + (b.x - shelf.x) * shelf.slope, radius = radii[b.tier];
+          if (previousY + radius <= surface + 3 && b.y + radius >= surface) {
+            b.y = surface - radius; b.vy = -Math.abs(b.vy) * .16; b.vx += shelf.slope * 90; b.shelfCooldown = .14; mergeShelfContacts++;
+            b.squash = Math.min(.18, Math.abs(b.vy) / 900); tone(164.81 + b.tier * 24, .07, 'triangle', .025); break;
+          }
+        }
       });
       for (let pass = 0; pass < 6; pass++) {
         balls.forEach(b => {
@@ -923,6 +1175,11 @@ window.AetherArcade = (() => {
                 banner('COUNTERWEIGHT CHIME · THE PILE ANSWERS', '#d9c7f3', 13);
               }
               largest = Math.max(largest, Math.min(10, tier)); totalMerges++; combo++;
+              if (veteran) {
+                mergeResonance = Math.min(100, mergeResonance + 16 + Math.min(12, tier * 2));
+                for (const enemy of mergeEnemies) if (!enemy.taken && enemy.state !== 'telegraph' && Math.hypot(enemy.x - x, enemy.y - y) < 112 + tier * 8) killMergeEnemy(enemy);
+                mergeBossMerge(x, y);
+              }
               comboTimer = has('echo-hourglass') ? 2.4 + (has('quake-core') && combo > 1 ? .6 : 0) : .85;
               charge = Math.min(100, charge + (has('pulse-dynamo') ? 26 : 16));
               if (has('quake-core')) shocks.push({ x, y, tier, chain: has('echo-hourglass') && combo > 1 });
@@ -979,8 +1236,85 @@ window.AetherArcade = (() => {
       if (pact > 0 && danger > 0) danger += dt * 1.2; // The wager accelerates overflow risk.
       if (danger > dangerLimit() || balls.length > 110) finish('One very full universe.', 1.4);
     }
+    function spawnSurfHunter() {
+      if (surfHunters.length >= 3) return false;
+      surfHunters.push({ x: camera + W + 65, y: clamp(ship.y + Math.sin(time * 1.9) * 150, 55, H - 55), vx: 0, vy: 0, state: 'stalk', timer: 1.25, targetX: ship.x, targetY: ship.y, r: 15 });
+      return true;
+    }
+    function startSurfBoss() {
+      if (surfBoss) return;
+      surfBoss = { stage: 0, progress: 0 }; surfHunterTimer = 1.2;
+      banner('FINALE · THE BINARY REGENT', '#edf19b', 21);
+      popups.push({ x: W / 2, y: H * .3 + 34, text: 'THREE CROWNS · RINGS, GATES AND REFLECTED HUNTERS', colour: '#d9c7f3', life: 2.4, size: 11 });
+      motif([[220, 0, .3, 'triangle', .05], [440, .12, .35, 'sine', .04]], .05);
+    }
+    function advanceSurfBoss(source, x, y) {
+      if (!surfBoss || phase !== 'running') return;
+      // The first crown is navigation; later crowns also accept a reflected
+      // hunter, so defensive mastery is a genuine alternative route.
+      if (surfBoss.stage === 0 && source === 'hunter') return;
+      if (surfBoss.stage === 1 && source !== 'hunter' && surfBoss.progress >= 1) return;
+      surfBoss.progress += surfBoss.stage === 1 && source === 'hunter' ? 2 : 1;
+      scoreAt(140 * (surfBoss.stage + 1), x, y, `REGENT CROWN ${surfBoss.progress}/${[2, 2, 3][surfBoss.stage]}`);
+      if (surfBoss.progress < [2, 2, 3][surfBoss.stage]) return;
+      if (surfBoss.stage === 1 && source === 'hunter') regentHunterCrown = 1;
+      surfBoss.stage++; surfBoss.progress = 0;
+      if (surfBoss.stage >= 3) { finish('The Binary Regent yields its crown to your wake.', 1.7, true); return; }
+      surfHunterTimer = .8; spawnSurfHunter(); surfCharge = Math.min(100, surfCharge + 25); invulnerable = Math.max(invulnerable, 1.2);
+      banner(`REGENT · CROWN ${surfBoss.stage + 1} · ${surfBoss.stage === 1 ? 'THE HUNT' : 'THE CROSSED CURRENT'}`, '#d9c7f3', 17);
+      popups.push({ x: W / 2, y: H * .3 + 32, text: 'CROWN REFUND · +25 TWINLIGHT', colour: '#edf19b', life: 1.5, size: 11 });
+    }
+    function breakSurfHunter(hunter) {
+      if (!hunter || hunter.taken) return;
+      hunter.taken = true; surfVeilBreaks++; surfHunterReflections++; surfCharge = Math.min(100, surfCharge + 14);
+      scoreAt(160, hunter.x - camera, hunter.y - 24, 'HUNTER REFLECTED +160'); burst(hunter.x - camera, hunter.y, '#d9c7f3', 20); relicField(hunter.x - camera, hunter.y, 65, '#edf19b', .5);
+      tone(987.77, .15, 'triangle', .05); advanceSurfBoss('hunter', hunter.x - camera, hunter.y - 45);
+    }
+    function updateSurfDeep(dt) {
+      if (!veteran) return;
+      surfVeil = Math.max(0, surfVeil - dt);
+      if (!surfBoss && (ship.x > 2400 || surfGatesPassed >= 2)) startSurfBoss();
+      const current = surfCurrents.find(c => ship.x >= c.x && ship.x <= c.x + c.width && Math.abs(ship.y - c.y) < c.height / 2);
+      if (current) {
+        surfCurrentTime += dt;
+        const force = current.strength * (surfBoss ? 1 + surfBoss.stage * .2 : 1);
+        if (!tether) { ship.vy += current.direction * force * dt; ship.vx += 12 * dt; }
+        else if (tether.planet.binary) tether.angle += tether.direction * current.direction * .42 * dt;
+      }
+      surfHunterTimer -= dt;
+      if (time > 15 && surfHunterTimer <= 0 && surfHunters.length < (surfBoss ? 3 : 2)) {
+        spawnSurfHunter(); surfHunterTimer = surfBoss ? Math.max(3.8, 6.8 - surfBoss.stage) : 11;
+      }
+      for (const hunter of surfHunters) {
+        if (hunter.taken) continue;
+        if (hunter.state === 'stalk') {
+          hunter.x -= 52 * dt; hunter.y += clamp(ship.y - hunter.y, -68 * dt, 68 * dt); hunter.timer -= dt;
+          if (hunter.timer <= 0) { hunter.state = 'aim'; hunter.timer = .95; hunter.targetX = ship.x + ship.vx * .28; hunter.targetY = ship.y + ship.vy * .28; tone(233.08, .22, 'square', .03); }
+        } else if (hunter.state === 'aim') {
+          hunter.timer -= dt; hunter.targetY += clamp(ship.y - hunter.targetY, -45 * dt, 45 * dt);
+          if (hunter.timer <= 0) {
+            const dx = hunter.targetX - hunter.x, dy = hunter.targetY - hunter.y, distance = Math.max(1, Math.hypot(dx, dy));
+            hunter.vx = dx / distance * 465; hunter.vy = dy / distance * 465; hunter.state = 'dive'; tone(155.56, .2, 'sawtooth', .035);
+          }
+        } else {
+          const desired = Math.atan2(ship.y - hunter.y, ship.x - hunter.x), heading = Math.atan2(hunter.vy, hunter.vx);
+          const turn = clamp(angleDiff(desired, heading), -1.05 * dt, 1.05 * dt), speed = Math.max(400, Math.hypot(hunter.vx, hunter.vy));
+          hunter.vx = Math.cos(heading + turn) * speed; hunter.vy = Math.sin(heading + turn) * speed;
+          hunter.x += hunter.vx * dt; hunter.y += hunter.vy * dt;
+          if (Math.hypot(hunter.x - ship.x, hunter.y - ship.y) < hunter.r + 13) {
+            if (surfVeil > 0) breakSurfHunter(hunter);
+            else if (tether) {
+              hunter.taken = true; tether = null; tetherAwaitingPress = false; surfCharge = Math.max(0, surfCharge - 15); combo = 0;
+              ship.vx = Math.max(230, ship.vx); ship.vy += hunter.vy * .35; banner('ORBIT SEVERED · VEIL THE NEXT DIVE', '#f5a08c', 13); tone(110, .28, 'sawtooth', .05);
+            } else { hunter.taken = true; hurt(hunter.x - camera, hunter.y); }
+          }
+          if (hunter.x < camera - 100 || hunter.x > camera + W + 250 || hunter.y < -100 || hunter.y > H + 100) hunter.taken = true;
+        }
+      }
+      surfHunters = surfHunters.filter(h => !h.taken);
+    }
     function surfStep(dt) {
-      if (veteran) updateSurfExpedition(dt);
+      if (veteran) { updateSurfExpedition(dt); updateSurfDeep(dt); }
       const held = pointerHeld || keys.has(' ') || keys.has('ArrowUp');
       flightBoost = Math.max(0, flightBoost - dt);
       if (held) tetherAwaitingPress = false;
@@ -1021,7 +1355,7 @@ window.AetherArcade = (() => {
           const step4 = Math.min(3, Math.floor(orbitCharge * 4));
           if (step4 > chargeStep) { chargeStep = step4; note([440, 523.25, 587.33, 783.99][step4], 0, .06, 'sine', .03); }
         }
-        tether.angle += tether.direction * (270 + level * 6) / tether.radius * dt;
+        tether.angle += tether.direction * (270 + level * 6) / tether.radius * (surfVeil > 0 ? .58 : 1) * dt;
         ship.x = tether.planet.x + Math.cos(tether.angle) * tether.radius; ship.y = tether.planet.y + Math.sin(tether.angle) * tether.radius;
         ship.vx = -Math.sin(tether.angle) * tether.direction * 290; ship.vy = Math.cos(tether.angle) * tether.direction * 290;
       } else {
@@ -1038,8 +1372,19 @@ window.AetherArcade = (() => {
       for (const w of worlds) {
         const wDistance = Math.hypot(ship.x - w.x, ship.y - w.y);
         if (!tether && wDistance < w.r + 10) {
-          const before = lives; hurt(ship.x - camera, ship.y);
-          if (lives < before) { ship.vx = 260; ship.vy = ship.y < w.y ? -180 : 180; }
+          if (veteran && surfVeil > 0) {
+            surfVeil = 0; ship.vx = Math.max(225, ship.vx * .9); ship.vy = ship.y < w.y ? -205 : 205; ship.y = w.y + (ship.y < w.y ? -1 : 1) * (w.r + 12);
+            banner('VEIL SPENT · PLANET REBOUND', '#d9c7f3', 12); relicField(ship.x - camera, ship.y, 46, '#d9c7f3', .45); tone(440, .12, 'triangle', .04);
+          } else {
+            const before = lives; hurt(ship.x - camera, ship.y);
+            if (lives < before) {
+              ship.vx = 260; ship.vy = ship.y < w.y ? -180 : 180;
+              if (veteran) {
+                const nx = (ship.x - w.x) / Math.max(1, wDistance), ny = (ship.y - w.y) / Math.max(1, wDistance);
+                ship.x = w.x + nx * (w.r + 13); ship.y = w.y + ny * (w.r + 13);
+              }
+            }
+          }
         } else if (!tether && wDistance < w.r + 34 && !w.grazed) {
           // Skimming a planet you never grabbed still counts for something.
           w.grazed = true; scoreAt(25, ship.x - camera, ship.y - 28, 'GRAZE +25'); tone(470, .07);
@@ -1053,7 +1398,7 @@ window.AetherArcade = (() => {
         if (!r.taken && d > 1 && d < ringReach()) { const pull = Math.min(d, (flightBoost > 0 ? 420 : 240) * dt) / d; r.x += dx * pull; r.y += dy * pull; r.attracted = true; }
         if (!r.taken && Math.hypot(ship.x - r.x, ship.y - r.y) < 35) {
           r.taken = true; combo++; ringsCaught++;
-          if (veteran) surfCharge = Math.min(100, surfCharge + 18);
+          if (veteran) { surfCharge = Math.min(100, surfCharge + 18); if (surfBoss) { surfBossRings++; advanceSurfBoss('ring', r.x - camera, r.y - 50); } }
           if (has('comet-aegis') && shields === 0) {
             shieldCharge++;
             if (shieldCharge >= (has('ring-reactor') ? 2 : 3)) { shields = 1; shieldCharge = 0; relicField(ship.x - camera, ship.y, 38, '#9ed7c6'); motif([[440, 0, .1], [587.33, .07, .1], [880, .14, .22]], .04); }
@@ -1070,25 +1415,33 @@ window.AetherArcade = (() => {
       rings = rings.filter(r => r.x > camera - 50);
       for (const r of rocks) {
         const d = Math.hypot(ship.x - r.x, ship.y - r.y);
-        if (!tether && d < r.r + 10) hurt(ship.x - camera, ship.y);
+        if (!tether && d < r.r + 10 && veteran && surfVeil > 0) {
+          r.shattered = true; surfVeilBreaks++; surfCharge = Math.min(100, surfCharge + 8); scoreAt(70, r.x - camera, r.y - 25, 'VEIL SHATTER +70'); burst(r.x - camera, r.y, '#d9c7f3', 16);
+        } else if (!tether && d < r.r + 10) hurt(ship.x - camera, ship.y);
         else if (d < r.r + 35 && !r.grazed) { r.grazed = true; scoreAt(35, r.x - camera, r.y - 30, 'CLOSE CALL +35'); note(196, 0, .09, 'triangle', .035); }
       }
-      rocks = rocks.filter(r => r.x > camera - 70);
+      rocks = rocks.filter(r => r.x > camera - 70 && !r.shattered);
       if (veteran) for (const gate of surfGates) {
         if (phase !== 'running') break;
-        if (Math.abs(ship.x - gate.x) < 15 && !surfGateSafe(gate, ship.y) && gate.cooldown <= 0) {
+        if (surfBoss?.stage !== 1 && Math.abs(ship.x - gate.x) < 15 && !surfGateSafe(gate, ship.y) && gate.cooldown <= 0) {
           gate.cooldown = 1.1; gate.struck = true; surfGateHits++;
-          banner(`${gate.label} · FIND THE OPENING`, '#f5a08c', 13);
-          hurt(clamp(gate.x - camera, 30, W - 30), ship.y);
+          if (surfVeil > 0) {
+            ship.y = gate.pattern === 'crown' ? gate.gapY + (ship.y < gate.gapY ? -48 : 48) : gate.gapY; ship.vy = 0;
+            banner('VEIL GUIDES THE OPENING · CLEAN BONUS LOST', '#d9c7f3', 12); relicField(ship.x - camera, ship.y, 48, '#d9c7f3', .4);
+          } else {
+            banner(`${gate.label} · FIND THE OPENING`, '#f5a08c', 13); hurt(clamp(gate.x - camera, 30, W - 30), ship.y);
+            if (veteran) { ship.y = gate.pattern === 'crown' ? gate.gapY + (ship.y < gate.gapY ? -48 : 48) : gate.gapY; ship.vy = 0; }
+          }
         }
         if (!gate.passed && ship.x > gate.x + 24) {
           gate.passed = true;
-          if (!gate.struck) { surfGatesPassed++; surfCharge = Math.min(100, surfCharge + 30); scoreAt(gate.pattern === 'scissor' ? 140 : 100, gate.x - camera, gate.gapY - 30, 'CLEAN GATE · +30 TWINLIGHT'); }
+          if (!gate.struck) { surfGatesPassed++; surfCharge = Math.min(100, surfCharge + 30); scoreAt(gate.pattern === 'scissor' ? 140 : 100, gate.x - camera, gate.gapY - 30, 'CLEAN GATE · +30 TWINLIGHT'); advanceSurfBoss('gate', gate.x - camera, gate.gapY - 45); }
         }
       }
       // Orbiting ships may swing briefly outside the band; only free flight is punished.
       if (!tether && (ship.y < -20 || ship.y > H + 20 || ship.x < camera - 20)) {
-        hurt(clamp(ship.x - camera, 30, W - 30), clamp(ship.y, 30, H - 30));
+        if (veteran && surfVeil > 0) { surfVeil = 0; banner('VEIL SPENT · RE-ENTRY', '#d9c7f3', 12); }
+        else hurt(clamp(ship.x - camera, 30, W - 30), clamp(ship.y, 30, H - 30));
         ship.x = camera + 110; ship.y = H / 2; ship.vx = Math.max(260, ship.vx); ship.vy = -35;
       }
       maxMetres = Math.max(maxMetres, ship.x / 10);
@@ -1155,11 +1508,13 @@ window.AetherArcade = (() => {
     const WHALE_MISSION = { id: 'whale', text: 'Catch 20 breath-stars', target: 20 };
     const currentMission = () => {
       if (!expedition) return null;
-      if (whale) return WHALE_MISSION;
+      if (whale) return veteranExpedition ? { id: 'whaleBank', text: `Bank ${[3, 4, 5][whale.finaleStage] || 0} breath-stars with E`, target: [3, 4, 5][whale.finaleStage] || 1 } : WHALE_MISSION;
       return dashStageIndex >= 0 && dashStageIndex < stageCatalog().length ? stageCatalog()[dashStageIndex].mission : null;
     };
     function missionCatch(f) {
       if (f.umbra && f.umbraLit) { umbraCatches++; umbraLumen = Math.min(100, umbraLumen + 12); }
+      else if (veteranExpedition && !f.bad) umbraLumen = Math.min(100, umbraLumen + 3);
+      if (veteranExpedition && whale && f.breath) { whale.caught++; return; }
       const mission = currentMission();
       if (!mission || missionDone || f.bad) return;
       if (mission.id === 'catch' && f.kind === 'star') missionProgress++;
@@ -1177,11 +1532,26 @@ window.AetherArcade = (() => {
       tone(155.56, .28, 'triangle', .05);
       return true;
     }
+    function spawnMoth() {
+      if (falling.filter(f => f.moth && !f.taken).length >= 3) return false;
+      const x = 90 + ((wave * 197 + Math.floor(time) * 31) % (W - 180));
+      falling.push({ x, y: -30, speed: 112, bad: true, kind: 'moth', moth: true, r: 17, wait: 1.05, spin: 0, taken: false, wind: 0 });
+      popups.push({ x, y: 112, text: 'GLOAM MOTH · BANK OR DASH BEFORE IT FEEDS', colour: '#e29eb7', life: 2, size: 12 });
+      tone(174.61, .25, 'triangle', .04); return true;
+    }
     function dashStep(dt) {
       const wasDashing = dashTime > 0;
       const umbraWeather = veteranExpedition && !!stageCatalog()[dashStageIndex]?.umbra;
-      umbraRein = umbraWeather && (pointerRein || keys.has('s') || keys.has('ArrowDown')) && umbraLumen > 0;
-      if (umbraRein) umbraLumen = Math.max(0, umbraLumen - 24 * dt);
+      dashAnchor = veteranExpedition && (pointerRein || keys.has('s') || keys.has('ArrowDown')) && umbraLumen > 0;
+      umbraRein = umbraWeather && dashAnchor;
+      if (dashAnchor) umbraLumen = Math.max(0, umbraLumen - (umbraWeather ? 24 : 14) * dt);
+      if (veteranExpedition) {
+        const tideTarget = time < 45 ? 0 : [0, 52, -52, 0][Math.floor(time / 12) % 4];
+        dashTide += (tideTarget - dashTide) * (1 - Math.exp(-1.8 * dt));
+        dashTideName = Math.abs(dashTide) < 8 ? 'STILL WATER' : dashTide > 0 ? 'EASTWARD TIDE →' : '← WESTWARD TIDE';
+        dashMothTimer -= dt;
+        if (time > 45 && dashMothTimer <= 0) { if (spawnMoth()) dashMothTimer = whale ? 8 : 14; else dashMothTimer = 2; }
+      }
       remaining = Math.max(0, remaining - dt); dashTime -= dt; magnet -= dt; slow = Math.max(0, slow - dt); spawn -= dt; charge = Math.min(100, charge + dt * (has('ion-cell') ? 13 : 8));
       if (activePower) {
         activePower.remaining -= dt;
@@ -1217,7 +1587,7 @@ window.AetherArcade = (() => {
         const velocity = direction ? direction * 560 : pointerAim !== null ? clamp((pointerAim - catcher.x) * 13, -850, 850) : 0;
         catcher.vx += (velocity - catcher.vx) * (1 - Math.exp(-18 * dt));
       }
-      catcher.x = clamp(catcher.x + catcher.vx * dt, basketWidth(), W - basketWidth()); catcher.tilt += (catcher.vx / 2200 - catcher.tilt) * dt * 12;
+      catcher.x = clamp(catcher.x + catcher.vx * dt + (veteranExpedition ? dashTide * (dashAnchor ? .08 : 1) * dt : 0), basketWidth(), W - basketWidth()); catcher.tilt += (catcher.vx / 2200 - catcher.tilt) * dt * 12;
       catcher.pop = Math.max(0, (catcher.pop || 0) - dt * 1.4);
       // Expedition staging: standard keeps five weathers; Veteran adds Umbra.
       const stage = expedition && dashStageIndex >= 0 && dashStageIndex < stageCatalog().length ? stageCatalog()[dashStageIndex] : null;
@@ -1239,10 +1609,10 @@ window.AetherArcade = (() => {
           } else {
             dashAct = 5;
             banner('THE UMBRA WHALE', '#9ed7c6', 24);
-            popups.push({ x: W / 2, y: H * .3 + 40, text: 'Three breaths. Catch the light.', colour: '#b7abc9', life: 2, size: 13 });
-            popups.push({ x: W / 2, y: H * .3 + 64, text: `MISSION · ${WHALE_MISSION.text.toUpperCase()}`, colour: '#a9d3be', life: 2.2, size: 12 });
+            popups.push({ x: W / 2, y: H * .3 + 40, text: veteranExpedition ? 'Three offerings. Catch the breath, then press E to bank.' : 'Three breaths. Catch the light.', colour: '#b7abc9', life: 2, size: 13 });
+            popups.push({ x: W / 2, y: H * .3 + 64, text: `MISSION · ${veteranExpedition ? 'BANK 3 BREATH-STARS WITH E' : WHALE_MISSION.text.toUpperCase()}`, colour: '#a9d3be', life: 2.2, size: 12 });
             motif([[329.63, 0, .4], [261.63, .3, .6]], .06);
-            whale = { x: W + 260, breath: 0, timer: 3, telegraph: 0 };
+            whale = { x: W + 260, breath: 0, timer: 3, telegraph: 0, finaleStage: 0, banked: 0, caught: 0 };
             missionProgress = 0; missionDone = false;
           }
           notify();
@@ -1252,15 +1622,16 @@ window.AetherArcade = (() => {
       if (whale && phase === 'running') {
         whale.x -= 16 * dt;
         if (whale.x < -280) whale.x = W + 260;
-        if (whale.breath < 3) {
+        if (whale.breath < (veteranExpedition ? 99 : 3)) {
           if (whale.telegraph > 0) {
             whale.telegraph -= dt;
             if (whale.telegraph <= 0) {
+              const breathPower = Math.min(2, whale.breath);
               breathLanes.forEach((laneX, li) => {
-                for (let k = 0; k < 3; k++) falling.push({ x: laneX, y: -30 - k * 46, speed: (165 + whale.breath * 40) * (stage?.speed || 1), bad: false, kind: 'star', breath: true, r: 12, wait: 0, spin: k, taken: false, wind: 0 });
-                if (whale.breath >= 1 && li === whale.breath % 3) falling.push({ x: laneX, y: -200, speed: 175 + whale.breath * 40, bad: true, kind: 'star', r: 18, wait: 0, spin: 0, taken: false, wind: 0 });
+                for (let k = 0; k < 3; k++) falling.push({ x: laneX, y: -30 - k * 46, speed: (165 + breathPower * 40) * (stage?.speed || 1), bad: false, kind: 'star', breath: true, r: 12, wait: 0, spin: k, taken: false, wind: 0 });
+                if (breathPower >= 1 && li === whale.breath % 3) falling.push({ x: laneX, y: -200, speed: 175 + breathPower * 40, bad: true, kind: 'star', r: 18, wait: 0, spin: 0, taken: false, wind: 0 });
               });
-              whale.breath++; whale.timer = 12 - whale.breath * 2; breathLanes = [];
+              whale.breath++; whale.timer = veteranExpedition ? Math.max(4.8, 7.5 - Math.min(3, whale.breath) * .45) : 12 - whale.breath * 2; breathLanes = [];
               motif([[880, 0, .2], [1108.73, .12, .3]], .05);
             }
           } else {
@@ -1272,15 +1643,16 @@ window.AetherArcade = (() => {
               tone(523.25, .3, 'sine', .05);
             }
           }
-        } else if (time > whaleAt() + 42) {
+        } else if (!veteranExpedition && time > whaleAt() + 42) {
           finish('The Umbra Whale dives home, humming your tune.', 1.6, true);
         }
       }
       // Mission bookkeeping for the current weather.
       const mission = currentMission();
       if (mission && !missionDone) {
+        if (mission.id === 'whaleBank') missionProgress = whale?.banked || 0;
         if (mission.id === 'calm') missionProgress = Math.min(mission.target, time - Math.max(lastHitTime, stageStartTime(dashStageIndex)));
-        if (missionProgress >= mission.target) {
+        if (mission.id !== 'whaleBank' && missionProgress >= mission.target) {
           missionDone = true;
           scoreAt(300, W / 2, H * .4, 'MISSION COMPLETE +300');
           banner('MISSION COMPLETE', '#a9d3be', 18);
@@ -1297,6 +1669,11 @@ window.AetherArcade = (() => {
         if (phase !== 'running') break;
         f.wait -= dt; if (f.wait > 0) continue;
         f.y += f.speed * dt * fallFactor; f.spin += dt;
+        if (veteranExpedition && !f.fleeing) f.x = clamp(f.x + dashTide * .62 * dt, 20, W - 20);
+        if (f.moth && !f.fleeing) {
+          if (combo === 0 && f.y > 180) { f.fleeing = true; f.speed = -185; popups.push({ x: f.x, y: f.y, text: 'NO UNBANKED STREAK · THE MOTH LEAVES', colour: '#b7abc9', life: 1.1, size: 10 }); }
+          else f.x = clamp(f.x + clamp(catcher.x - f.x, -118 * dt, 118 * dt), 22, W - 22);
+        }
         if (f.shade && f.y < 315) f.x = clamp(f.x + clamp(catcher.x - f.x, -82 * dt, 82 * dt), 22, W - 22);
         if (f.wind) f.x = clamp(f.x + Math.sin(time * .7 + f.spin) * f.wind * dt, 20, W - 20);
         f.umbraLit = !f.umbra || Math.abs(f.x - umbraLightX) <= 112;
@@ -1318,11 +1695,19 @@ window.AetherArcade = (() => {
           f.taken = true;
           missionCatch(f);
           if (f.bad) {
-            if (f.shade && dashTime > 0) {
+            if (f.moth) {
+              if (dashTime > 0) {
+                dashMothsBroken++; charge = Math.min(100, charge + 22); scoreAt(110, f.x, f.y - 32, 'GLOAM MOTH BROKEN +110');
+                relicField(f.x, f.y, 58, '#edf19b', .45); burst(f.x, f.y, '#e29eb7', 16); tone(932.33, .13, 'triangle', .05);
+              } else {
+                const stolen = Math.min(5, combo); combo = Math.max(0, combo - stolen); dashMothThefts += stolen;
+                banner(stolen ? `MOTH FEEDS · ${stolen} UNBANKED STARS LOST` : 'THE MOTH FINDS NO STREAK', '#e29eb7', 13); tone(146.83, .25, 'triangle', .045);
+              }
+            } else if (f.shade && dashTime > 0) {
               shadesBroken++; charge = Math.min(100, charge + 18); scoreAt(90, f.x, f.y - 32, 'SHADE BROKEN +90');
               relicField(f.x, f.y, 62, '#d9c7f3', .5); banner('SHADE BROKEN · THE LIGHT HOLDS', '#d9c7f3', 13);
               burst(f.x, f.y, '#d9c7f3', 18); tone(880, .14, 'sine', .05);
-            } else hurt(catcher.x, H - 72);
+            } else if (!f.shade || dashTime <= 0) hurt(catcher.x, H - 72);
             catcher.tilt = (f.x < catcher.x ? 1 : -1) * .38;
           }
           else if (f.kind === 'pickup') collectPickup(f);
@@ -1369,7 +1754,7 @@ window.AetherArcade = (() => {
           if (f.kind === 'pickup') popups.push({ x: f.x, y: H - 60, text: 'THE GIFT DRIFTS BY', colour: '#b7abc9', life: 1.2 });
         }
       }
-      falling = falling.filter(f => !f.taken && f.y < H + 50);
+      falling = falling.filter(f => !f.taken && f.y < H + 50 && (!f.fleeing || f.y > -90));
       level = 1 + Math.floor(time / 15);
       // The 75 seconds have a spine: five named acts, then a staged finale.
       if (level !== dashAct) {
@@ -1391,7 +1776,8 @@ window.AetherArcade = (() => {
         // The shower surrenders: every falling meteor bursts into gold.
         for (const f of falling) if (!f.taken) { f.taken = true; burst(f.x, f.y, f.bad ? '#edf19b' : '#f1f4ac', 6, 120); }
         burst(catcher.x, H - 72, '#edf19b', 65, 260); punch(.15, .45);
-        finish('Meteor shower: absolutely handled.', 1.6, true);
+        const completedVeteranWhale = !veteranExpedition || !whale || whale.finaleStage >= 3;
+        finish(completedVeteranWhale ? 'Meteor shower: absolutely handled.' : 'The Whale dives with the unoffered breath. Bank earlier next time.', 1.6, completedVeteranWhale);
       }
     }
     function splitComet(source) {
@@ -1400,8 +1786,27 @@ window.AetherArcade = (() => {
       comets.push({ x: source.x, y: source.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, trail: [], secondary: true, focus: source.focus || 0, pierceGrace: 0, lastPierce: null });
       relicField(source.x, source.y, 40, '#9ed7c6');
     }
-    function hitCrystal(b, damage = 1) {
-      if (b.hp <= 0) return;
+    function advanceCathedralBoss(source, x = W / 2, y = H / 2) {
+      if (!cathedralBoss || phase !== 'running') return;
+      if (cathedralBoss.stage === 0) {
+        if (source !== 'litany') return;
+        cathedralBoss.progress = 3;
+      } else if (cathedralBoss.stage === 1) {
+        if (source !== 'parry' && source !== 'censer') return;
+        cathedralBoss.progress++;
+      } else return;
+      scoreAt(240 * (cathedralBoss.stage + 1), x, y - 35, `CATHEDRAL SEAL ${cathedralBoss.progress}/${[3, 2, 2][cathedralBoss.stage]}`);
+      if (cathedralBoss.progress < [3, 2, 2][cathedralBoss.stage]) return;
+      cathedralBoss.stage++; cathedralBoss.progress = 0; bricks = []; cathedralSentries = [];
+      burst(W / 2, H / 2, '#edf19b', 35); punch(.2, .18); makeCathedralBricks(); notify();
+    }
+    function hitCrystal(b, damage = 1, focused = false, conducted = false) {
+      if (b.hp <= 0) return false;
+      if (veteran && b.bossCore && (!focused || cathedralBoss?.stage !== 2)) {
+        b.hit = .2; relicField(b.x, b.y, 42, '#d9c7f3', .3);
+        if (time - lastSealNote > 1.4) { lastSealNote = time; banner('THE ROSE HEART ANSWERS ONLY FOCUS', '#d9c7f3', 12); }
+        tone(164.81, .1, 'square', .03); return false;
+      }
       if (veteran && b.sealed && bricks.some(k => k.key && k.hp > 0)) {
         b.hit = .2; cathedralSealBlocks++;
         if (time - lastSealNote > 1.4) { lastSealNote = time; banner('SEALED · BREAK THE GOLD KEYSTONES', '#edf19b', 13); }
@@ -1411,6 +1816,24 @@ window.AetherArcade = (() => {
       const wasKey = veteran && b.key;
       b.hp = Math.max(0, b.hp - damage); b.hit = .2; combo++; crystalHits++;
       if (veteran && b.hp > 0) cathedralArmourDents++;
+      if (veteran && b.bossCore && focused && cathedralBoss?.stage === 2) {
+        cathedralBoss.progress++; cathedralFocusHeartBreaks++;
+        if (!b.hp && cathedralBoss.progress >= 2) { scoreAt(1200, b.x, b.y - 45, 'THE ROSE HEART OPENS'); finish('The Last Cathedral becomes a window instead of a wall.', 1.8, true); }
+      }
+      if (veteran && !wasKey && !b.bossCore && !conducted) {
+        if (b.order === litanyTarget) {
+          litanyProgress++; litanyTarget = (litanyTarget + 1) % 3;
+          scoreAt(35 * litanyProgress, b.x, b.y - 34, `LITANY ${litanyProgress}/3`);
+          if (cathedralBoss?.stage === 0) cathedralBoss.progress = litanyProgress;
+          if (litanyProgress >= 3) {
+            litanyProgress = 0; litanyTarget = 0; litanyCompletions++; charge = Math.min(100, charge + 24);
+            const resonance = bricks.filter(n => n !== b && n.hp > 0 && !n.key && !n.bossCore && n.order === litanyTarget && (!n.sealed || !bricks.some(k => k.key && k.hp > 0))).slice(0, 3);
+            for (const n of resonance) { if (hitCrystal(n, 1, false, true)) fields.push({ x: b.x, y: b.y, toX: n.x, toY: n.y, radius: 80, colour: '#edf19b', life: .45, max: .45 }); }
+            banner('LITANY COMPLETE · CENSER CHARGE RESTORED', '#edf19b', 14); motif([[392, 0, .14], [523.25, .1, .18], [659.25, .2, .25]], .045);
+            advanceCathedralBoss('litany', b.x, b.y);
+          }
+        } else { litanyProgress = 0; litanyTarget = 0; if (cathedralBoss?.stage === 0) cathedralBoss.progress = 0; }
+      }
       if (wasKey && !b.hp && !bricks.some(k => k.key && k.hp > 0)) {
         banner('THE CATHEDRAL IS UNSEALED', '#9ed7c6', 18); relicField(W / 2, H / 2, 220, '#9ed7c6', .8);
       }
@@ -1459,11 +1882,18 @@ window.AetherArcade = (() => {
       }
       for (const bolt of choirBolts) {
         bolt.x += bolt.vx * dt; bolt.y += bolt.vy * dt;
-        const dx = bolt.x - W / 2, dy = bolt.y - H / 2, distance = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+        let dx = bolt.x - W / 2, dy = bolt.y - H / 2, distance = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+        if (censerTime > 0 && distance > 1) {
+          bolt.vx -= dx / distance * 310 * dt; bolt.vy -= dy / distance * 310 * dt;
+          if (distance < 76) {
+            bolt.taken = true; censerBanishes++; scoreAt(75, bolt.x, bolt.y - 20, 'DISCORD CENSED +75');
+            burst(bolt.x, bolt.y, '#d9c7f3', 12); tone(587.33, .14, 'sine', .04); advanceCathedralBoss('censer', bolt.x, bolt.y); continue;
+          }
+        }
         if (distance >= 224 && distance <= 241 && Math.abs(angleDiff(a, paddle.angle)) < paddleHalf() + .035) {
           bolt.taken = true; choirParries++; charge = Math.min(100, charge + 28); paddle.kick = 1;
           scoreAt(90, bolt.x, bolt.y - 20, 'CHOIR PARRY +90'); relicField(bolt.x, bolt.y, 48, '#9ed7c6', .45);
-          burst(bolt.x, bolt.y, '#9ed7c6', 12); tone(740, .13, 'sine', .05);
+          burst(bolt.x, bolt.y, '#9ed7c6', 12); tone(740, .13, 'sine', .05); advanceCathedralBoss('parry', bolt.x, bolt.y);
         } else if (distance > 255) {
           bolt.taken = true; choirHushes++; paddleHush = Math.max(paddleHush, 2.6); combo = 0;
           banner('DISCORD · PADDLE NARROWED', '#f5a08c', 14); tone(130.81, .3, 'sawtooth', .04);
@@ -1471,8 +1901,30 @@ window.AetherArcade = (() => {
       }
       choirBolts = choirBolts.filter(b => !b.taken);
     }
+    function updateSentries(dt) {
+      if (!veteran) return;
+      for (const sentry of cathedralSentries) {
+        if (sentry.taken) continue;
+        sentry.cooldown = Math.max(0, sentry.cooldown - dt);
+        if (comets.length) {
+          const target = comets.slice().sort((a, b) => Math.hypot(a.x - sentry.x, a.y - sentry.y) - Math.hypot(b.x - sentry.x, b.y - sentry.y))[0];
+          const desired = Math.atan2(target.y - H / 2, target.x - W / 2), turn = angleDiff(desired, sentry.angle);
+          sentry.angle += clamp(turn, -.48 * dt, .48 * dt) + .07 * dt;
+        }
+        sentry.x = W / 2 + Math.cos(sentry.angle) * sentry.radius; sentry.y = H / 2 + Math.sin(sentry.angle) * sentry.radius;
+        sentry.timer -= dt;
+        if (sentry.timer <= 0) {
+          if (choirBolts.length < 3) {
+            choirBolts.push({ x: sentry.x, y: sentry.y, vx: Math.cos(sentry.angle) * 112, vy: Math.sin(sentry.angle) * 112, angle: sentry.angle, sentry: true }); choirShots++;
+            tone(207.65, .18, 'square', .03);
+          }
+          sentry.timer = 7 + cathedralSentries.indexOf(sentry) * .8;
+        }
+      }
+      cathedralSentries = cathedralSentries.filter(s => !s.taken);
+    }
     function breakerStep(dt) {
-      slowTime -= dt;
+      slowTime -= dt; censerTime = Math.max(0, censerTime - dt);
       const direction = (keys.has('ArrowRight') || keys.has('d') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('a') ? 1 : 0);
       if (direction) paddle.target = paddle.angle + direction * 3.5 * dt;
       paddle.angle += angleDiff(paddle.target, paddle.angle) * (direction ? 1 : 1 - Math.exp(-20 * dt));
@@ -1488,13 +1940,22 @@ window.AetherArcade = (() => {
         });
         return;
       }
-      updateChoir(dt);
+      updateChoir(dt); updateSentries(dt);
       const speedFactor = slowTime > 0 ? .65 : 1, radius = cometRadius();
       const contact = 235 - (slowTime > 0 ? 6 : 5) - radius;
       let lastLost = null;
       for (const c of comets) {
         const previousDistance = Math.hypot(c.x - W / 2, c.y - H / 2);
         c.pierceGrace = Math.max(0, (c.pierceGrace || 0) - dt); if (!c.pierceGrace) c.lastPierce = null;
+        if (veteran && censerTime > 0) {
+          const alive = bricks.filter(b => b.hp > 0), marked = alive.length ? (alive.find(b => b.key || b.order === litanyTarget) || alive[0]) : null;
+          const gx = (marked?.x ?? W / 2) - c.x, gy = (marked?.y ?? H / 2) - c.y, gd = Math.max(35, Math.hypot(gx, gy));
+          if (marked) {
+            const desired = Math.atan2(gy, gx), heading = Math.atan2(c.vy, c.vx), turnRate = alive.length <= 4 ? 3 : 2.2, turn = clamp(angleDiff(desired, heading), -turnRate * dt, turnRate * dt);
+            const speed = Math.max(320, Math.hypot(c.vx, c.vy) * Math.exp(-.08 * dt));
+            c.vx = Math.cos(heading + turn) * speed; c.vy = Math.sin(heading + turn) * speed;
+          } else { c.vx += gx / gd * 118 * dt; c.vy += gy / gd * 118 * dt; }
+        }
         c.x += c.vx * dt * speedFactor; c.y += c.vy * dt * speedFactor;
         for (const b of bricks) {
           if (!b.hp || c.lastPierce === b) continue;
@@ -1502,7 +1963,7 @@ window.AetherArcade = (() => {
           if (distance < b.r + radius) {
             const nx = distance > .001 ? dx / distance : 0, ny = distance > .001 ? dy / distance : 1;
             const focusBreak = veteran && (c.focus || 0) >= 2;
-            const crystalHit = hitCrystal(b, focusBreak ? 2 : has('dense-core') ? 2 : 1);
+            const crystalHit = hitCrystal(b, focusBreak ? 2 : has('dense-core') ? 2 : 1, focusBreak);
             if (focusBreak && crystalHit) {
               c.focus = 0; c.pierceGrace = .14; c.lastPierce = b; cathedralFocusBreaks++;
               scoreAt(80, c.x, c.y - 28, 'FOCUS BREAK +80'); relicField(c.x, c.y, 58, '#edf19b', .45);
@@ -1520,6 +1981,20 @@ window.AetherArcade = (() => {
             break;
           }
         }
+        if (veteran) for (const sentry of cathedralSentries) {
+          if (sentry.taken) continue;
+          const sx = c.x - sentry.x, sy = c.y - sentry.y, sd = Math.hypot(sx, sy);
+          if (sd >= 15 + radius) continue;
+          if ((c.focus || 0) >= 2 || censerTime > 0) {
+            sentry.taken = true; sentryBreaks++; scoreAt(130, sentry.x, sentry.y - 25, 'SENTRY SHATTERED +130'); burst(sentry.x, sentry.y, '#edf19b', 18); tone(698.46, .13, 'triangle', .05);
+          } else if (sentry.cooldown <= 0) {
+            const nx = sd > .001 ? sx / sd : 1, ny = sd > .001 ? sy / sd : 0, dot = c.vx * nx + c.vy * ny;
+            c.x = sentry.x + nx * (15 + radius + .2); c.y = sentry.y + ny * (15 + radius + .2);
+            if (dot < 0) { c.vx -= 2 * dot * nx; c.vy -= 2 * dot * ny; }
+            c.focus = 0; combo = 0; sentry.cooldown = 1; banner('SENTRY DEFLECT · FOCUS OR CENSER TO BREAK', '#e29eb7', 12); tone(185, .12, 'square', .035);
+          }
+          break;
+        }
         const dx = c.x - W / 2, dy = c.y - H / 2, distance = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
         if (c.vx * dx + c.vy * dy > 0) {
           let offset = angleDiff(a, paddle.angle);
@@ -1533,7 +2008,7 @@ window.AetherArcade = (() => {
             c.vx = Math.cos(bounce) * speed; c.vy = Math.sin(bounce) * speed;
             if (veteran) {
               if (Math.abs(offset) < .14) {
-                c.focus = Math.min(2, (c.focus || 0) + 1); cathedralFocusReturns++;
+                c.focus = Math.min(2, (c.focus || 0) + 1); cathedralFocusReturns++; charge = Math.min(100, charge + 4);
                 if (c.focus >= 2) { banner('FOCUS BREAK READY · NEXT CRYSTAL PIERCES', '#edf19b', 13); relicField(c.x, c.y, 46, '#edf19b', .45); }
               } else c.focus = 0;
             }
@@ -1562,7 +2037,18 @@ window.AetherArcade = (() => {
         }
       }
       while (splitHits >= 6) { splitHits -= 6; splitComet(comets[0]); }
-      if (bricks.every(b => !b.hp) && phase === 'running') {
+      if (veteran && cathedralBoss && phase === 'running') {
+        const keysRemain = bricks.some(b => b.key && b.hp > 0);
+        if (cathedralBoss.stage === 0 && bricks.every(b => !b.hp)) {
+          cathedralBoss.rebuild = (cathedralBoss.rebuild || 0) + dt;
+          if (cathedralBoss.rebuild > 1.25) { banner('THE GLASS REFORMS · COMPLETE THE MOVEMENT', '#d9c7f3', 13); makeCathedralBricks(); }
+        } else if (cathedralBoss.stage === 1 && !keysRemain && cathedralSentries.length === 0) {
+          // Broken keys never reset the two required defensive captures. Keep
+          // the Discord moving through a bounded, telegraphed reserve sentry.
+          cathedralBoss.rebuild = (cathedralBoss.rebuild || 0) + dt;
+          if (cathedralBoss.rebuild > 2) { initialiseSentries(1); cathedralSentries[0].timer = 1.2; cathedralBoss.rebuild = 0; banner('A RESERVE SENTRY ANSWERS', '#e29eb7', 13); }
+        } else cathedralBoss.rebuild = 0;
+      } else if (!cathedralBoss && bricks.every(b => !b.hp) && phase === 'running') {
         // The wave gets a ceremony: slow-mo dissolve, gold bloom, a held breath.
         level++; lives = Math.min(3, lives + 1);
         scoreAt(500, W / 2, H / 2, 'CONSTELLATION CLEARED +500');
@@ -1632,6 +2118,47 @@ window.AetherArcade = (() => {
     function text(value, x, y, size = 12, colour = '#b8aacb', align = 'center') {
       ctx.font = `500 ${size}px "DM Sans", sans-serif`; ctx.fillStyle = colour; ctx.textAlign = align; ctx.fillText(value, x, y);
     }
+    const compactHUD = () => veteran && canvasCssWidth < 520;
+    const hudScale = () => veteran ? clamp(Math.max(W / Math.max(1, canvasCssWidth), H / Math.max(1, canvasCssHeight)), 1, 2.8) : 1;
+    const essentialHudScale = () => Math.max(W / Math.max(1, canvasCssWidth), H / Math.max(1, canvasCssHeight));
+    const essentialBackingPx = () => ESSENTIAL_HUD_CSS_PX * essentialHudScale();
+    function hudMeasure(value, x, y, size, align) {
+      ctx.font = `500 ${size}px "DM Sans", sans-serif`;
+      const metrics = ctx.measureText(String(value)), width = metrics.width;
+      const left = align === 'right' ? x - width : align === 'left' ? x : x - width / 2;
+      return { text: String(value), x: left, y: y - (metrics.actualBoundingBoxAscent || size * .8), w: width,
+        h: (metrics.actualBoundingBoxAscent || size * .8) + (metrics.actualBoundingBoxDescent || size * .2), font: size };
+    }
+    function hudText(value, x, y, size = 10, colour = '#eee4c8', align = 'center', kind = 'status') {
+      const font = compactHUD() ? essentialBackingPx() : size;
+      text(value, x, y, font, colour, align);
+      if (hudFrame) hudFrame.texts.push({ ...hudMeasure(value, x, y, font, align), kind });
+    }
+    function narrativeRegion() {
+      if (options.game === 'merge') return { x: 24, y: 202, w: W - 48 };
+      if (options.game === 'hop') return { x: 190, y: 138, w: W - 210 };
+      if (options.game === 'dash') return { x: 24, y: 180, w: W - 48 };
+      return { x: 24, y: 170, w: W - 48 };
+    }
+    function hudPopup(value, colour) {
+      const region = narrativeRegion(), scaled = essentialBackingPx(), lines = [];
+      ctx.font = `500 ${scaled}px "DM Sans", sans-serif`;
+      for (const word of String(value).split(/\s+/)) {
+        const candidate = lines.length ? `${lines[lines.length - 1]} ${word}` : word;
+        if (lines.length && ctx.measureText(candidate).width > region.w) lines.push(word);
+        else if (lines.length) lines[lines.length - 1] = candidate;
+        else lines.push(word);
+      }
+      const panelHeight = lines.length * scaled * 1.12 + 12, centreX = region.x + region.w / 2;
+      ctx.fillStyle = 'rgba(7,12,24,.88)'; ctx.fillRect(region.x, region.y, region.w, panelHeight);
+      ctx.strokeStyle = 'rgba(185,154,98,.45)'; ctx.lineWidth = 1; ctx.strokeRect(region.x + .5, region.y + .5, region.w - 1, panelHeight - 1);
+      if (hudFrame) hudFrame.texts.push({ text: String(value), x: region.x, y: region.y, w: region.w, h: panelHeight, font: scaled, kind: 'narrative' });
+      lines.forEach((line, i) => {
+        const baseline = region.y + 6 + scaled * .82 + i * scaled * 1.12;
+        text(line, centreX, baseline, scaled, colour);
+        if (hudFrame) hudFrame.texts.push({ ...hudMeasure(line, centreX, baseline, scaled, 'center'), kind: 'narrativeText' });
+      });
+    }
     function trail(points, colour, offset = 0, width = 8) {
       if (points.length < 2) return;
       ctx.lineCap = 'round';
@@ -1662,8 +2189,8 @@ window.AetherArcade = (() => {
     function background() {
       if (!hueCache) {
         hueCache = { base: ctx.createLinearGradient(0, 0, 0, H), glow: ctx.createRadialGradient(W * .65, H * .28, 20, W * .65, H * .28, W * .7) };
-        hueCache.base.addColorStop(0, '#0d1b2c'); hueCache.base.addColorStop(.55, '#14243a'); hueCache.base.addColorStop(1, '#1b2a3d');
-        const glowStops = { merge: '#6d4a2f46', hop: '#67426c46', dash: '#3963684a', breaker: '#3d4a7a46' };
+        hueCache.base.addColorStop(0, '#070c18'); hueCache.base.addColorStop(.55, '#140f20'); hueCache.base.addColorStop(1, '#260f1d');
+        const glowStops = { merge: '#9b693448', hop: '#6d263852', dash: '#285b5c48', breaker: '#6d26384c' };
         hueCache.glow.addColorStop(0, glowStops[options.game]); hueCache.glow.addColorStop(1, '#211b3500');
         const nebulae = { merge: ['#dfac7f', '#b0a0df'], hop: ['#b0a0df', '#e29eb7'], dash: ['#7ac7b5', '#8eaade'], breaker: ['#8eaade', '#b0a0df'] };
         hueCache.nebulaA = nebulaSprite(...nebulae[options.game]);
@@ -1682,6 +2209,29 @@ window.AetherArcade = (() => {
           const grad = g.createRadialGradient(W / 2, H * .52, H * .35, W / 2, H * .52, H * .8);
           grad.addColorStop(0, 'rgba(245,142,155,0)'); grad.addColorStop(1, 'rgba(245,142,155,.55)');
           g.fillStyle = grad; g.fillRect(0, 0, W, H);
+          return c;
+        })();
+        // Baked architectural enamel: pointed brass ribs, ivory incisions and a
+        // low-contrast stained-glass rose. It is cached once and never competes
+        // with moving hazards or collision silhouettes.
+        hueCache.tracery = (() => {
+          const c = document.createElement('canvas'); c.width = W; c.height = H;
+          const g = c.getContext('2d'), archW = W / 3;
+          g.strokeStyle = 'rgba(185,154,98,.16)'; g.lineWidth = 2;
+          for (let i = 0; i < 3; i++) {
+            const left = i * archW + 10, right = (i + 1) * archW - 10, mid = (left + right) / 2, shoulder = H * .33, base = H * .9;
+            g.beginPath(); g.moveTo(left, base); g.lineTo(left, shoulder); g.quadraticCurveTo(left, H * .15, mid, H * .09); g.quadraticCurveTo(right, H * .15, right, shoulder); g.lineTo(right, base); g.stroke();
+            g.strokeStyle = 'rgba(238,228,200,.055)'; g.lineWidth = 1; g.beginPath(); g.moveTo(mid, H * .1); g.lineTo(mid, base); g.stroke(); g.strokeStyle = 'rgba(185,154,98,.16)'; g.lineWidth = 2;
+          }
+          const rx = W * .78, ry = H * .22, rr = Math.min(74, W * .1);
+          for (let i = 0; i < 12; i++) {
+            const a = i / 12 * TAU, b = (i + 1) / 12 * TAU;
+            g.fillStyle = i % 3 === 0 ? 'rgba(109,38,56,.12)' : i % 3 === 1 ? 'rgba(36,55,91,.12)' : 'rgba(185,154,98,.07)';
+            g.beginPath(); g.moveTo(rx, ry); g.arc(rx, ry, rr, a, b); g.closePath(); g.fill();
+            g.strokeStyle = 'rgba(238,228,200,.11)'; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx + Math.cos(a) * rr, ry + Math.sin(a) * rr); g.stroke();
+          }
+          g.strokeStyle = 'rgba(185,154,98,.22)'; g.lineWidth = 3; g.beginPath(); g.arc(rx, ry, rr, 0, TAU); g.stroke();
+          g.lineWidth = 1; g.beginPath(); g.arc(rx, ry, rr * .42, 0, TAU); g.stroke();
           return c;
         })();
         if (options.game === 'hop') {
@@ -1747,15 +2297,30 @@ window.AetherArcade = (() => {
         ctx.restore();
       }
       ctx.globalAlpha = 1;
+      ctx.drawImage(hueCache.tracery, 0, 0);
     }
     function drawMerge() {
       if (veteran) {
         const swing = clamp(mergeGravityX / 230, -1, 1), pendulumX = 154;
         ctx.strokeStyle = '#d9c7f366'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(pendulumX, 12); ctx.lineTo(pendulumX + swing * 27, 65); ctx.stroke();
         ctx.fillStyle = '#d9c7f3'; ctx.beginPath(); ctx.arc(pendulumX + swing * 27, 65, 6, 0, TAU); ctx.fill();
-        text(mergeForecast ? `${mergeForecast.telegraph ? 'FORECAST' : 'PENDULUM'} · ${mergeForecast.name}` : 'PENDULUM ORRERY · BETWEEN FRONTS', W - 24, 23, 9, mergeForecast?.telegraph ? '#edf19b' : '#d9c7f3', 'right');
-        if (mergeForecast) text(`${Math.ceil(mergeForecast.remaining)}s · ${mergeForecast.hint}`, W - 24, 40, 9, '#b7abc9', 'right');
-        if (mergeForecast?.telegraph) text('DROP NOW → CAST AN ANCHOR', W / 2, 76, 9, '#edf19b');
+        if (compactHUD()) {
+          hudText(mergeForecast ? `${mergeForecast.telegraph ? 'ANCHOR WINDOW' : 'PENDULUM'} · ${Math.ceil(mergeForecast.remaining)}s` : 'PENDULUM · BETWEEN FRONTS', W / 2, 108, 10, mergeForecast?.telegraph ? '#edf19b' : '#d9c7f3');
+          if (mergeForecast?.telegraph) hudText('DROP NOW → CAST AN ANCHOR', W / 2, 138, 10, '#edf19b');
+        } else {
+          text(mergeForecast ? `${mergeForecast.telegraph ? 'FORECAST' : 'PENDULUM'} · ${mergeForecast.name}` : 'PENDULUM ORRERY · BETWEEN FRONTS', W - 24, 23, 9, mergeForecast?.telegraph ? '#edf19b' : '#d9c7f3', 'right');
+          if (mergeForecast) text(`${Math.ceil(mergeForecast.remaining)}s · ${mergeForecast.hint}`, W - 24, 40, 9, '#b7abc9', 'right');
+          if (mergeForecast?.telegraph) text('DROP NOW → CAST AN ANCHOR', W / 2, 76, 9, '#edf19b');
+        }
+        if (mergeBoss) {
+          const bx = W / 2 + Math.sin(time * .55) * 72, by = 132;
+          ctx.save(); ctx.translate(bx, by); ctx.rotate(reduced ? 0 : time * .08);
+          ctx.fillStyle = '#210f1ddd'; ctx.strokeStyle = mergeBoss.telegraph > 0 ? '#f5a08c' : '#b99a62'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(0, 0, 33, 0, TAU); ctx.fill(); ctx.stroke();
+          for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 24, Math.sin(a) * 24); ctx.lineTo(Math.cos(a) * 29, Math.sin(a) * 29); ctx.stroke(); }
+          ctx.rotate(reduced ? 0 : -time * .16); ctx.strokeStyle = '#eee4c8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -20); ctx.moveTo(0, 0); ctx.lineTo(15, 7); ctx.stroke(); ctx.restore();
+          hudText(mergeBoss.stage >= 3 ? 'HOROLOGIST · COMPLETE' : compactHUD() ? `${mergeBoss.telegraph > 0 ? 'TOLL!' : 'HOROLOGIST'} · ${mergeBoss.stage + 1}/3 · ${mergeBoss.progress}/${[1, 2, 3][mergeBoss.stage]}` : `THE HOROLOGIST · ${mergeBoss.stage + 1}/3 · ${mergeBoss.progress}/${[1, 2, 3][mergeBoss.stage]}`, W / 2, 181, 10, mergeBoss.telegraph > 0 ? '#f5a08c' : '#edf19b');
+        }
       }
       ctx.fillStyle = '#bea7f008'; ctx.fillRect(22, 92, W - 44, H - 119);
       // The jar is a place: glass depth, a shine on the walls, an ember pool.
@@ -1772,7 +2337,7 @@ window.AetherArcade = (() => {
       ctx.strokeStyle = danger > .2 ? '#ff929a' : '#b7a2d644'; ctx.lineWidth = 1; ctx.setLineDash([5, 7]); ctx.beginPath(); ctx.moveTo(24, 92); ctx.lineTo(W - 24, 92); ctx.stroke(); ctx.setLineDash([]);
       if (danger > .2) {
         const t = Math.min(1, danger / dangerLimit());
-        text('ROOM IS GETTING COSY', W / 2, 115, 10, '#ffacb4'); ctx.fillStyle = '#f58e9b'; ctx.fillRect(24, 88, (W - 48) * t, 3);
+        hudText('ROOM IS GETTING COSY', W / 2, compactHUD() ? 160 : 115, 10, '#ffacb4'); ctx.fillStyle = '#f58e9b'; ctx.fillRect(24, 88, (W - 48) * t, 3);
         ctx.strokeStyle = '#f58e9b'; ctx.globalAlpha = .10 + t * .15; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(24, 92); ctx.lineTo(W - 24, 92); ctx.stroke(); ctx.globalAlpha = 1;
         if (t > .55) { ctx.globalAlpha = (t - .55) * (reduced ? .7 : .5 + .5 * Math.sin(visualTime * (3 + t * 5))); ctx.drawImage(hueCache.dread, 0, 0); ctx.globalAlpha = 1; }
       }
@@ -1783,10 +2348,19 @@ window.AetherArcade = (() => {
         if (d > radii[a.tier] * 2 && d < reach) { ctx.globalAlpha = .12 + (1 - d / reach) * .22; ctx.strokeStyle = '#edf19b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.globalAlpha = 1; }
       }
       if (has('guiding-thread') && guidedBall && balls.includes(guidedBall) && guidedBall.age < 1.1) { ctx.strokeStyle = '#edf19b88'; ctx.setLineDash([3, 6]); ctx.beginPath(); ctx.moveTo(aim, 52); ctx.lineTo(guidedBall.x, guidedBall.y); ctx.stroke(); ctx.setLineDash([]); }
+      if (veteran) for (const shelf of mergeShelves) {
+        const left = shelf.x - shelf.half, right = shelf.x + shelf.half, ly = shelf.y - shelf.half * shelf.slope, ry = shelf.y + shelf.half * shelf.slope;
+        ctx.strokeStyle = '#21121a'; ctx.lineWidth = 11; ctx.beginPath(); ctx.moveTo(left, ly + 4); ctx.lineTo(right, ry + 4); ctx.stroke();
+        ctx.strokeStyle = mergeBracing ? '#edf19b' : '#aa8854'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(left, ly); ctx.lineTo(right, ry); ctx.stroke();
+        ctx.strokeStyle = '#eee4c888'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(left, ly - 2); ctx.lineTo(right, ry - 2); ctx.stroke();
+        for (let i = -2; i <= 2; i++) { const x = shelf.x + i * shelf.half / 2.5, y = shelf.y + (x - shelf.x) * shelf.slope; ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.stroke(); }
+        text('RELIQUARY', shelf.x, shelf.y + 19, 7, '#b99a62');
+      }
       if (phase !== 'over' && phase !== 'ending') {
         const r = radii[queue[0]], x = clamp(aim, r + 24, W - r - 24);
         let landing = H - 27 - r;
         for (const b of balls) { const dx = Math.abs(x - b.x), sum = r + radii[b.tier]; if (dx < sum) landing = Math.min(landing, b.y - Math.sqrt(sum * sum - dx * dx)); }
+        if (veteran) for (const shelf of mergeShelves) if (Math.abs(x - shelf.x) < shelf.half + r * .25) landing = Math.min(landing, shelf.y + (x - shelf.x) * shelf.slope - r);
         ctx.strokeStyle = '#e8d0b633'; ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.moveTo(x, 50 + r); ctx.lineTo(x, landing); ctx.stroke(); ctx.setLineDash([]);
         ctx.strokeStyle = '#e8d0b622'; ctx.setLineDash([4, 7]); ctx.beginPath(); ctx.arc(x, Math.max(50, landing), r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
         ctx.globalAlpha = .13; orb(ctx, x, Math.max(50, landing), r, queue[0]); ctx.globalAlpha = 1;
@@ -1813,13 +2387,23 @@ window.AetherArcade = (() => {
           ctx.beginPath(); ctx.moveTo(b.x + r * .3, b.y - r * .12); ctx.lineTo(b.x + r * .16, b.y - r * .2); ctx.stroke();
         }
       }
+      if (veteran) for (const enemy of mergeEnemies) {
+        if (enemy.state === 'telegraph') {
+          ctx.strokeStyle = '#f5a08c'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 6]); ctx.beginPath(); ctx.moveTo(enemy.x, 82); ctx.lineTo(enemy.x, 160); ctx.stroke(); ctx.setLineDash([]);
+          if (!compactHUD() || !mergeBoss) hudText(`GARGOYLE ${Math.max(1, Math.ceil(enemy.timer))}`, enemy.x, 183, 10, '#f5a08c', 'center', 'world'); continue;
+        }
+        ctx.save(); ctx.translate(enemy.x, enemy.y); ctx.fillStyle = '#24101d'; ctx.strokeStyle = '#f5a08c'; ctx.lineWidth = 2;
+        ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = i % 2 ? 12 : 18; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#eee4c8'; ctx.fillRect(-7, -4, 4, 3); ctx.fillRect(3, -4, 4, 3); ctx.restore();
+        if (enemy.state === 'latched') text('WEIGHT', enemy.x, enemy.y - 25, 7, '#f5a08c');
+      }
       pileT = clamp((H - 92 - topY) / (H - 120), 0, 1);
-      if (combo > 1) text(`${combo}× CHAIN REACTION`, W / 2, H - 6, 11, '#edf19b');
+      if (combo > 1) hudText(compactHUD() ? `${combo}× CHAIN` : `${combo}× CHAIN REACTION`, W / 2, H - 6, 11, '#edf19b');
       // The chain window, made visible: watch it drain and plan the next merge.
       if (combo > 0 && comboTimer > 0) {
         ctx.fillStyle = '#edf19b2e'; ctx.fillRect(W / 2 - 60, 30, 120, 4);
         ctx.fillStyle = comboTimer < .3 ? '#f5a08c' : '#edf19b'; ctx.fillRect(W / 2 - 60, 30, 120 * clamp(comboTimer / (has('echo-hourglass') ? 2.4 + (has('quake-core') && combo > 1 ? .6 : 0) : .85), 0, 1), 4);
-        text(`${combo}× CHAIN`, W / 2, 24, 9, '#edf19b');
+        hudText(`${combo}× CHAIN`, W / 2, 24, 9, '#edf19b');
       }
     }
     function drawSurf() {
@@ -1835,6 +2419,17 @@ window.AetherArcade = (() => {
         text('MOON', gateX, H * .84, 9, '#a9d3be');
       }
       if (veteran) {
+        for (const current of surfCurrents) {
+          const x = current.x - camera;
+          if (x + current.width < -30 || x > W + 30) continue;
+          ctx.fillStyle = '#6d263814'; ctx.fillRect(x, current.y - current.height / 2, current.width, current.height);
+          ctx.fillStyle = '#6d263817'; ctx.fillRect(x, current.y - current.height * .25, current.width, current.height * .5);
+          ctx.strokeStyle = '#c1a26b66'; ctx.lineWidth = 1.5; ctx.setLineDash([10, 12]);
+          for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x, current.y + side * current.height / 2); ctx.lineTo(x + current.width, current.y + side * current.height / 2); ctx.stroke(); }
+          ctx.setLineDash([]);
+          for (let i = 0; i < 3; i++) { const ax = x + 50 + i * 78, ay = current.y + current.direction * (i - 1) * 19; ctx.beginPath(); ctx.moveTo(ax - 9, ay - current.direction * 7); ctx.lineTo(ax, ay + current.direction * 7); ctx.lineTo(ax + 9, ay - current.direction * 7); ctx.stroke(); }
+          text(`SOLAR CURRENT ${current.direction > 0 ? '↓' : '↑'}`, x + current.width / 2, current.y - current.height / 2 - 9, 7, '#c9ae7b');
+        }
         for (const system of binarySystems) {
           const ax = system.a.x - camera, bx = system.b.x - camera;
           if (Math.max(ax, bx) < -80 || Math.min(ax, bx) > W + 80) continue;
@@ -1842,21 +2437,22 @@ window.AetherArcade = (() => {
           text('TWIN STAR', system.x - camera, system.y - system.radius - 45, 9, '#d9c7f3');
         }
         for (const gate of surfGates) {
-          const x = gate.x - camera, gap = gate.currentGap || gate.gap;
+          const x = gate.x - camera, gap = gate.currentGap || gate.gap, huntOpen = surfBoss?.stage === 1;
           if (x < -40 || x > W + 40) continue;
           const top = gate.gapY - gap / 2, bottom = gate.gapY + gap / 2;
-          ctx.fillStyle = '#17152acc'; ctx.fillRect(x - 11, 0, 22, Math.max(0, top)); ctx.fillRect(x - 11, bottom, 22, H - bottom);
-          ctx.strokeStyle = gate.cooldown > 0 ? '#f58e9b' : '#d9c7f3'; ctx.lineWidth = 2;
+          ctx.fillStyle = huntOpen ? '#17152a38' : '#17152acc'; ctx.fillRect(x - 11, 0, 22, Math.max(0, top)); ctx.fillRect(x - 11, bottom, 22, H - bottom);
+          ctx.strokeStyle = huntOpen ? '#9ed7c655' : gate.cooldown > 0 ? '#f58e9b' : '#d9c7f3'; ctx.lineWidth = 2;
           for (const y of [top, bottom]) { ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.lineTo(x + 18, y); ctx.stroke(); }
           for (let y = 22; y < H; y += 46) if (y < top - 8 || y > bottom + 8) star(ctx, x, y, 7, '#8f83bd', 4, gate.phase + y);
           ctx.globalAlpha = .25; ctx.setLineDash([3, 8]); ctx.beginPath(); ctx.moveTo(x - 34, gate.gapY); ctx.lineTo(x + 34, gate.gapY); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
           if (gate.pattern === 'crown') { orb(ctx, x, gate.gapY, 25, 3, false, visualTime * .15); text('OR', x, gate.gapY - 38, 8, '#edf19b'); }
-          text(gate.label, x, clamp(top - 12, 18, H - 18), 8, '#d9c7f3');
+          text(huntOpen ? `${gate.label} · OPEN FOR THE HUNT` : gate.label, x, clamp(top - 12, 18, H - 18), 8, huntOpen ? '#9ed7c6' : '#d9c7f3');
         }
-        text(`TWIN-STAR ROUTE · ${surfGatesPassed} CLEAN GATES`, W - 28, H - 44, 9, '#d9c7f3', 'right');
-        text(`TWINLIGHT ${Math.floor(surfCharge)} / 100`, W - 28, H - 60, 9, '#edf19b', 'right');
+        hudText(compactHUD() ? `${surfGatesPassed} CLEAN GATES` : `TWIN-STAR ROUTE · ${surfGatesPassed} CLEAN GATES`, W - 28, compactHUD() ? H - 30 : H - 44, 10, '#d9c7f3', 'right');
+        hudText(`TWINLIGHT ${Math.floor(surfCharge)}/100`, W - 28, compactHUD() ? H - 105 : H - 60, 10, '#edf19b', 'right');
         const swapReady = tether?.planet?.binary && surfCharge >= 25;
-        text(tether?.planet?.binary ? `X · SWAP TWIN (25)${swapReady ? '' : ' · NEED TWINLIGHT'}` : surfCharge >= 50 ? 'X · STARHOOK NEAREST MARKED PLANET (50)' : 'RINGS + CLEAN GATES REFILL TWINLIGHT', W / 2, 74, 9, swapReady || !tether && surfCharge >= 50 ? '#edf19b' : '#b7abc9');
+        const surfInstruction = compactHUD() ? (tether?.planet?.binary ? 'X SWAP · E VEIL SLOWS ORBIT' : 'X HOOK · E VEIL · RINGS REFILL') : tether?.planet?.binary ? `X · SWAP TWIN (25)${swapReady ? '' : ' · NEED TWINLIGHT'}` : surfCharge >= 50 ? 'X · STARHOOK NEAREST MARKED PLANET (50)' : 'RINGS + CLEAN GATES REFILL TWINLIGHT';
+        hudText(surfInstruction, W / 2, 74, 10, swapReady || !tether && surfCharge >= 50 ? '#edf19b' : '#b7abc9');
       }
       const hookTarget = veteran && !tether && surfCharge >= 50 ? worlds.map(w => ({ w, d: Math.hypot(w.x - ship.x, w.y - ship.y) })).filter(p => p.w.x > ship.x - 50 && p.d < 430 && p.d > p.w.r + 15).sort((a, b) => a.d - b.d)[0]?.w : null;
       for (const w of worlds) {
@@ -1876,6 +2472,25 @@ window.AetherArcade = (() => {
         star(ctx, r.x - camera, r.y, 7, '#edf19b');
       }
       for (const r of rocks) { orb(ctx, r.x - camera, r.y, r.r, 3, false, visualTime * .2); ctx.strokeStyle = '#ff919a55'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(r.x - camera, r.y, r.r + 7, 0, TAU); ctx.stroke(); }
+      if (veteran) {
+        for (const hunter of surfHunters) {
+          const x = hunter.x - camera;
+          if (hunter.state === 'aim') {
+            ctx.strokeStyle = '#f5a08c99'; ctx.lineWidth = 1.5; ctx.setLineDash([7, 7]); ctx.beginPath(); ctx.moveTo(x, hunter.y); ctx.lineTo(hunter.targetX - camera, hunter.targetY); ctx.stroke(); ctx.setLineDash([]);
+            hudText('DIVE', hunter.targetX - camera, hunter.targetY - 18, 10, '#f5a08c', 'center', 'world');
+          }
+          ctx.save(); ctx.translate(x, hunter.y); ctx.rotate(hunter.state === 'dive' ? Math.atan2(hunter.vy, hunter.vx) : 0);
+          ctx.fillStyle = '#210e1b'; ctx.strokeStyle = '#f5a08c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-6, 0); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#eee4c8'; ctx.beginPath(); ctx.arc(4, 0, 3, 0, TAU); ctx.fill(); ctx.restore();
+        }
+        if (surfBoss) {
+          const x = W - 92, y = 142 + surfBoss.stage * 105;
+          ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#160d20cc'; ctx.strokeStyle = '#c2a36b'; ctx.lineWidth = 2;
+          for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(side * 27, 0, 27, 0, TAU); ctx.fill(); ctx.stroke(); star(ctx, side * 27, 0, 10, '#eee4c8', 6, reduced ? 0 : side * visualTime * .3); }
+          ctx.beginPath(); ctx.moveTo(-8, -34); ctx.lineTo(0, -50); ctx.lineTo(8, -34); ctx.stroke(); ctx.restore();
+          hudText(surfBoss.stage >= 3 ? 'REGENT · COMPLETE' : compactHUD() ? `REGENT ${surfBoss.stage + 1}/3 · ${surfBoss.progress}/${[2, 2, 3][surfBoss.stage]}` : `BINARY REGENT · ${surfBoss.stage + 1}/3 · ${surfBoss.progress}/${[2, 2, 3][surfBoss.stage]}`, W - 24, compactHUD() ? H - 180 : y + 53, 10, '#edf19b', 'right');
+        }
+      }
       trail(ship.trail, flightBoost > 0 ? '#edf19b' : '#f5ba9c', camera, flightBoost > 0 ? 19 : 15);
       if (tether) {
         ctx.globalAlpha = .12; ctx.strokeStyle = '#f0f3a0'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(tether.planet.x - camera, tether.planet.y); ctx.lineTo(ship.x - camera, ship.y); ctx.stroke(); ctx.globalAlpha = 1;
@@ -1885,6 +2500,7 @@ window.AetherArcade = (() => {
       const reentry = phase === 'ending' ? Math.max(.12, finishDelay / 1.3) : 1;
       ctx.globalAlpha = (invulnerable > 0 && Math.sin(visualTime * 30) > 0 ? .35 : 1) * reentry;
       if (shields > 0) { ctx.strokeStyle = '#9ed7c6aa'; ctx.lineWidth = 2; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.arc(ship.x - camera, ship.y, 22 + Math.sin(visualTime * 5) * 2, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+      if (surfVeil > 0) { ctx.fillStyle = '#bba7ed22'; ctx.strokeStyle = '#eee4c8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ship.x - camera, ship.y, 28, 0, TAU); ctx.fill(); ctx.stroke(); text('REFLECT', ship.x - camera, ship.y - 36, 7, '#d9c7f3'); }
       ctx.save(); ctx.translate(ship.x - camera, ship.y); ctx.rotate(Math.atan2(ship.vy, ship.vx));
       // Engine ember: a two-frame flicker at the tail while flying free.
       if (!tether) {
@@ -1928,14 +2544,23 @@ window.AetherArcade = (() => {
       // Each act tints the sky; the last fifteen seconds warm toward dawn.
       const actTints = ['#396368', '#3d4a7a', '#67426c', '#8c4a5e', '#8c753d'];
       ctx.globalAlpha = .05 + seaT * .12; ctx.fillStyle = actTints[Math.min(dashAct - 1, 4)]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+      if (veteranExpedition && Math.abs(dashTide) >= 8 && (!whale || !compactHUD())) {
+        ctx.strokeStyle = '#b99a6244'; ctx.lineWidth = 1.5; ctx.setLineDash([12, 15]);
+        for (const y of [176, 302, 420]) { ctx.beginPath(); ctx.moveTo(dashTide > 0 ? 45 : W - 45, y); ctx.lineTo(dashTide > 0 ? W - 45 : 45, y); ctx.stroke(); }
+        ctx.setLineDash([]); hudText(`${compactHUD() ? (dashTide > 0 ? 'TIDE →' : '← TIDE') : dashTideName}${dashAnchor ? ' · ANCHOR' : ''}`, W / 2, 144, 10, dashAnchor ? '#edf19b' : '#b99a62');
+      }
       const umbraWeather = veteranExpedition && stageCatalog()[dashStageIndex]?.umbra;
       if (umbraWeather) {
         ctx.fillStyle = '#08081766'; ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = .8; ctx.drawImage(hueCache.umbraGlow, umbraLightX - 130, 0); ctx.globalAlpha = 1;
         ctx.strokeStyle = '#c4b5f266'; ctx.setLineDash([4, 10]); ctx.lineWidth = 1.5;
         for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(umbraLightX + side * 112, 82); ctx.lineTo(umbraLightX + side * 112, H - 88); ctx.stroke(); }
-        ctx.setLineDash([]); text('ROAMING LANTERN · ONLY LIT DARK STARS CAN LAND', umbraLightX, 96, 10, '#d9c7f3');
-        text(umbraRein ? 'LANTERN REINED · RELEASE S / ↓ TO LET GO' : 'S / ↓ TOW (LIT CATCHES REFILL) · DASH UNLIT STARS, THEN BREAK THEIR SHADES', W / 2, 118, 9, umbraRein ? '#edf19b' : '#b7abc9');
+        ctx.setLineDash([]);
+        if (compactHUD()) hudText(umbraRein ? 'REINED · RELEASE S' : 'LIT STARS · S REIN · E BANK', W / 2, 140, 10, umbraRein ? '#edf19b' : '#d9c7f3');
+        else {
+          hudText('ROAMING LANTERN · ONLY LIT DARK STARS CAN LAND', umbraLightX, 96, 10, '#d9c7f3');
+          hudText(umbraRein ? 'LANTERN REINED · RELEASE S / ↓ TO LET GO' : 'S / ↓ TOW (LIT CATCHES REFILL) · DASH UNLIT STARS, THEN BREAK THEIR SHADES', W / 2, 118, 10, umbraRein ? '#edf19b' : '#b7abc9');
+        }
         if (umbraRein) { ctx.strokeStyle = '#edf19b66'; ctx.setLineDash([4, 8]); ctx.beginPath(); ctx.moveTo(umbraLightX, 154); ctx.lineTo(catcher.x, H - 90); ctx.stroke(); ctx.setLineDash([]); }
       }
       if (slow > 0 && hueCache.motes) {
@@ -1944,13 +2569,20 @@ window.AetherArcade = (() => {
         ctx.globalAlpha = 1;
       }
       for (const f of falling) {
-        if (f.wait > 0) { if (f.bad) { text(f.shade ? 'SHADE' : '⌄', f.x, 20, f.shade ? 9 : 25, f.shade ? '#e29eb7' : '#ff9aa4'); ctx.fillStyle = f.shade ? '#bba7ed18' : '#f58e9b10'; ctx.fillRect(f.x - 22, 30, 44, H - 100); } continue; }
-        if (f.shade) {
+        if (f.wait > 0) { if (f.bad) { hudText(f.moth ? 'GLOAM MOTH' : f.shade ? 'SHADE' : '⌄', f.x, 28, f.shade || f.moth ? 10 : 25, f.shade || f.moth ? '#e29eb7' : '#ff9aa4', 'center', 'world'); ctx.fillStyle = f.shade || f.moth ? '#bba7ed18' : '#f58e9b10'; ctx.fillRect(f.x - 22, 30, 44, H - 100); } continue; }
+        if (f.moth) {
+          ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(reduced ? 0 : Math.sin(f.spin * 9) * .18);
+          ctx.strokeStyle = '#e29eb7'; ctx.fillStyle = '#251020'; ctx.lineWidth = 2;
+          for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(side * 27, -20, side * 23, 10); ctx.quadraticCurveTo(side * 12, 19, 0, 5); ctx.fill(); ctx.stroke(); }
+          ctx.fillStyle = '#eee4c8'; ctx.fillRect(-2, -9, 4, 20); ctx.restore();
+          hudText(f.fleeing ? 'REPELLED' : combo >= 3 ? `HUNTING ${Math.min(5, combo)}` : 'BANKED = SAFE', f.x, f.y - 28, 7, '#e29eb7', 'center', 'world');
+        }
+        else if (f.shade) {
           ctx.strokeStyle = '#e29eb755'; ctx.lineWidth = 3; ctx.setLineDash([5, 7]); ctx.beginPath(); ctx.moveTo(f.x, Math.max(30, f.y - 65)); ctx.lineTo(f.x, f.y - 12); ctx.stroke(); ctx.setLineDash([]);
           ctx.fillStyle = '#171020'; ctx.strokeStyle = '#e29eb7'; ctx.lineWidth = 2; ctx.beginPath();
           for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + f.spin * .25, r = i % 2 ? 8 : 17; ctx.lineTo(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r); }
           ctx.closePath(); ctx.fill(); ctx.stroke();
-          if (f.y > 280) text('DASH TO BREAK', f.x, f.y - 27, 8, '#e29eb7');
+          if (f.y > 280) hudText('DASH TO BREAK', f.x, f.y - 27, 8, '#e29eb7', 'center', 'world');
         }
         else if (f.bad) { ctx.strokeStyle = '#f58e9b30'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(f.x + 8, f.y - 35); ctx.lineTo(f.x, f.y); ctx.stroke(); orb(ctx, f.x, f.y, f.r, 3, false, f.spin); }
         else if (f.kind === 'pickup') {
@@ -1982,7 +2614,10 @@ window.AetherArcade = (() => {
       if (slow > 0) { ctx.fillStyle = 'rgba(158,215,198,.055)'; ctx.fillRect(0, 0, W, H); }
       // Active power-up chip: canvas-first so it is visible even when the DOM
       // build panel is scrolled away on a phone.
-      if (activePower) {
+      if (activePower && compactHUD()) {
+        const shortNames = { 'lodestone-bloom': 'BLOOM', 'clock-moth': 'CLOCK', moonshield: 'SHIELD', 'prism-net': 'NET', 'star-prism': 'PRISM' };
+        hudText(`${shortNames[activePower.id] || 'POWER'} ${activePower.charges ? `${activePower.charges}×` : `${Math.ceil(activePower.remaining)}s`}`, W / 2, H - 150, 10, activePower.colour);
+      } else if (activePower) {
         const px = 22, py = 14, pw = 136;
         ctx.globalAlpha = .92; ctx.fillStyle = '#101c22e6'; ctx.fillRect(px, py, pw, 30); ctx.globalAlpha = 1;
         ctx.strokeStyle = activePower.colour + '88'; ctx.lineWidth = 1; ctx.strokeRect(px + .5, py + .5, pw - 1, 29);
@@ -2038,6 +2673,10 @@ window.AetherArcade = (() => {
         ctx.fillStyle = '#edf19b'; ctx.beginPath(); ctx.arc(-104, -8, 3.5, 0, TAU); ctx.fill();
         ctx.restore();
         ctx.globalAlpha = 1;
+        if (veteranExpedition) {
+          hudText(compactHUD() ? `CHOIR ${Math.min(3, whale.finaleStage + 1)}/3 · C${whale.caught} · B${whale.banked}/${[3, 4, 5][whale.finaleStage] || 0}` : `WHALE CHOIR ${Math.min(3, whale.finaleStage + 1)}/3 · CAUGHT ${whale.caught} · OFFERED ${whale.banked}/${[3, 4, 5][whale.finaleStage] || 0}`, compactHUD() ? W / 2 : clamp(whale.x, 220, W - 220), 132, 10, '#edf19b');
+          for (let i = 0; i < 3; i++) { ctx.fillStyle = i < whale.finaleStage ? '#edf19b' : '#9ed7c644'; ctx.fillRect(W / 2 - 54 + i * 38, 151, 30, 3); }
+        }
         // Breath lanes, telegraphed before the stars fall.
         for (const laneX of breathLanes) {
           ctx.strokeStyle = '#9ed7c6'; ctx.globalAlpha = .35 + (reduced ? 0 : Math.sin(visualTime * 6) * .15);
@@ -2050,13 +2689,14 @@ window.AetherArcade = (() => {
       if (expedition) {
         const mission = currentMission();
         if (mission) {
-          text(`${missionDone ? '✓ ' : ''}${mission.text.toUpperCase()} · ${Math.floor(missionProgress)}/${mission.target}`, 26, 56, 10, missionDone ? '#a9d3be' : '#a9b6c3', 'left');
+          const shortMissions = { umbra: 'LIT DARK STARS', catch: 'CATCH STARS', calm: 'NO HITS', centre: 'CENTRE STARS', gift: 'CATCH A GIFT', surge: 'SURGE STARS', whaleBank: 'BANK BREATH', whale: 'CATCH BREATH' };
+          hudText(compactHUD() ? `${missionDone ? '✓ ' : ''}${shortMissions[mission.id] || mission.id.toUpperCase()} ${Math.floor(missionProgress)}/${mission.target}` : `${missionDone ? '✓ ' : ''}${mission.text.toUpperCase()} · ${Math.floor(missionProgress)}/${mission.target}`, 26, compactHUD() ? 82 : 56, 10, missionDone ? '#a9d3be' : '#a9b6c3', 'left');
         }
         const stageName = whale ? 'THE WHALE' : stageCatalog()[dashStageIndex]?.name;
-        if (stageName) text(stageName, W - 27, 58, 10, '#cbb287', 'right');
+        if (stageName) hudText(compactHUD() ? stageName.replace('THE ', '') : stageName, W - 27, compactHUD() ? 82 : 58, 10, '#cbb287', 'right');
       }
-      text(`${Math.ceil(remaining)}s`, W - 27, 35, 22, remaining <= 10 && !expedition ? '#edf19b' : '#eee7d4', 'right');
-      text(combo > 0 ? `${combo} STREAK · ×${Math.min(8, 1 + Math.floor(combo / 5))}` : 'GOLD IS GOOD. PINK IS TROUBLE.', W / 2, 30, 11, combo > 0 ? '#edf19b' : '#b7abc9');
+      hudText(`${Math.ceil(remaining)}s`, W - 27, compactHUD() ? 36 : 35, 22, remaining <= 10 && !expedition ? '#edf19b' : '#eee7d4', 'right');
+      hudText(combo > 0 ? compactHUD() ? `${combo} STREAK ×${Math.min(8, 1 + Math.floor(combo / 5))}` : `${combo} STREAK · ×${Math.min(8, 1 + Math.floor(combo / 5))}` : compactHUD() ? 'CATCH STARS · BANK ×3+' : 'GOLD IS GOOD. PINK IS TROUBLE.', W / 2, compactHUD() ? 36 : 30, 11, combo > 0 ? '#edf19b' : '#b7abc9');
       ctx.fillStyle = '#9ed7c622'; ctx.fillRect(25, H - 20, W - 50, 3);
       if (remaining <= 10 && !expedition) { ctx.globalAlpha = reduced ? .8 : .5 + .4 * Math.sin(visualTime * 8); ctx.fillStyle = '#edf19b'; }
       else ctx.fillStyle = '#9ed7c6';
@@ -2071,8 +2711,8 @@ window.AetherArcade = (() => {
       const alive = bricks.reduce((n, b) => n + (b.hp > 0 ? 1 : 0), 0);
       const critical = alive > 0 && alive <= bricks.length / 4;
       if (veteran) {
-        text(`CATHEDRAL · ${cathedralPatterns[(level - 1) % cathedralPatterns.length]}`, W / 2, 28, 11, '#d9c7f3');
-        text(bricks.some(b => b.key && b.hp > 0) ? 'GOLD KEYSTONES BREAK THE SEALS' : 'THE GLASS IS UNSEALED', W / 2, 47, 9, '#edf19b');
+        hudText(cathedralBoss ? `${compactHUD() ? 'FINAL' : 'LAST CATHEDRAL'} · ${['LITANY', 'DISCORD', 'ROSE HEART'][cathedralBoss.stage]} · ${cathedralBoss.progress}/${[3, 2, 2][cathedralBoss.stage]}` : compactHUD() ? `CATHEDRAL · ${cathedralPatterns[(level - 1) % cathedralPatterns.length]}` : `CATHEDRAL · ${cathedralPatterns[(level - 1) % cathedralPatterns.length]}`, W / 2, compactHUD() ? 32 : 28, 11, '#d9c7f3');
+        hudText(cathedralBoss ? ['FOLLOW GLASS ORDER', 'PARRY/CENSER 2 MOTES', '2 FOCUS BREAKS'][cathedralBoss.stage] : compactHUD() ? (bricks.some(b => b.key && b.hp > 0) ? 'BREAK GOLD KEYSTONES' : 'GLASS UNSEALED') : bricks.some(b => b.key && b.hp > 0) ? 'GOLD KEYSTONES BREAK THE SEALS' : 'THE GLASS IS UNSEALED', W / 2, compactHUD() ? 80 : 52, 10, '#edf19b');
       }
       ctx.strokeStyle = '#b9a5dc'; ctx.globalAlpha = critical ? .13 : .05; ctx.setLineDash([2, 10]);
       for (const r of [62, 111, 157]) { ctx.beginPath(); ctx.arc(W / 2, H / 2, r, 0, TAU); ctx.stroke(); }
@@ -2097,7 +2737,21 @@ window.AetherArcade = (() => {
         ctx.strokeStyle = '#e29eb7'; ctx.lineWidth = 2; ctx.setLineDash([6, 7]); ctx.beginPath(); ctx.moveTo(choirSource.x, choirSource.y);
         ctx.lineTo(W / 2 + Math.cos(a) * 255, H / 2 + Math.sin(a) * 255); ctx.stroke(); ctx.setLineDash([]);
         ctx.beginPath(); ctx.arc(choirSource.x, choirSource.y, choirSource.r + 11, 0, TAU); ctx.stroke();
-        text(`CHOIR ${Math.max(1, Math.ceil(choirCharge))} · BREAK OR PARRY`, (choirSource.x + W / 2 + Math.cos(a) * 235) / 2, (choirSource.y + H / 2 + Math.sin(a) * 235) / 2 - 12, 8, '#e29eb7');
+        hudText(compactHUD() ? `CHOIR ${Math.max(1, Math.ceil(choirCharge))} · PARRY/E` : `CHOIR ${Math.max(1, Math.ceil(choirCharge))} · BREAK OR PARRY`, (choirSource.x + W / 2 + Math.cos(a) * 235) / 2, (choirSource.y + H / 2 + Math.sin(a) * 235) / 2 - 12, 10, '#e29eb7', 'center', 'world');
+      }
+      if (veteran && censerTime > 0) {
+        ctx.strokeStyle = '#d9c7f388'; ctx.lineWidth = 2; ctx.setLineDash([4, 8]);
+        for (const r of [56, 91, 132]) { ctx.beginPath(); ctx.arc(W / 2, H / 2, r, reduced ? 0 : visualTime * .3, TAU - .4); ctx.stroke(); }
+        ctx.setLineDash([]); if (!compactHUD()) text(`ROSE CENSER ${censerTime.toFixed(1)}s`, W / 2, H / 2 + 111, 8, '#d9c7f3');
+      }
+      if (veteran) for (const sentry of cathedralSentries) {
+        if (sentry.timer < 1.25) {
+          ctx.strokeStyle = '#e29eb777'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 7]); ctx.beginPath(); ctx.moveTo(sentry.x, sentry.y); ctx.lineTo(W / 2 + Math.cos(sentry.angle) * 255, H / 2 + Math.sin(sentry.angle) * 255); ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.save(); ctx.translate(sentry.x, sentry.y); ctx.rotate(sentry.angle);
+        ctx.fillStyle = '#25101f'; ctx.strokeStyle = sentry.timer < 1.25 ? '#f5a08c' : '#b99a62'; ctx.lineWidth = 2;
+        ctx.fillRect(-11, -11, 22, 22); ctx.strokeRect(-11, -11, 22, 22); ctx.strokeStyle = '#eee4c8'; ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(16, 0); ctx.moveTo(0, -16); ctx.lineTo(0, 16); ctx.stroke(); ctx.restore();
+        hudText(sentry.timer < 1.25 ? 'DISCORD' : 'SENTRY', sentry.x, sentry.y - 23, sentry.timer < 1.25 ? 10 : 8, '#e29eb7', 'center', 'world');
       }
       // The paddle braces inward and flashes on every return.
       const pk = paddle.kick || 0;
@@ -2119,7 +2773,7 @@ window.AetherArcade = (() => {
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle + .4);
         const popScale = 1 + (b.hit / .2) * (reduced ? .14 : .28);
         ctx.scale(popScale, popScale);
-        ctx.fillStyle = b.hit > 0 ? '#fff4d4' : colours[b.tier]; ctx.beginPath();
+        ctx.fillStyle = b.hit > 0 ? '#fff4d4' : b.bossCore ? '#5a1f38' : colours[b.tier]; ctx.beginPath();
         for (let i = 0; i < 6; i++) ctx.lineTo(Math.cos(i / 6 * TAU) * b.r, Math.sin(i / 6 * TAU) * b.r);
         ctx.closePath(); ctx.fill();
         if (b.hp > 1) {
@@ -2129,6 +2783,16 @@ window.AetherArcade = (() => {
         // Family marks: pulse crystals breathe blue; the heart beats pink.
         if (b.family === 'pulse') { ctx.fillStyle = '#a6d9ec'; ctx.beginPath(); ctx.arc(0, 0, 4 + (reduced ? 0 : Math.sin(visualTime * 4) * 1.5), 0, TAU); ctx.fill(); }
         else if (b.family === 'heart') { ctx.fillStyle = '#f5a08c'; ctx.font = '13px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('♥', 0, 1); ctx.textBaseline = 'alphabetic'; }
+        if (veteran && !b.key && !b.bossCore) {
+          const orderColours = ['#eee4c8', '#e29eb7', '#edcf83'];
+          ctx.strokeStyle = orderColours[b.order]; ctx.lineWidth = b.order === litanyTarget && (!b.sealed || !bricks.some(k => k.key && k.hp > 0)) ? 3 : 1.4;
+          ctx.beginPath(); if (b.order === 0) ctx.arc(0, 0, 5, 0, TAU); else if (b.order === 1) { ctx.moveTo(0, -6); ctx.lineTo(6, 5); ctx.lineTo(-6, 5); ctx.closePath(); } else ctx.rect(-5, -5, 10, 10); ctx.stroke();
+        }
+        if (veteran && b.bossCore) {
+          ctx.strokeStyle = '#eee4c8'; ctx.lineWidth = 2;
+          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.beginPath(); ctx.ellipse(Math.cos(a) * 10, Math.sin(a) * 10, 10, 4, a, 0, TAU); ctx.stroke(); }
+          star(ctx, 0, 0, 7, '#edf19b', 8, 0);
+        }
         if (veteran && b.key) { star(ctx, 0, 0, 8, '#fff3a6', 4, reduced ? 0 : visualTime); }
         else if (veteran && b.sealed && bricks.some(k => k.key && k.hp > 0)) {
           ctx.strokeStyle = '#edf19b'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.arc(0, 0, b.r + 5, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
@@ -2159,44 +2823,58 @@ window.AetherArcade = (() => {
       }
       if (veteran) {
         const focus = Math.max(0, ...comets.map(c => c.focus || 0));
-        ctx.fillStyle = '#0d1b2ccc'; ctx.fillRect(W / 2 - 174, 53, 348, 19);
-        text(focus >= 2 ? 'FOCUS BREAK READY · NEXT CRYSTAL PIERCES' : `CENTRED RETURNS ${focus} / 2 · OFF-CENTRE RETURNS RESET FOCUS`, W / 2, 66, 8, focus >= 2 ? '#edf19b' : '#b7abc9');
+        if (compactHUD()) {
+          hudText(`FOCUS ${focus >= 2 ? 'READY' : `${focus}/2`} · LITANY ${litanyProgress}/3 · ${['IVORY ○', 'WINE △', 'GOLD □'][litanyTarget]}`, W / 2, 128, 10, ['#eee4c8', '#e29eb7', '#edcf83'][litanyTarget]);
+        } else {
+          ctx.fillStyle = '#0d1b2ccc'; ctx.fillRect(W / 2 - 174, 53, 348, 19);
+          hudText(focus >= 2 ? 'FOCUS BREAK READY · NEXT CRYSTAL PIERCES' : `CENTRED RETURNS ${focus} / 2 · OFF-CENTRE RETURNS RESET FOCUS`, W / 2, 66, 10, focus >= 2 ? '#edf19b' : '#b7abc9');
+          hudText(`LITANY ${litanyProgress}/3 · NEXT ${['IVORY ○', 'WINE △', 'GOLD □'][litanyTarget]} · ${litanyCompletions} COMPLETE`, W / 2, 85, 10, ['#eee4c8', '#e29eb7', '#edcf83'][litanyTarget]);
+        }
       }
-      if (launchTimer > 0 && phase === 'running') text('GET READY', W / 2, H / 2, 14, '#edf19b');
-      text(`WAVE ${String(level).padStart(2, '0')}`, 28, 34, 13, '#bba7ed', 'left');
-      text(paddleHush > 0 ? `DISCORD · NARROW PADDLE ${paddleHush.toFixed(1)}s` : slowTime > 0 ? 'SLOW ORBIT ACTIVE' : 'KEEP IT IN ORBIT', W - 28, H - 28, 11, paddleHush > 0 ? '#f5a08c' : '#bba7ed', 'right');
-      if (combo > 1) text(`${Math.min(8, combo)}×`, 45, H / 2, 27, '#edf19b');
+      if (launchTimer > 0 && phase === 'running') hudText('GET READY', W / 2, H / 2, 14, '#edf19b', 'center', 'world');
+      if (!compactHUD()) text(`WAVE ${String(level).padStart(2, '0')}`, 28, 34, 13, '#bba7ed', 'left');
+      if (!compactHUD() || paddleHush > 0 || slowTime > 0) hudText(paddleHush > 0 ? compactHUD() ? `DISCORD ${paddleHush.toFixed(1)}s` : `DISCORD · NARROW PADDLE ${paddleHush.toFixed(1)}s` : slowTime > 0 ? 'SLOW ORBIT ACTIVE' : 'KEEP IT IN ORBIT', W - 28, H - 28, 11, paddleHush > 0 ? '#f5a08c' : '#bba7ed', 'right');
+      if (combo > 1) hudText(`${Math.min(8, combo)}×`, 45, H / 2, 27, '#edf19b', 'center', 'world');
     }
     function drawTouchControls() {
       if (!veteran || suspended || phase !== 'running') return;
-      const rects = controlRects(), uiScale = Math.max(1, W / Math.max(1, canvasCssWidth), H / Math.max(1, canvasCssHeight));
-      const titleSize = Math.min(32, 11 * uiScale), subSize = Math.min(24, 8 * uiScale);
+      const rects = controlRects(), uiScale = Math.max(1, W / Math.max(1, canvasCssWidth), H / Math.max(1, canvasCssHeight)), phone = compactHUD();
+      const titleSize = phone ? essentialBackingPx() : Math.min(32, 11 * uiScale), subSize = phone ? essentialBackingPx() : Math.min(26, 9.5 * uiScale);
       const pad = (r, title, subtitle, active, enabled = true) => {
         ctx.globalAlpha = active || enabled ? .94 : .68;
         ctx.fillStyle = active ? '#edf19b38' : '#101c22dd'; ctx.fillRect(r.x, r.y, r.w, r.h);
         ctx.strokeStyle = active ? '#edf19b' : enabled ? '#d9c7f3aa' : '#8f86a377'; ctx.lineWidth = active ? 2.5 : 1.5; ctx.strokeRect(r.x + .75, r.y + .75, r.w - 1.5, r.h - 1.5);
-        text(title, r.x + r.w / 2, r.y + r.h / 2 - 3 * uiScale, titleSize, active ? '#edf19b' : '#eee7d4');
-        text(subtitle, r.x + r.w / 2, r.y + r.h / 2 + 14 * uiScale, subSize, enabled ? '#b7abc9' : '#8f86a3');
+        const titleY = phone ? r.y + 16 * uiScale : r.y + r.h / 2 - 3 * uiScale, subY = phone ? r.y + 36 * uiScale : r.y + r.h / 2 + 14 * uiScale;
+        text(title, r.x + r.w / 2, titleY, titleSize, active ? '#edf19b' : '#eee7d4');
+        text(subtitle, r.x + r.w / 2, subY, subSize, enabled ? '#b7abc9' : '#8f86a3');
+        if (hudFrame) hudFrame.controls.push({ name: title, x: r.x, y: r.y, w: r.w, h: r.h, labels: [hudMeasure(title, r.x + r.w / 2, titleY, titleSize, 'center'), hudMeasure(subtitle, r.x + r.w / 2, subY, subSize, 'center')] });
         ctx.globalAlpha = 1;
       };
       if (options.game === 'merge' && rects.brace) {
-        const r = rects.brace; pad(r, pointerBrace ? 'BRACING' : 'BRACE', `HOLD / S · ${Math.round(mergeGrip)}`, pointerBrace, mergeGrip > 0);
+        const r = rects.brace; pad(r, pointerBrace && !phone ? 'BRACING' : 'BRACE', phone ? `S · ${Math.round(mergeGrip)}` : `${pointerBrace ? 'BRACING' : 'HOLD / S'} · ${Math.round(mergeGrip)}`, pointerBrace, mergeGrip > 0);
         ctx.fillStyle = '#d9c7f333'; ctx.fillRect(r.x + 10, r.y + r.h - 9, r.w - 20, 3);
         ctx.fillStyle = '#d9c7f3'; ctx.fillRect(r.x + 10, r.y + r.h - 9, (r.w - 20) * mergeGrip / 100, 3);
+        if (rects.tune) pad(rects.tune, 'TUNE', phone ? `E30 · ${Math.round(mergeResonance)}` : `TAP / E · 30 · ${Math.round(mergeResonance)}`, mergeTuneQueued, mergeResonance >= 30);
       } else if (options.game === 'hop' && rects.ability) {
         const swap = !!tether?.planet?.binary, cost = swap ? 25 : 50;
-        pad(rects.ability, swap ? 'SWAP' : 'STARHOOK', `TAP / X · ${cost}`, false, surfCharge >= cost);
+        pad(rects.ability, swap ? 'SWAP' : phone ? 'HOOK' : 'STARHOOK', phone ? `X${cost}` : `TAP / X · ${cost}`, false, surfCharge >= cost);
+        if (rects.veil) pad(rects.veil, surfVeil > 0 && !phone ? 'VEILED' : 'VEIL', phone ? surfVeil > 0 ? `${surfVeil.toFixed(1)}s` : 'E25' : `TAP / E · 25`, surfVeil > 0, surfCharge >= 25 && surfVeil <= 0);
       } else if (options.game === 'dash') {
-        if (rects.dash) pad(rects.dash, stageCatalog()[dashStageIndex]?.umbra ? 'ECLIPSE' : 'DASH', `TAP / X · ${charge >= 100 ? 'READY' : Math.floor(charge) + '%'}`, dashTime > 0, charge >= 100);
-        if (rects.rein) pad(rects.rein, pointerRein ? 'REINING' : 'REIN', `HOLD / S · ${Math.floor(umbraLumen)}`, pointerRein, umbraLumen > 0);
+        if (rects.dash) pad(rects.dash, 'DASH', phone ? `X ${Math.floor(charge)}%` : `TAP / X · ${charge >= 100 ? 'READY' : Math.floor(charge) + '%'}`, dashTime > 0, charge >= 100);
+        if (rects.bank) pad(rects.bank, 'BANK', phone ? `E ${whale?.caught || combo}` : `TAP / E · ${whale?.caught || combo}`, false, combo >= 3 || !!whale?.caught);
+        if (rects.rein) pad(rects.rein, 'REIN', phone ? `S ${Math.floor(umbraLumen)}` : `HOLD / S · ${Math.floor(umbraLumen)}`, pointerRein, umbraLumen > 0);
       } else if (options.game === 'breaker') {
-        text('DRAG / TOUCH PADDLE · CENTRE = FOCUS · PARRY MOTES', W / 2, H - 12, titleSize, '#b7abc9');
+        const censer = censerTouchRect();
+        if (censer) pad(censer, 'CENSER', phone ? censerTime > 0 ? `${censerTime.toFixed(1)}s` : 'E40' : `TAP / E · 40`, censerTime > 0, charge >= 40 && censerTime <= 0);
+        if (phone && paddleHush <= 0 && slowTime <= 0) hudText('DRAG · CENTRE = FOCUS', W / 2, H - 12, 11, '#b7abc9'); else if (!phone) text('DRAG / TOUCH PADDLE · CENTRE = FOCUS · PARRY MOTES', W / 2, H - 12, titleSize, '#b7abc9');
       }
     }
     function draw() {
       const dpr = Math.min(devicePixelRatio || 1, 2);
       if (canvas.width !== W * dpr || canvas.height !== H * dpr) { canvas.width = W * dpr; canvas.height = H * dpr; }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); background(); ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      hudFrame = compactHUD() ? { texts: [], controls: [] } : null;
+      background(); ctx.save();
       // The camera leans into big moments; the ending dims and pushes in.
       if (!reduced && zoom > 1.001) {
         ctx.translate(W / 2, H * .58); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H * .58);
@@ -2212,11 +2890,17 @@ window.AetherArcade = (() => {
       ctx.globalAlpha = 1;
       for (const r of ripples) { ctx.globalAlpha = r.life * .6; ctx.strokeStyle = r.colour; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(r.x, r.y, r.radius, 0, TAU); ctx.stroke(); }
       for (const p of particles) { ctx.globalAlpha = Math.min(1, p.life * 2); star(ctx, p.x, p.y, p.size, p.colour, 4, p.angle); }
-      // Popups overshoot to 138% and settle — every reward reads richer.
+      // Popups overshoot to 138% and settle. Compact Masterworks use one
+      // measured 14-CSSpx narrative panel; persistent HUD lines carry the
+      // longer objectives, while score feedback stays at its world event.
+      const phoneNarrative = compactHUD() ? popups.filter(p => p.size >= 16).slice(-1) : [];
       for (const p of popups) {
+        const narrativeIndex = phoneNarrative.indexOf(p);
+        if (compactHUD() && p.size && p.size !== 15 && narrativeIndex < 0) continue;
         const max = p.max || p.life, t = 1 - p.life / max, s = reduced ? 1 : 1 + .38 * Math.max(0, 1 - t * 4.5);
+        const px = narrativeIndex >= 0 ? 0 : p.x, py = narrativeIndex >= 0 ? 0 : p.y;
         ctx.globalAlpha = Math.min(1, p.life / max * 3.2);
-        ctx.save(); ctx.translate(p.x, p.y); ctx.scale(s, s); text(p.text, 0, 0, p.size || 15, p.colour); ctx.restore();
+        ctx.save(); ctx.translate(px, py); ctx.scale(s, s); if (narrativeIndex >= 0) hudPopup(p.text, p.colour); else text(p.text, 0, 0, p.size || 15, p.colour); ctx.restore();
       }
       ctx.globalAlpha = 1; ctx.restore();
       // The baked vignette: focus at rest, pressure when things go wrong.
@@ -2238,11 +2922,14 @@ window.AetherArcade = (() => {
         ctx.fillStyle = '#edf19b'; ctx.fillRect(W * .25, 47, W * .5 * pact / 12, 3);
       }
       if (options.game !== 'merge') {
-        const heartY = options.game === 'breaker' ? 64 : options.game === 'dash' && veteranExpedition ? 82 : H - 30;
+        const heartY = options.game === 'breaker' ? 64 : options.game === 'dash' && veteranExpedition ? compactHUD() ? 110 : 82 : H - 30;
         for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < lives ? 1 : .15; star(ctx, 28 + i * 23, heartY, 8, '#f5a08c', 5); } ctx.globalAlpha = 1;
       }
       if (flash > 0 && !reduced) { ctx.fillStyle = `rgba(${flashTint},${flash * .6})`; ctx.fillRect(0, 0, W, H); }
       drawTouchControls();
+      // Read-only, per-frame typography diagnostics. Backing rectangles are in
+      // logical canvas units; tests multiply by backingToCss for CSS pixels.
+      canvas.aetherHUD = hudFrame ? { cssFontPx: ESSENTIAL_HUD_CSS_PX, backingFontPx: essentialBackingPx(), backingToCss: canvasCssWidth / W, width: W, height: H, ...hudFrame } : null;
     }
     let idleTimer = 0;
     // Frame scheduling follows the game's actual state: full rate while a run
@@ -2291,7 +2978,10 @@ window.AetherArcade = (() => {
       if (!veteran || phase !== 'running' || suspended) return null;
       measureControls();
       const rect = canvas.getBoundingClientRect(), x = (event.clientX - rect.left) / rect.width * W, y = (event.clientY - rect.top) / rect.height * H;
-      return Object.entries(controlRects()).find(([, r]) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h)?.[0] || null;
+      const named = Object.entries(controlRects()).find(([, r]) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h)?.[0];
+      if (named) return named;
+      const censer = censerTouchRect();
+      return censer && x >= censer.x && x <= censer.x + censer.w && y >= censer.y && y <= censer.y + censer.h ? 'censer' : null;
     }
     listen(canvas, 'pointerdown', event => {
       const control = controlHit(event);
@@ -2302,6 +2992,7 @@ window.AetherArcade = (() => {
         canvas.focus({ preventScroll: true }); canvas.setPointerCapture(event.pointerId);
         if (control === 'brace') pointerBrace = true;
         else if (control === 'rein') pointerRein = true;
+        else if (['tune', 'veil', 'bank', 'censer'].includes(control)) masterAbility();
         else ability();
         notify(); return;
       }
@@ -2335,12 +3026,14 @@ window.AetherArcade = (() => {
     listen(canvas, 'keydown', event => {
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
       const controls = [' ', 'Enter', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'a', 'd', 'p', 'Escape', 'x', 'c'];
+      if (veteran) controls.push('e');
       if ((veteran && options.game === 'merge') || (veteranExpedition && options.game === 'dash')) controls.push('s', 'ArrowDown');
       if (!controls.includes(key)) return;
       event.preventDefault();
       if (['p', 'Escape'].includes(key)) { if (event.repeat || key === 'Escape' && document.body.classList.contains('game-theatre')) return; phase === 'paused' ? resume() : pause(); return; }
       keys.add(key);
       if (!event.repeat && key === 'x') ability();
+      if (!event.repeat && key === 'e') masterAbility();
       if (!event.repeat && key === 'c') invokePact();
       if (!event.repeat && [' ', 'Enter', 'ArrowUp'].includes(key) && (options.game !== 'hop' || phase !== 'running')) action();
     });
@@ -2356,7 +3049,7 @@ window.AetherArcade = (() => {
       if (typeof ResizeObserver !== 'undefined') { controlObserver = new ResizeObserver(measureControls); controlObserver.observe(canvas); }
     }
     reset(); schedule();
-    return { start, pause, resume, action, ability, reset, invokePact,
+    return { start, pause, resume, action, ability, masterAbility, reset, invokePact,
       applyRelic: id => resolveOffer(id),
       skipRelic: () => resolveOffer(null, true),
       startForecast(id) { forecastPick = id; reset(); start(); },

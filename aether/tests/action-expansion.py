@@ -201,7 +201,9 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                         page.clock.run_for(250)
                     assert any(bolt['lodestar'] and bolt['pierce'] >= 1 for bolt in state(page)['bolts'])
                     page.locator('button[data-chain-formation="halo"]').click()
-                    assert not state(page)['attuned'] and state(page)['attune'] == 0, state(page)
+                    # The pointer dispatch may include one legitimate fixed tick
+                    # after the synchronous reset; never allow old attunement to persist.
+                    assert not state(page)['attuned'] and 0 <= state(page)['attune'] <= 1 / 120 + 1e-9, state(page)
                 page.evaluate('window.__actionGame.destroy()')
                 page.clock.run_for(1000)
                 assert page.evaluate('window.__actionEnds') == []

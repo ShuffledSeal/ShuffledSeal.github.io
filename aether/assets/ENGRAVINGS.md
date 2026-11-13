@@ -15,6 +15,10 @@ The following images are from **Wellcome Collection**, marked **Public Domain Ma
 
 Public Domain Mark: https://creativecommons.org/publicdomain/mark/1.0/
 
+## Original Gothic illustrations
+
+`gothic-window.svg`, `gothic-frame.svg`, and `relic-seal.svg` are original vector illustrations drawn for this project. They use no external artwork, stock imagery, fonts, embedded raster images, or generative bitmaps. The existing `gothic-arch.svg`, `armillary.svg`, and `victorian-icons.svg` are likewise local project illustrations. Historical engraving records above are unchanged.
+
 ## IM Fell English
 
 `im-fell-english.woff2` and `im-fell-english-italic.woff2` are local WOFF2 conversions from the Google Fonts distribution of **IM Fell English**, licensed under the SIL Open Font License. See `IM-FELL-OFL.txt`.

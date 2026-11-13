@@ -46,12 +46,12 @@ window.AetherVoyage = (() => {
     deepfield: ['celestial-eagle-chart.webp', 'A double-headed eagle bearing an intricate map of the heavens'],
   };
   const VETERAN_RULES = {
-    shooter: 'Glass Cathedral · the Meridian Cantor and two new refits',
-    bastion: 'Two sapper sieges · the refinable Ward Loom',
-    labyrinth: 'Two scanner chambers · decoy counterplay and a null jammer',
-    starforge: 'Three advanced contracts · eclipses, clock seals and capacitor venting',
-    chain: 'Warden route · Counterpoint and Lodestar formation relics',
-    deepfield: 'Cathedral or Meridian finale · the Stillpoint Seal',
+    shooter: 'Ossuary Bell · Consonance combos and Cadenza censers',
+    bastion: 'Three-office sieges · tower actives and the Gilded Warden',
+    labyrinth: 'Meridian heart · doors, relays and coordinated Watchers',
+    starforge: 'Nocturne Machina · inner-ring counterplay and the three-phase Heart',
+    chain: 'Black Office · Link Lattice, Star Cast and route vows',
+    deepfield: 'Nocturne · canticles, rifts and logical seals',
   };
   function hasVeteran(id) {
     if (cartridgeRecords.clears[id] > 0) return true;
@@ -310,7 +310,7 @@ window.AetherVoyage = (() => {
       ? `<a class="button" href="${withVariant(baseModeHref, true)}" ${veteran ? 'aria-current="page"' : ''}>Veteran Sky</a>`
       : '<button class="button" type="button" disabled title="Clear the campaign to unlock Veteran Sky">Veteran locked</button>';
     const modeLinks = id === 'starforge' ? '' : `<div class="cartridge-modes" aria-label="Challenge mode"><a class="button" href="${campaignHref(id)}" ${campaign && !veteran ? 'aria-current="page"' : ''}>Campaign</a><a class="button" href="${cartridgeHref(id)}" ${!campaign && !daily && !veteran ? 'aria-current="page"' : ''}>Endless run</a><a class="button" href="${dailyHref(id)}" ${daily && !veteran ? 'aria-current="page"' : ''}>Daily Vigil<span class="mode-date"> · ${day}</span></a>${veteranLink}</div>`;
-    const modeNote = veteran ? `<p class="veteran-rule">VETERAN SKY · ${VETERAN_RULES[id]}. Veteran records are kept separately.</p>` : daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : `<p>${card.goal || card.brief}</p>`;
+    const modeNote = veteran ? `<p class="veteran-rule">VETERAN SKY · ${VETERAN_RULES[id]}. Veteran records are kept separately.</p>` : daily ? '<p>Same encounter seed for every attempt today. Beat your own daily record.</p>' : card.goal && card.goal !== card.brief ? `<p>${card.goal}</p>` : '';
     const recordLabel = veteran ? 'VETERAN BEST' : daily ? 'TODAY’S BEST' : campaign ? 'CAMPAIGN BEST' : 'PERSONAL BEST';
     const clears = campaign && cartridgeRecords.clears[id] ? `<span class="cartridge-clears">${cartridgeRecords.clears[id]} campaign clear${cartridgeRecords.clears[id] === 1 ? '' : 's'}</span>` : '';
     return `<div class="view-enter tour-page cartridge-page"><section class="view-header cartridge-header"><div><p class="eyebrow">ÆTHER CARTRIDGE · ${card.eyebrow}${veteran ? ' · VETERAN SKY' : daily ? ' · DAILY VIGIL' : campaign ? ' · CAMPAIGN' : ''}</p><h1>${card.name}.</h1><p>${card.brief}</p>${modeLinks}${modeNote}</div><div class="cartridge-record"><span>${recordLabel}</span><strong>${(cartridgeRecords.best[key] || 0).toLocaleString()}</strong>${clears}</div></section><div id="cartridge-stage" class="cartridge-stage" aria-live="polite"></div><div class="cartridge-footer"><a class="button" href="index.html?standalone=1#voyage">← CARTRIDGE CABINET</a><span>${card.controls}</span></div></div>`;

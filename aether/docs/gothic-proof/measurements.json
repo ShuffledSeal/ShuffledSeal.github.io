@@ -1,0 +1,3605 @@
+{
+  "measurements": [
+    {
+      "state": "observatory-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".playground-hero .hero-description",
+          "text": "Eight worlds, faithfully observed. Trace a watershed, plot a rover\u2019s passage, and unlock forty puzzles shaped ",
+          "font": 18,
+          "line": 1.5499999999999998,
+          "contrast": 10.755396746038905,
+          "foreground": "rgb(208, 201, 185)",
+          "surfaces": [
+            "rgba(8,25,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".welcome p",
+          "text": "Your private observatory \u00b7 Est. MMXXVI",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 8.911299918658438,
+          "foreground": "rgb(213, 177, 113)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".welcome p",
+          "text": "Field notes, planetary puzzles, and instruments for a curious mind.",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 9.75026634959783,
+          "foreground": "rgb(196, 190, 175)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "14% illuminated \u00b7 A little more light each night",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "Pick a planet to start",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "17 November \u00b7 Meteor shower",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "Read, edit, or add a field note",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "cabinet-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Pilot hostile formations, master four weapons, and turn dangerous close calls into FLOW.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Forecast each siege and commit your alloy to a defence that survives the next assault.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Infiltrate a shifting archive, steal its keys, and outwit the Watchers on your own route.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Align an orbital factory, route living starlight, and contain the heat you create.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Shape a living constellation, switch formations, and draft stars that fight as one.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Chart a haunted firmament in a lavish, logical game of Minesweeper.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "01 \u00b7 ACTION",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "02 \u00b7 STRATEGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "03 \u00b7 STEALTH ROGUELITE",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "04 \u00b7 FACTORY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "05 \u00b7 SURVIVAL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "10 \u00b7 MINESWEEPER",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "4 weapons",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 acts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Build drafts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "6 sieges",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Tower refining",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Lane forecasts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "4 chambers",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Relic builds",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Seeded routes",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "6 contracts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Moving gates",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Heat management",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "5 encounters",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 formations",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "8 relics",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 board classes",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Expedition relics",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Touch + keyboard",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY NOWBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "atlas-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".atlas-intro",
+          "text": "Liquid water covers about 71% of Earth. Its atmosphere, oceans, rocks, and living things exchange energy and m",
+          "font": 16,
+          "line": 1.9,
+          "contrast": 9.944061451746734,
+          "foreground": "rgb(197, 192, 178)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "From the Sun",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Mean diameter",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Orbital period",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Surface gravity",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "observatory-768",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".playground-hero .hero-description",
+          "text": "Eight worlds, faithfully observed. Trace a watershed, plot a rover\u2019s passage, and unlock forty puzzles shaped ",
+          "font": 18,
+          "line": 1.5499999999999998,
+          "contrast": 10.755396746038905,
+          "foreground": "rgb(208, 201, 185)",
+          "surfaces": [
+            "rgba(8,25,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".welcome p",
+          "text": "Your private observatory \u00b7 Est. MMXXVI",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.911299918658438,
+          "foreground": "rgb(213, 177, 113)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".welcome p",
+          "text": "Field notes, planetary puzzles, and instruments for a curious mind.",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 9.75026634959783,
+          "foreground": "rgb(196, 190, 175)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "14% illuminated \u00b7 A little more light each night",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "Pick a planet to start",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "17 November \u00b7 Meteor shower",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "Read, edit, or add a field note",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 768,
+      "height": 1024,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "cabinet-768",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Pilot hostile formations, master four weapons, and turn dangerous close calls into FLOW.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Forecast each siege and commit your alloy to a defence that survives the next assault.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Infiltrate a shifting archive, steal its keys, and outwit the Watchers on your own route.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Align an orbital factory, route living starlight, and contain the heat you create.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Shape a living constellation, switch formations, and draft stars that fight as one.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Chart a haunted firmament in a lavish, logical game of Minesweeper.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "01 \u00b7 ACTION",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "02 \u00b7 STRATEGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "03 \u00b7 STEALTH ROGUELITE",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "04 \u00b7 FACTORY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "05 \u00b7 SURVIVAL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "10 \u00b7 MINESWEEPER",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "4 weapons",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 acts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Build drafts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "6 sieges",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Tower refining",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Lane forecasts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "4 chambers",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Relic builds",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Seeded routes",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "6 contracts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Moving gates",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Heat management",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "5 encounters",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 formations",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "8 relics",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 board classes",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Expedition relics",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Touch + keyboard",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY NOWBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 768,
+      "height": 1024,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "atlas-768",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".atlas-intro",
+          "text": "Liquid water covers about 71% of Earth. Its atmosphere, oceans, rocks, and living things exchange energy and m",
+          "font": 16,
+          "line": 1.9,
+          "contrast": 9.944061451746734,
+          "foreground": "rgb(197, 192, 178)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "From the Sun",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Mean diameter",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Orbital period",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Surface gravity",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 768,
+      "height": 1024,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "observatory-1440",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".playground-hero .hero-description",
+          "text": "Eight worlds, faithfully observed. Trace a watershed, plot a rover\u2019s passage, and unlock forty puzzles shaped ",
+          "font": 18,
+          "line": 1.5499999999999998,
+          "contrast": 10.755396746038905,
+          "foreground": "rgb(208, 201, 185)",
+          "surfaces": [
+            "rgba(8,25,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".welcome p",
+          "text": "Your private observatory \u00b7 Est. MMXXVI",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.911299918658438,
+          "foreground": "rgb(213, 177, 113)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".welcome p",
+          "text": "Field notes, planetary puzzles, and instruments for a curious mind.",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 9.75026634959783,
+          "foreground": "rgb(196, 190, 175)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "14% illuminated \u00b7 A little more light each night",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "Pick a planet to start",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "17 November \u00b7 Meteor shower",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".stat-detail",
+          "text": "Read, edit, or add a field note",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 9.00920669451127,
+          "foreground": "rgb(192, 186, 172)",
+          "surfaces": [
+            "rgba(18,26,41,1)",
+            "rgba(10,24,40,1)",
+            "rgba(33,18,29,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "cabinet-1440",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Pilot hostile formations, master four weapons, and turn dangerous close calls into FLOW.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Forecast each siege and commit your alloy to a defence that survives the next assault.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Infiltrate a shifting archive, steal its keys, and outwit the Watchers on your own route.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Align an orbital factory, route living starlight, and contain the heat you create.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Shape a living constellation, switch formations, and draft stars that fight as one.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".cartridge-card .cartridge-brief",
+          "text": "Chart a haunted firmament in a lavish, logical game of Minesweeper.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 8.935734687435216,
+          "foreground": "rgb(203, 197, 181)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "01 \u00b7 ACTION",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "02 \u00b7 STRATEGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "03 \u00b7 STEALTH ROGUELITE",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "04 \u00b7 FACTORY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "05 \u00b7 SURVIVAL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-copy>p",
+          "text": "10 \u00b7 MINESWEEPER",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 8.13292383368805,
+          "foreground": "rgb(217, 184, 124)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "4 weapons",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 acts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Build drafts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "6 sieges",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Tower refining",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Lane forecasts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "4 chambers",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Relic builds",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Seeded routes",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "6 contracts",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Moving gates",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Heat management",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "5 encounters",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 formations",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "8 relics",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "3 board classes",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Expedition relics",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card .cartridge-features b",
+          "text": "Touch + keyboard",
+          "font": 14,
+          "line": 1.45,
+          "contrast": 8.401945210957354,
+          "foreground": "rgb(198, 191, 174)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY NOWBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer",
+          "text": "PLAY CAMPAIGNBEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 8.59242881439696,
+          "foreground": "rgb(224, 189, 121)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-card footer small",
+          "text": "BEST 0",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 7.889245260459782,
+          "foreground": "rgb(193, 185, 167)",
+          "surfaces": [
+            "rgba(16,38,60,1)",
+            "rgba(7,20,33,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".cartridge-daily-link",
+          "text": "DAILY VIGIL \u00b7 TODAY\u2019S FIXED SKY \u2197",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 10.52626229420008,
+          "foreground": "rgb(225, 197, 143)",
+          "surfaces": [
+            "rgba(10,26,43,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "atlas-1440",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".atlas-intro",
+          "text": "Liquid water covers about 71% of Earth. Its atmosphere, oceans, rocks, and living things exchange energy and m",
+          "font": 16,
+          "line": 1.9,
+          "contrast": 9.944061451746734,
+          "foreground": "rgb(197, 192, 178)",
+          "surfaces": [
+            "rgba(6,13,24,1)",
+            "rgba(8,23,39,1)",
+            "rgba(5,12,22,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "From the Sun",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Mean diameter",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Orbital period",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".atlas-facts dt",
+          "text": "Surface gravity",
+          "font": 14,
+          "line": 1.6500000000000001,
+          "contrast": 5.147569306650793,
+          "foreground": "rgb(96, 71, 41)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "arcade-relic-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Keep merge chains alive for 2.4 seconds. Plan the next collision.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Aim steers your newest planet during its first 1.1 seconds.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Merges grant 26 pulse energy. Pulses lift harder and clear half the overflow danger.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "A new possibility for this expedition",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": "#relic-description",
+          "text": "Choose one. It stays with you this run. Your expedition is paused.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-dialog-footer>span",
+          "text": "Choose with a tap or keys 1 / 2 / 3",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CHAIN",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CONTROL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "ENERGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "heading",
+          "selector": ".relic-dialog h2",
+          "text": "What will you become?",
+          "font": 32,
+          "line": 1.2,
+          "contrast": 8.792695342692367,
+          "foreground": "rgb(60, 32, 35)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "arcade-relic-768",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Keep merge chains alive for 2.4 seconds. Plan the next collision.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Aim steers your newest planet during its first 1.1 seconds.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Merges grant 26 pulse energy. Pulses lift harder and clear half the overflow danger.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.853960698633379,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "A new possibility for this expedition",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.863763688509067,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": "#relic-description",
+          "text": "Choose one. It stays with you this run. Your expedition is paused.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-dialog-footer>span",
+          "text": "Choose with a tap or keys 1 / 2 / 3",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CHAIN",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CONTROL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "ENERGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.83859036877472,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "heading",
+          "selector": ".relic-dialog h2",
+          "text": "What will you become?",
+          "font": 38.4,
+          "line": 1.2,
+          "contrast": 8.792695342692367,
+          "foreground": "rgb(60, 32, 35)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 768,
+      "height": 1024,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "arcade-relic-1440",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Keep merge chains alive for 2.4 seconds. Plan the next collision.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Aim steers your newest planet during its first 1.1 seconds.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.853960698633379,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Merges grant 26 pulse energy. Pulses lift harder and clear half the overflow danger.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.863763688509067,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "A new possibility for this expedition",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": "#relic-description",
+          "text": "Choose one. It stays with you this run. Your expedition is paused.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-dialog-footer>span",
+          "text": "Choose with a tap or keys 1 / 2 / 3",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CHAIN",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CONTROL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.83859036877472,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "ENERGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "heading",
+          "selector": ".relic-dialog h2",
+          "text": "What will you become?",
+          "font": 47,
+          "line": 1.2,
+          "contrast": 8.792695342692367,
+          "foreground": "rgb(60, 32, 35)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "arcade-relic-zoom200",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Keep merge chains alive for 2.4 seconds. Plan the next collision.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.853960698633379,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Aim steers your newest planet during its first 1.1 seconds.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "primary",
+          "selector": ".relic-choice-effect",
+          "text": "Merges grant 26 pulse energy. Pulses lift harder and clear half the overflow danger.",
+          "font": 16,
+          "line": 1.65,
+          "contrast": 7.03281205616146,
+          "foreground": "rgb(64, 54, 42)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.863763688509067,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "Pairs with a relic you have not met yet",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-pair",
+          "text": "A new possibility for this expedition",
+          "font": 14,
+          "line": 1.5999999999999999,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": "#relic-description",
+          "text": "Choose one. It stays with you this run. Your expedition is paused.",
+          "font": 16,
+          "line": 1.6,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-dialog-footer>span",
+          "text": "Choose with a tap or keys 1 / 2 / 3",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.250694464285271,
+          "foreground": "rgb(88, 72, 47)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CHAIN",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.83859036877472,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(226,209,175,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "CONTROL",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "secondary",
+          "selector": ".relic-choice-tag",
+          "text": "ENERGY",
+          "font": 14,
+          "line": 1.5,
+          "contrast": 5.2281530697819685,
+          "foreground": "rgb(96, 70, 31)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        },
+        {
+          "role": "heading",
+          "selector": ".relic-dialog h2",
+          "text": "What will you become?",
+          "font": 36,
+          "line": 1.2000000000000002,
+          "contrast": 8.792695342692367,
+          "foreground": "rgb(60, 32, 35)",
+          "surfaces": [
+            "rgba(216,198,161,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 720,
+      "height": 450,
+      "dpr": 2,
+      "animations": 0
+    },
+    {
+      "state": "veteran-shooter-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".veteran-rule",
+          "text": "VETERAN SKY \u00b7 Ossuary Bell \u00b7 Consonance combos and Cadenza censers. Veteran records are kept separately.",
+          "font": 16,
+          "line": 1.5,
+          "contrast": 10.820080730630693,
+          "foreground": "rgb(227, 194, 141)",
+          "surfaces": [
+            "rgba(7,21,37,0.96)",
+            "rgba(7,21,37,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "veteran-bastion-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".veteran-rule",
+          "text": "VETERAN SKY \u00b7 Three-office sieges \u00b7 tower actives and the Gilded Warden. Veteran records are kept separately.",
+          "font": 16,
+          "line": 1.5,
+          "contrast": 10.820080730630693,
+          "foreground": "rgb(227, 194, 141)",
+          "surfaces": [
+            "rgba(7,21,37,0.96)",
+            "rgba(7,21,37,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "veteran-labyrinth-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".veteran-rule",
+          "text": "VETERAN SKY \u00b7 Meridian heart \u00b7 doors, relays and coordinated Watchers. Veteran records are kept separately.",
+          "font": 16,
+          "line": 1.5,
+          "contrast": 10.820080730630693,
+          "foreground": "rgb(227, 194, 141)",
+          "surfaces": [
+            "rgba(7,21,37,0.96)",
+            "rgba(7,21,37,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "veteran-starforge-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".veteran-rule",
+          "text": "VETERAN SKY \u00b7 Nocturne Machina \u00b7 inner-ring counterplay and the three-phase Heart. Veteran records are kept se",
+          "font": 16,
+          "line": 1.5,
+          "contrast": 10.820080730630693,
+          "foreground": "rgb(227, 194, 141)",
+          "surfaces": [
+            "rgba(7,21,37,0.96)",
+            "rgba(7,21,37,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "veteran-chain-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".veteran-rule",
+          "text": "VETERAN SKY \u00b7 Black Office \u00b7 Link Lattice, Star Cast and route vows. Veteran records are kept separately.",
+          "font": 16,
+          "line": 1.5,
+          "contrast": 10.820080730630693,
+          "foreground": "rgb(227, 194, 141)",
+          "surfaces": [
+            "rgba(7,21,37,0.96)",
+            "rgba(7,21,37,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    },
+    {
+      "state": "veteran-deepfield-390",
+      "results": [
+        {
+          "role": "primary",
+          "selector": ".veteran-rule",
+          "text": "VETERAN SKY \u00b7 Nocturne \u00b7 canticles, rifts and logical seals. Veteran records are kept separately.",
+          "font": 16,
+          "line": 1.5,
+          "contrast": 10.820080730630693,
+          "foreground": "rgb(227, 194, 141)",
+          "surfaces": [
+            "rgba(7,21,37,0.96)",
+            "rgba(7,21,37,1)"
+          ],
+          "overflow": false,
+          "disabled": false
+        }
+      ],
+      "pageOverflow": false,
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "animations": 0
+    }
+  ],
+  "failures": [],
+  "errors": [],
+  "badResponses": []
+}

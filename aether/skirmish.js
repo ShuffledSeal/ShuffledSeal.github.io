@@ -31,6 +31,11 @@ window.AetherSkirmish = (() => {
     // Veteran duellist: its directional ward follows until the salvo locks.
     // Flank the locked facing, punish recovery, or use an omni-directional Mortar.
     aegis: { name: 'Aegis Lancer', hp: 48, speed: 62, accel: 270, radius: 21, damage: 10, kb: 190, resist: .65, keepAway: 285, orbCd: 3.8, orbSpeed: 250, motes: 5 },
+    // Veteran support role. Its processional tether protects one ally until the
+    // Deacon dies, a Lance/Mortar breaks the ward, or the ship dashes through it.
+    deacon: { name: 'Processional Deacon', hp: 46, speed: 58, accel: 240, radius: 19, damage: 9, kb: 180, resist: .55, keepAway: 290, orbCd: 4.4, orbSpeed: 175, motes: 6 },
+    // Optional Act III encounter, reached by answering the Black Procession.
+    procession: { name: 'The Ossuary Bell', hp: 300, speed: 0, accel: 0, radius: 48, damage: 15, kb: 360, resist: .95, motes: 14 },
   };
 
   // Instruments are rule changes, not stat boosts. Verbs travel into trials too.
@@ -97,30 +102,48 @@ window.AetherSkirmish = (() => {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H; canvas.tabIndex = 0;
     canvas.setAttribute('role', 'application');
-    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. 1–4 select weapons. Space or right-click to dash.' + (options.veteran ? ' E raises a timed Reversal guard that reflects one hostile bolt; guarding slows flight and pauses firing. ' : ' ') + 'P pauses.');
+    canvas.setAttribute('aria-label', (boss ? 'Boss arena. ' : 'Skirmish arena. ') + 'Move with WASD, arrow keys or the pointer. Hold click, J, Z or Enter to fire. 1–4 select weapons. Space, right-click, or the Dash button dashes.' + (options.veteran ? ' E raises a timed Reversal guard that reflects one hostile bolt. Alternate different weapons on the same target to earn Consonance; R spends it on orbiting Cadenza censers that fire with your equipped weapon and erase hostile bolts. Dash through Deacon tethers to sever their protection. ' : ' ') + 'P pauses.');
     container.appendChild(canvas);
     const weaponBar = document.createElement('div');
     // NB: deliberately NOT .skirmish-draft — tests assert that selector is a single
     // (hideable) breather bar. Layout is inlined; voyage.css owns the pressed state.
     weaponBar.className = 'skirmish-armory';
-    weaponBar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border:1px solid #d8c49466;background:#0f2034;color:#f3d9a4;font:600 12px "DM Sans",sans-serif';
+    weaponBar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border:1px solid #d8c49466;background:#0f1420;color:#f3d9a4;font:600 14px "DM Sans",sans-serif';
     weaponBar.setAttribute('role', 'group'); weaponBar.setAttribute('aria-label', 'Hunt weapons');
-    const armoryButtonStyle = "min-height:44px;padding:10px 16px;border:1px solid #d8c494;background:#1a2d3d;color:#e5efdf;font:600 12px 'DM Sans',sans-serif;cursor:pointer";
-    weaponBar.innerHTML = `<strong style="flex:1 0 100%;text-align:center">ARMORY · 1–4 SELECT · HOLD FIRE · SWITCHING PRESERVES RECOVERY</strong>` + WEAPON_IDS.map(id => `<button type="button" data-skirmish-weapon="${id}" aria-pressed="false" style="${armoryButtonStyle}">${WEAPONS[id].key} · ${WEAPONS[id].name}</button>`).join('');
+    const armoryButtonStyle = "min-height:44px;padding:10px 16px;border:1px solid #b89b62;background:#171d29;color:#eee5cf;font:600 14px 'DM Sans',sans-serif;cursor:pointer";
+    weaponBar.innerHTML = `<strong style="flex:1 0 100%;text-align:center">ARMORY · 1–4 SELECT · HOLD FIRE${options.veteran ? ' · ALTERNATE HITS TO CONSONATE · R CADENZA' : ' · SWITCHING PRESERVES RECOVERY'}</strong>` + WEAPON_IDS.map(id => `<button type="button" data-skirmish-weapon="${id}" aria-pressed="false" style="${armoryButtonStyle}">${WEAPONS[id].key} · ${WEAPONS[id].name}</button>`).join('');
     const weaponHelp = document.createElement('span');
     weaponHelp.style.cssText = 'flex:1 0 100%;text-align:center;line-height:1.6';
     weaponBar.appendChild(weaponHelp);
+    const dashButton = document.createElement('button');
+    dashButton.type = 'button'; dashButton.dataset.skirmishDash = '';
+    dashButton.style.cssText = armoryButtonStyle;
+    dashButton.title = 'Dash in the current flight direction with brief invulnerability. Touch and pointer players use this button; Space or right-click remains available on desktop.';
+    dashButton.setAttribute('aria-label', 'Dash in the current flight direction');
+    weaponBar.appendChild(dashButton);
     const guardButton = document.createElement('button');
     guardButton.type = 'button'; guardButton.dataset.skirmishGuard = '';
     guardButton.style.cssText = armoryButtonStyle;
     guardButton.title = 'Veteran Reversal: for 0.38s, reflect one nearby hostile bolt. A hit refreshes dash and empowers two shots; a miss still spends the full cooldown. Guarding slows movement and interrupts firing.';
     guardButton.hidden = !options.veteran;
     if (options.veteran) weaponBar.appendChild(guardButton);
+    const cadenzaButton = document.createElement('button');
+    cadenzaButton.type = 'button'; cadenzaButton.dataset.skirmishCadenza = '';
+    cadenzaButton.style.cssText = armoryButtonStyle;
+    cadenzaButton.title = 'Spend all Consonance to orbit one Cadenza censer per charge. Censers erase hostile bolts and repeatedly strike with the currently equipped weapon; switching weapons changes their next volley.';
+    if (options.veteran) weaponBar.appendChild(cadenzaButton);
     container.appendChild(weaponBar);
     const missionStatus = document.createElement('p');
     missionStatus.dataset.skirmishObjective = '';
-    missionStatus.style.cssText = 'margin:0;padding:12px 16px;background:#0e1d30;color:#e5efdf;font:600 13px/1.6 sans-serif';
+    missionStatus.style.cssText = 'margin:0;padding:12px 16px;background:#0e1420;color:#eee5cf;font:600 14px/1.55 "DM Sans",sans-serif';
     container.appendChild(missionStatus);
+    // Canvas HUD lettering scales with the 960px playfield. This live DOM
+    // readout keeps every essential resource at a real 14px on a 390px phone,
+    // without changing world coordinates, pointer mapping or relic typography.
+    const tacticalStatus = document.createElement('p');
+    tacticalStatus.dataset.skirmishTactical = '';
+    tacticalStatus.style.cssText = 'margin:0;padding:10px 16px;border-top:1px solid #a98c5744;background:#090f1a;color:#d8c494;font:600 14px/1.55 "DM Sans",sans-serif';
+    container.appendChild(tacticalStatus);
     const draftBar = document.createElement('div');
     draftBar.className = 'skirmish-draft'; draftBar.hidden = true;
     container.appendChild(draftBar);
@@ -164,6 +187,8 @@ window.AetherSkirmish = (() => {
     let blasts = [], cantorMarks = [], sanctuaries = [];
     let guardTime = 0, guardCooldown = 0, guardCount = 0, guardWhiffs = 0, reversalCount = 0, reversalHits = 0;
     let aegisBlocks = 0, aegisBreaches = 0, aegisMortars = 0, aegisReversals = 0, aegisSeen = false;
+    let consonance = 0, consonanceCombos = 0, cadenzaTime = 0, cadenzaPower = 0, cadenzaCount = 0, cadenzaTick = 0, cadenzaVolley = 0, cadenzaErases = 0, cadenzaHits = 0;
+    let tetherSevers = 0, tetherRewards = 0, processionSevers = 0, processionClears = 0, processionStage = 0, dashCount = 0;
     const fieldRelics = [];
     let notice = { text: 'MOUSE PILOT · HOLD CLICK / J / Z / ENTER: FIRE · RIGHT CLICK: DASH · P: PAUSE', ttl: 6 };
     let bossEnt = null, bossPhase = 1;
@@ -171,10 +196,12 @@ window.AetherSkirmish = (() => {
     function reset() {
       player = { x: W / 2, y: H - 130, vx: 0, vy: 0, hp: hull.hp, maxHp: hull.hp, burstT: 0, burstCd: 0, invuln: 0, hurtInvuln: 0, boltCd: 0, bank: 0, trail: [] };
       enemies = []; bolts = []; orbs = []; motes = []; wells = []; trails = []; freezes = []; parts = []; popups = [];
-      wave = startingAct - 1; waveIntro = 1.6; phase = 'intro'; refit = null; dust = 0; kills = 0; boltCount = 0; ended = false;
+      wave = startingAct - 1; waveIntro = 1.6; phase = 'intro'; refit = options.veteran && options.startRefit === 'procession' ? 'procession' : null; dust = 0; kills = 0; boltCount = 0; ended = false;
       charge = 0; pending = []; waveTime = 0; blasts = []; cantorMarks = []; sanctuaries = [];
       guardTime = 0; guardCooldown = 0; guardCount = 0; guardWhiffs = 0; reversalCount = 0; reversalHits = 0;
       aegisBlocks = 0; aegisBreaches = 0; aegisMortars = 0; aegisReversals = 0; aegisSeen = false;
+      consonance = options.veteran ? 1 : 0; consonanceCombos = 0; cadenzaTime = 0; cadenzaPower = 0; cadenzaCount = 0; cadenzaTick = 0; cadenzaVolley = 0; cadenzaErases = 0; cadenzaHits = 0;
+      tetherSevers = 0; tetherRewards = 0; processionSevers = 0; processionClears = 0; processionStage = 0; dashCount = 0;
       streak = 0; streakTime = 0; bestStreak = 0; score = 0; supercharge = 0; hazardTimer = 6; hazard = null; echoQueue = [];
       bossEnt = boss ? { id: 'boss', kind: 'maw', name: 'The Umbral Maw', x: W / 2, y: 150, vx: 0, vy: 0, hp: Math.round(620 * mode.hp), maxHp: Math.round(620 * mode.hp), radius: 46, state: 'chase', t: 0, cd: 2, beam: null, hurt: 0, spawnCd: 5 } : null;
     }
@@ -198,9 +225,12 @@ window.AetherSkirmish = (() => {
       wave++;
       const n = waveBudget(), pool = waveKinds();
       const veteranFinale = options.veteran && !endless && wave === 4;
+      const blackProcession = options.veteran && !endless && wave === 3 && refit === 'procession';
       waveTime = 0;
       if (veteranFinale) {
         spawnCantor();
+      } else if (blackProcession) {
+        spawnProcession();
       } else if (endless) {
         for (let i = 0; i < n; i++) spawnEnemy(pool[Math.floor(rand() * pool.length)]);
       } else {
@@ -209,9 +239,9 @@ window.AetherSkirmish = (() => {
           : wave === 2 ? ['shard', 'shard', 'drifter', 'lancer', 'weaver', 'shard']
           : wave === 3 ? ['maw', 'drifter', 'drifter', 'lancer', 'shard', 'shard', 'weaver']
           : ['maw', 'maw', 'lancer', 'lancer', 'blossom', 'shard', 'weaver'];
-        const veteranRoster = wave === 1 ? ['drifter', 'aegis', 'drifter', 'weaver']
-          : wave === 2 ? ['shard', 'aegis', 'drifter', 'lancer', 'weaver', 'aegis']
-          : wave === 3 ? ['maw', 'aegis', 'drifter', 'lancer', 'shard', 'aegis', 'weaver']
+        const veteranRoster = wave === 1 ? ['drifter', 'aegis', 'drifter', 'deacon', 'weaver']
+          : wave === 2 ? ['shard', 'aegis', 'deacon', 'drifter', 'lancer', 'weaver', 'aegis']
+          : wave === 3 ? ['maw', 'aegis', 'deacon', 'drifter', 'lancer', 'shard', 'aegis', 'weaver']
           : standardRoster;
         const roster = options.veteran ? veteranRoster : standardRoster;
         const firstPacket = Math.ceil(n * .55);
@@ -220,7 +250,7 @@ window.AetherSkirmish = (() => {
       }
       if ((options.elite && wave === 3) || (options.veteran && wave === 4 && !veteranFinale) || (endless && wave % 4 === 0)) spawnEnemy((options.sector ?? 0) > 0 ? 'blossom' : 'weaver', true);
       if (lure && (wave === 3 || (endless && wave % 5 === 0))) spawnEnemy('maw', true);
-      notice = { text: veteranFinale ? 'ACT 4 · THE MERIDIAN CANTOR' : !endless ? `ACT ${wave} · ${ACTS[wave - 1].name.toUpperCase()}` : wave % 4 === 0 ? `WAVE ${wave} · GILDED HARBINGER` : `WAVE ${wave} · CONTACTS INBOUND`, ttl: 2.5 };
+      notice = { text: veteranFinale ? 'ACT 4 · THE MERIDIAN CANTOR' : blackProcession ? 'BLACK PROCESSION · THE OSSUARY BELL' : !endless ? `ACT ${wave} · ${ACTS[wave - 1].name.toUpperCase()}` : wave % 4 === 0 ? `WAVE ${wave} · GILDED HARBINGER` : `WAVE ${wave} · CONTACTS INBOUND`, ttl: 2.5 };
       waveIntro = 1.4;
     }
     function spawnCantor() {
@@ -235,6 +265,20 @@ window.AetherSkirmish = (() => {
       cantorMarks = [];
       burst(bossEnt.x, bossEnt.y, '#b9e8ef', 34, 240);
       tone(146, .55, 'sine', .055);
+    }
+    function spawnProcession() {
+      const hp = Math.round(ENEMIES.procession.hp * mode.hp);
+      bossEnt = {
+        id: 'procession', kind: 'procession', name: ENEMIES.procession.name,
+        x: W / 2, y: 205, vx: 0, vy: 0, hp, maxHp: hp, radius: ENEMIES.procession.radius,
+        state: 'chase', t: 0, cd: 1.6, hurt: 0, frozen: 0, slow: 0, born: 0,
+        attack: null, attackIndex: 0, phase: 1, warded: false, exposed: 0,
+      };
+      processionStage = 1;
+      cantorMarks = [];
+      notice = { text: 'OSSUARY BELL · LEAVE THE LOCKED TOLL; LANCE OR DASH THROUGH DEACON TETHERS', ttl: 4 };
+      burst(bossEnt.x, bossEnt.y, '#c8ad72', 28, 190);
+      tone(110, .7, 'sine', .055);
     }
     function entryPoint() {
       const side = rand() * TAU;
@@ -254,11 +298,13 @@ window.AetherSkirmish = (() => {
         vx: 0, vy: 0, hp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp, maxHp: def.hp * (gilded ? 2.5 : 1) * (1 + (options.sector ?? 0) * .25) * (endless ? 1 + Math.min(1.2, Math.max(0, wave - 1) * .09) : 1) * mode.hp,
         state: kind === 'aegis' ? 'guard' : 'chase', t: 0, cd: def.cd || def.orbCd || def.beamCd || 2, hurt: 0, frozen: 0, slow: 0, born: 0,
         guardAngle: kind === 'aegis' ? Math.atan2(player.y - pos.y, player.x - pos.x) : 0,
+        tetherBroken: 0, tetherTarget: null, exposed: 0, severRewarded: false, bellSevered: false, bellOwner: null,
       });
       if (kind === 'aegis' && !aegisSeen) {
         aegisSeen = true;
         notice = { text: 'AEGIS LANCER · FLANK ITS LOCKED WARD, USE MORTAR, OR PUNISH RECOVERY', ttl: 3.4 };
       }
+      if (kind === 'deacon') notice = { text: 'PROCESSIONAL DEACON · ITS TETHER WARDS AN ALLY — LANCE, MORTAR, OR DASH THROUGH THE THREAD', ttl: 3.8 };
       burst(pos.x, pos.y, sector.accent, 8, 120);
     }
 
@@ -269,6 +315,48 @@ window.AetherSkirmish = (() => {
       }
     }
     function popup(x, y, text, colour = '#f1f4ac') { popups.push({ x, y, text, life: .9, colour }); }
+    function segmentDistance(x, y, a, b) {
+      const sx = b.x - a.x, sy = b.y - a.y;
+      const along = clamp(((x - a.x) * sx + (y - a.y) * sy) / (sx * sx + sy * sy || 1), 0, 1);
+      return Math.hypot(x - a.x - sx * along, y - a.y - sy * along);
+    }
+    function deaconWard(target) {
+      if (!options.veteran || !target || target.kind === 'deacon') return null;
+      return enemies.find(e => e.kind === 'deacon' && e.hp > 0 && e.tetherBroken <= 0 && e.tetherTarget === target && target.hp > 0) || null;
+    }
+    function severTether(deacon, method = 'dash') {
+      if (!deacon || deacon.tetherBroken > 0) return false;
+      deacon.tetherBroken = 3.2; deacon.exposed = 3.2; tetherSevers++;
+      if (deacon.bellOwner?.kind === 'procession' && !deacon.bellSevered) {
+        deacon.bellSevered = true; processionSevers++;
+      }
+      // Recharging a ward restores its protection, not its resource bounty.
+      // The mechanical sever remains useful on every crossing.
+      const reward = !deacon.severRewarded;
+      if (reward) {
+        deacon.severRewarded = true; tetherRewards++;
+        consonance = Math.min(3, consonance + 1);
+      }
+      arcs.push({ x1: deacon.x, y1: deacon.y, x2: deacon.tetherTarget?.x ?? deacon.x, y2: deacon.tetherTarget?.y ?? deacon.y, life: .28, gold: true });
+      popup(deacon.x, deacon.y - 28, reward ? method === 'dash' ? 'TETHER SEVERED · +1 CONSONANCE' : 'WARD BROKEN · +1 CONSONANCE' : 'TETHER SEVERED · BOUNTY SPENT', '#e8d7ad');
+      notice = { text: reward ? 'PROCESSION SEVERED · ALLY AND DEACON EXPOSED · +1 CONSONANCE' : 'PROCESSION SEVERED · WARD OPEN · THIS DEACON’S BOUNTY IS SPENT', ttl: 1.5 };
+      tone(590, .14, 'triangle', .04);
+      return true;
+    }
+    function processionDeacons(b) { return enemies.filter(e => e.kind === 'deacon' && e.bellOwner === b && e.hp > 0); }
+    function processionObjectiveMet(b) {
+      const choir = processionDeacons(b);
+      return choir.length === 0 || choir.every(deacon => deacon.bellSevered);
+    }
+    function cadenzaCenters() {
+      if (cadenzaTime <= 0) return [];
+      const centers = [];
+      for (let i = 0; i < cadenzaPower; i++) {
+        const a = clock * 1.7 + i / cadenzaPower * TAU;
+        centers.push({ x: player.x + Math.cos(a) * (72 + cadenzaPower * 7), y: player.y + Math.sin(a) * (72 + cadenzaPower * 7), a });
+      }
+      return centers;
+    }
 
     // ── Sim ────────────────────────────────────────────────────────────────
     function step(dt) {
@@ -329,6 +417,31 @@ window.AetherSkirmish = (() => {
           guardWhiffs++;
           notice = { text: 'REVERSAL WHIFFED · WEAPONS RECOVER; GUARD RECHARGING', ttl: 1.1 };
         }
+      }
+      // Cadenza is a weapon stance, not a relic: its censers inherit whichever
+      // arm the player equips, and their orbit is both a close threat and a
+      // projectile screen. All cadence runs on the fixed simulation clock.
+      if (cadenzaTime > 0) {
+        cadenzaTime = Math.max(0, cadenzaTime - dt);
+        cadenzaTick -= dt; cadenzaVolley -= dt;
+        const centers = cadenzaCenters();
+        if (cadenzaVolley <= 0) { fireCadenza(centers); cadenzaVolley = .64; }
+        if (cadenzaTick <= 0) {
+          cadenzaTick = .3;
+          const pool = bossEnt && bossEnt.hp > 0 ? [...enemies, bossEnt] : enemies;
+          for (const e of pool) {
+            if (e.hp <= 0) continue;
+            const center = centers.find(c => Math.hypot(e.x - c.x, e.y - c.y) < (e.radius ?? ENEMIES[e.kind].radius) + (weapon === 'scatter' ? 31 : 22));
+            if (!center) continue;
+            damageEnemy(e, hull.boltDmg * (weapon === 'lance' ? .62 : weapon === 'scatter' ? .3 : .4), { weapon, cadenza: true, vx: e.x - center.x, vy: e.y - center.y }, true);
+          }
+        }
+      }
+      // A dash can cut a support line without spending ammunition. Its brief
+      // invulnerability is the risk; the reward is a Consonance charge.
+      if (p.burstT > 0) for (const deacon of enemies) {
+        if (deacon.kind !== 'deacon' || deacon.hp <= 0 || deacon.tetherBroken > 0 || !deacon.tetherTarget || deacon.tetherTarget.hp <= 0) continue;
+        if (segmentDistance(p.x, p.y, deacon, deacon.tetherTarget) < 18) severTether(deacon);
       }
 
       // The mouse pilots the ship, while the targeting computer leads the closest threat.
@@ -411,6 +524,7 @@ window.AetherSkirmish = (() => {
         const def = ENEMIES[e.kind];
         e.born = (e.born ?? 1) + dt;
         e.hurt = Math.max(0, e.hurt - dt); e.frozen = Math.max(0, e.frozen - dt); e.slow = Math.max(0, e.slow - dt); e.guardFlash = Math.max(0, (e.guardFlash || 0) - dt);
+        e.tetherBroken = Math.max(0, (e.tetherBroken || 0) - dt); e.exposed = Math.max(0, (e.exposed || 0) - dt);
         if (e.frozen > 0) { e.vx *= .9; e.vy *= .9; e.x += e.vx * dt; e.y += e.vy * dt; continue; }
         const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
         const slowMul = e.slow > 0 ? .45 : 1;
@@ -480,6 +594,27 @@ window.AetherSkirmish = (() => {
               e.state = 'recover'; e.t = 1.5; e.markAngle = 0;
               tone(175, .16, 'square', .04);
             }
+          }
+        } else if (e.kind === 'deacon') {
+          const candidates = [...enemies, ...(bossEnt?.kind === 'procession' && bossEnt.hp > 0 ? [bossEnt] : [])]
+            .filter(o => o !== e && o.kind !== 'deacon' && o.kind !== 'votive' && o.hp > 0);
+          if (!candidates.includes(e.tetherTarget)) {
+            e.tetherTarget = candidates.reduce((best, o) => {
+              const od = Math.hypot(o.x - e.x, o.y - e.y);
+              return !best || od < best.d ? { o, d: od } : best;
+            }, null)?.o || null;
+          }
+          const keep = d < 245 ? -1 : d > 325 ? 1 : 0;
+          e.vx += (dx / d * keep + dy / d * .32) * def.accel * dt;
+          e.vy += (dy / d * keep - dx / d * .32) * def.accel * dt;
+          const dsp = Math.hypot(e.vx, e.vy) || 1, dmax = def.speed * slowMul * mode.velocity;
+          if (dsp > dmax) { e.vx *= dmax / dsp; e.vy *= dmax / dsp; }
+          e.cd -= dt;
+          if (e.cd < .8 && !e.markAngle) e.markAngle = Math.atan2(dy, dx) + .00001;
+          if (e.cd <= 0 && phase === 'combat' && orbs.length < 80) {
+            const a = e.markAngle || Math.atan2(dy, dx);
+            orbs.push({ x: e.x, y: e.y, vx: Math.cos(a) * def.orbSpeed, vy: Math.sin(a) * def.orbSpeed, life: 4.5, hostile: true, deacon: true });
+            e.cd = def.orbCd; e.markAngle = 0; tone(155, .18, 'triangle', .035);
           }
         } else if (e.kind === 'lancer') {
           const keep = d < 270 ? -1 : d > 345 ? 1 : 0;
@@ -580,6 +715,9 @@ window.AetherSkirmish = (() => {
           }
           if (struck) continue;
         } else {
+          if (cadenzaTime > 0 && cadenzaCenters().some(c => Math.hypot(o.x - c.x, o.y - c.y) < 20)) {
+            orbs.splice(i, 1); cadenzaErases++; burst(o.x, o.y, '#d8c494', 3, 50); continue;
+          }
           if (guardTime > 0 && Math.hypot(o.x - p.x, o.y - p.y) < 58) { reverseOrb(o); continue; }
           const ward = stillwakeAt(o.x, o.y);
           if (ward) { ward.erased++; orbs.splice(i, 1); burst(o.x, o.y, '#a7ebde', 3, 55); continue; }
@@ -617,7 +755,7 @@ window.AetherSkirmish = (() => {
       }
     }
     function openRefit() {
-      phase = 'draft'; orbs = []; bolts = []; echoQueue = []; charge = 0;
+      phase = 'draft'; orbs = []; bolts = []; echoQueue = []; charge = 0; cadenzaTime = 0;
       cantorMarks = []; sanctuaries = [];
       hazard = null; hazardTimer = 4; firing = false; keys.clear();
       // Field salvage is recovered before the menu; no need to circle an empty arena.
@@ -632,6 +770,9 @@ window.AetherSkirmish = (() => {
       ] : wave === 1 ? [
         { id: 'guard', text: 'Patch & evade · +14 plating, quicker dash next act' },
         { id: 'pursuit', text: 'Pursue signal · extra gilded lancer; +24 dust if cleared' },
+      ] : options.veteran && wave === 2 ? [
+        { id: 'procession', text: 'Answer the Black Procession · replace Act III with the staged Ossuary Bell and its Deacon ward; +45 dust and repairs' },
+        { id: 'shelter', text: 'Take the Ivory Via · keep the command Maw and ground all sector hazards' },
       ] : options.veteran && wave === 3 ? [
         { id: 'severance', text: 'Severing Rounds · +55% damage to votives; their hits arc 70% into the warded Cantor' },
         { id: 'stillwake', text: 'Stillwake Veil · dash raises a 1.1s bolt-erasing ward; dash recharge is 25% slower' },
@@ -671,11 +812,22 @@ window.AetherSkirmish = (() => {
       weaponHelp.textContent = `${WEAPONS[weapon].name} — ${WEAPONS[weapon].note}`;
       canvas.dataset.weapon = weapon;
     }
+    function syncDash() {
+      dashButton.disabled = paused || ended || phase !== 'combat' || player.burstCd > 0 || player.burstT > 0 || guardTime > 0;
+      dashButton.setAttribute('aria-pressed', String(player.burstT > 0));
+      dashButton.textContent = player.burstT > 0 ? 'DASHING' : player.burstCd > 0 ? `DASH · ${player.burstCd.toFixed(1)}s` : 'DASH · SPACE / TAP';
+    }
     function syncGuard() {
       if (!options.veteran) return;
       guardButton.disabled = paused || ended || phase !== 'combat' || guardCooldown > 0 || guardTime > 0;
       guardButton.setAttribute('aria-pressed', String(guardTime > 0));
       guardButton.textContent = guardTime > 0 ? 'E · REVERSING' : guardCooldown > 0 ? `E · REVERSAL ${guardCooldown.toFixed(1)}s` : 'E · REVERSAL READY';
+    }
+    function syncCadenza() {
+      if (!options.veteran) return;
+      cadenzaButton.disabled = paused || ended || phase !== 'combat' || consonance < 1 || cadenzaTime > 0;
+      cadenzaButton.setAttribute('aria-pressed', String(cadenzaTime > 0));
+      cadenzaButton.textContent = cadenzaTime > 0 ? `R · CADENZA ${cadenzaTime.toFixed(1)}s` : `R · CADENZA · ${consonance}/3 CONSONANCE`;
     }
     function setWeapon(id, quiet = false) {
       if (!WEAPONS[id] || destroyed) return;
@@ -690,18 +842,25 @@ window.AetherSkirmish = (() => {
       syncArmory();
     }
     listen(weaponBar, 'click', e => {
+      if (e.target.closest('[data-skirmish-dash]')) {
+        tryBurst(); syncDash(); canvas.focus({ preventScroll: true }); return;
+      }
       if (e.target.closest('[data-skirmish-guard]')) {
         tryGuard(); canvas.focus({ preventScroll: true }); return;
+      }
+      if (e.target.closest('[data-skirmish-cadenza]')) {
+        tryCadenza(); canvas.focus({ preventScroll: true }); return;
       }
       const id = e.target.closest('[data-skirmish-weapon]')?.dataset.skirmishWeapon;
       if (!id) return;
       setWeapon(id);
       canvas.focus({ preventScroll: true });
     });
-    syncArmory(); syncGuard();
+    syncArmory(); syncDash(); syncGuard(); syncCadenza();
     listen(draftBar, 'click', e => chooseRefit(e.target.closest('[data-skirmish-refit]')?.dataset.skirmishRefit));
     function bossStep(b, dt) {
       if (b.kind === 'cantor') { cantorStep(b, dt); return; }
+      if (b.kind === 'procession') { processionStep(b, dt); return; }
       const def = ENEMIES.maw, p = player;
       b.hurt = Math.max(0, b.hurt - dt);
       const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy) || 1;
@@ -764,6 +923,57 @@ window.AetherSkirmish = (() => {
         end(true);
       }
     }
+    function advanceProcession(b) {
+      if (b.phase === 1 && b.hp <= b.maxHp * .66) {
+        b.phase = 2; processionStage = 2; b.attack = null; b.cd = 1.5; orbs = [];
+        for (const side of [-1, 1]) {
+          spawnEnemy('deacon', false, { x: b.x + side * 145, y: b.y + 35 });
+          const deacon = enemies[enemies.length - 1]; deacon.tetherTarget = b; deacon.bellOwner = b; deacon.born = 0;
+        }
+        spawnEnemy('shard', false, { x: b.x - 190, y: b.y + 110 });
+        spawnEnemy('shard', false, { x: b.x + 190, y: b.y + 110 });
+        notice = { text: 'SECOND TOLL · DEACONS WARD THE BELL — SEVER BOTH TETHERS OR BREAK THEIR PROCESSION', ttl: 3.2 };
+        burst(b.x, b.y, '#a88455', 28, 220); tone(98, .55, 'sawtooth', .05);
+      }
+      if (b.phase === 2 && b.hp <= b.maxHp * .32 && processionObjectiveMet(b)) {
+        b.phase = 3; processionStage = 3; b.attack = null; b.cd = 1.1; b.exposed = 2.4;
+        for (const deacon of enemies) if (deacon.kind === 'deacon') deacon.tetherBroken = Math.max(deacon.tetherBroken, 2.4);
+        notice = { text: 'FINAL TOLL · THE CRACKED BELL IS EXPOSED; ITS ANTIPHON LEAVES AN IVORY GAP', ttl: 2.8 };
+        burst(b.x, b.y, '#e8d7ad', 32, 250); tone(73, .65, 'sawtooth', .055);
+      }
+    }
+    function processionStep(b, dt) {
+      const p = player, def = ENEMIES.procession;
+      b.hurt = Math.max(0, b.hurt - dt); b.born = (b.born ?? 0) + dt;
+      b.exposed = Math.max(0, (b.exposed || 0) - dt);
+      advanceProcession(b);
+      b.warded = !!deaconWard(b);
+      if (b.attack) {
+        const a = b.attack; a.t -= dt;
+        const live = a.t <= a.live;
+        if (live) {
+          const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy) || 1;
+          const angle = Math.atan2(dy, dx);
+          const angles = a.kind === 'antiphon' ? [a.angle - .28, a.angle + .28] : [a.angle];
+          if (d > b.radius && d < 680 && angles.some(toll => Math.abs(Math.atan2(Math.sin(angle - toll), Math.cos(angle - toll))) < (a.kind === 'antiphon' ? .075 : .19))) {
+            if (p.hurtInvuln <= 0 && p.invuln <= 0) hurtPlayer(a.kind === 'antiphon' ? 11 : 14, b);
+          }
+        }
+        if (a.t <= 0) { b.attack = null; b.cd = b.phase === 3 ? 1.15 : 1.65; }
+      } else {
+        b.cd -= dt;
+        if (b.cd <= 0) {
+          const kind = b.phase > 1 && b.attackIndex++ % 2 ? 'antiphon' : 'toll';
+          const windup = kind === 'antiphon' ? 1.25 : 1.05;
+          b.attack = { kind, angle: Math.atan2(p.y - b.y, p.x - b.x), t: windup + .48, live: .48 };
+          notice = { text: kind === 'antiphon' ? 'ANTIPHON · TWO LOCKED RAYS — TAKE THE IVORY CENTRE OR OUTER LANE' : 'TOLL · THE OXBLOOD WEDGE HAS LOCKED — LEAVE IT', ttl: 1.4 };
+          tone(kind === 'antiphon' ? 155 : 123, .25, 'triangle', .045);
+        }
+      }
+      const d = Math.hypot(p.x - b.x, p.y - b.y);
+      if (d < b.radius + 12 && p.hurtInvuln <= 0 && p.invuln <= 0) hurtPlayer(def.damage, b);
+    }
+
     // ── Veteran Sky: the Meridian Cantor ──────────────────────────────────
     // Its three rules are deliberately different from the Maw: ground is sealed
     // in sequence, a crown of beams rotates through old safe lanes, and a mirror
@@ -928,6 +1138,26 @@ window.AetherSkirmish = (() => {
       if (verbs.has('echo') && !echo) echoQueue.push({ t: .35, id, angle, distance, damage: damageMul, rail });
       if (verbs.has('split') && !echo && id === 'pulse' && boltCount % 4 === 0) { mk(angle - .22); mk(angle + .22); }
     }
+    function fireCadenza(centers) {
+      if (!centers.length || bolts.length >= 180) return;
+      const pool = (bossEnt && bossEnt.hp > 0 ? [...enemies, bossEnt] : enemies).filter(e => e.hp > 0);
+      const def = WEAPONS[weapon];
+      for (const center of centers) {
+        const nearest = pool.reduce((best, e) => {
+          const d = Math.hypot(e.x - center.x, e.y - center.y);
+          return !best || d < best.d ? { e, d } : best;
+        }, null);
+        const a = nearest ? Math.atan2(nearest.e.y - center.y, nearest.e.x - center.x) : center.a;
+        const distance = nearest?.d || def.range;
+        const life = weapon === 'mortar' ? clamp(distance, 100, def.range) / def.speed : def.range / def.speed * .78;
+        bolts.push({
+          x: center.x, y: center.y, vx: Math.cos(a) * def.speed, vy: Math.sin(a) * def.speed,
+          dmg: hull.boltDmg * def.damage * .42, life, maxLife: life,
+          pierce: weapon === 'lance' ? 2 : 0, weapon, colour: def.colour,
+          radius: weapon === 'mortar' ? 54 : undefined, hits: new Set(), cadenza: true,
+        });
+      }
+    }
     function detonate(b) {
       const r = b.radius || WEAPONS.mortar.radius;
       blasts.push({ x: b.x, y: b.y, r, life: .34, max: .34, colour: b.colour });
@@ -955,6 +1185,14 @@ window.AetherSkirmish = (() => {
       else tone(700 + (boltCount % 4) * 60, .05, 'triangle', .028);
     }
     function damageEnemy(e, dmg, bolt, quiet = false) {
+      if (bolt?.cadenza) cadenzaHits++;
+      const tether = deaconWard(e);
+      if (tether) {
+        if (bolt && (bolt.weapon === 'lance' || bolt.weapon === 'mortar')) severTether(tether, bolt.weapon);
+        else dmg *= .45;
+      }
+      if (e.kind === 'deacon' && e.exposed > 0) dmg *= 1.5;
+      if (e.kind === 'procession' && e.exposed > 0) dmg *= 1.35;
       if (e.kind === 'aegis' && e.state !== 'recover' && bolt && bolt.weapon !== 'mortar' && !bolt.reversal) {
         const sourceAngle = Math.atan2(-(bolt.vy || 0), -(bolt.vx || 0));
         const diff = Math.abs(Math.atan2(Math.sin(sourceAngle - e.guardAngle), Math.cos(sourceAngle - e.guardAngle)));
@@ -974,7 +1212,25 @@ window.AetherSkirmish = (() => {
         }
         if (e.exposed > 0) dmg *= 1.4;
       }
-      e.hp -= dmg; e.hurt = .12;
+      // Consonance rewards deliberate armory rotation on a real target, not
+      // button mashing in an empty room. Each fresh pair adds one charge and a
+      // modest impact bonus; Cadenza hits can continue the same combo.
+      if (bolt && WEAPONS[bolt.weapon]) {
+        if (e.verseWeapon && e.verseWeapon !== bolt.weapon && clock - (e.verseAt || 0) < 3.5) {
+          consonance = Math.min(3, consonance + 1); consonanceCombos++; dmg *= 1.12;
+          popup(e.x, e.y - 30, `CONSONANCE ${consonance}/3`, '#e8d7ad');
+        }
+        e.verseWeapon = bolt.weapon; e.verseAt = clock;
+      }
+      if (e.kind === 'procession' && e.phase < 3) {
+        const threshold = e.phase === 1 ? .66 : .32;
+        if (e.hp - dmg <= e.maxHp * threshold) {
+          // A burst build may cross a toll in one hit, but may never skip its
+          // authored objective. Clamp to the seal and mount the next stage now.
+          e.hp = e.maxHp * threshold; advanceProcession(e);
+        } else e.hp -= dmg;
+      } else e.hp -= dmg;
+      e.hurt = .12;
       if (!quiet) {
         popup(e.x, e.y - (e.radius ?? 14) - 8, Math.round(dmg), '#f1f4ac');
         burst(e.x, e.y, sector.mote, 5, 90); tone(340 + dmg * 8, .05, 'triangle', .03);
@@ -1041,12 +1297,19 @@ window.AetherSkirmish = (() => {
         if (rand() < .09) motes.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 12, kind: 'repair' });
         else if (rand() < .08) motes.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 12, kind: 'magnet' });
         if (e === bossEnt) {
-          const cantorFell = e.kind === 'cantor';
+          const cantorFell = e.kind === 'cantor', optionalProcession = e.kind === 'procession';
           bossEnt = null;
           hazard = null; cantorMarks = []; sanctuaries = [];
-          burst(e.x, e.y, cantorFell ? '#b9e8ef' : '#e8a0a8', 60, 390);
-          notice = { text: cantorFell ? 'THE MERIDIAN CANTOR FALLS · THE CATHEDRAL IS SILENT' : 'THE UMBRAL MAW FALLS · THE STARS ARE YOURS', ttl: 5 };
-          end(true); // Resolve the death here: bossStep is skipped at zero HP.
+          burst(e.x, e.y, cantorFell ? '#b9e8ef' : optionalProcession ? '#e8d7ad' : '#e8a0a8', 60, 390);
+          if (optionalProcession) {
+            processionClears++; dust += 45;
+            for (const side of [-1, 1]) motes.push({ x: e.x + side * 24, y: e.y, vx: side * 45, vy: -30, life: 14, kind: 'repair' });
+            notice = { text: 'OSSUARY BELL SILENCED · +45 DUST · IVORY REPAIRS OFFERED', ttl: 3.5 };
+            tone(196, .55, 'sine', .06);
+          } else {
+            notice = { text: cantorFell ? 'THE MERIDIAN CANTOR FALLS · THE CATHEDRAL IS SILENT' : 'THE UMBRAL MAW FALLS · THE STARS ARE YOURS', ttl: 5 };
+            end(true); // Resolve the death here: bossStep is skipped at zero HP.
+          }
         }
         enemies = enemies.filter(o => o.hp > 0);
       }
@@ -1096,8 +1359,15 @@ window.AetherSkirmish = (() => {
       notice = { text: 'REVERSAL GUARD · CATCH ONE BOLT · FLIGHT AND FIRE SLOWED', ttl: .8 };
       tone(410, .1, 'sine', .035); syncGuard();
     }
+    function tryCadenza() {
+      if (!options.veteran || paused || destroyed || ended || phase !== 'combat' || consonance < 1 || cadenzaTime > 0) return;
+      cadenzaPower = consonance; consonance = 0; cadenzaCount++;
+      cadenzaTime = 2.8 + cadenzaPower * .85; cadenzaTick = 0; cadenzaVolley = 0;
+      notice = { text: `CADENZA · ${cadenzaPower} CENSER${cadenzaPower > 1 ? 'S' : ''} · SWITCH ARMS TO CHANGE THEIR VERSE`, ttl: 2.2 };
+      burst(player.x, player.y, '#d8c494', 16, 150); tone(466, .28, 'triangle', .05); syncCadenza();
+    }
     function tryBurst() {
-      if(paused || guardTime > 0)return;
+      if(paused || destroyed || ended || guardTime > 0)return;
       const p = player;
       const cdMul = (verbs.has('gyro') ? .65 : 1) * (refit === 'guard' ? .75 : 1) * (refit === 'stillwake' ? 1.25 : 1);
       if (p.burstCd > 0 || p.burstT > 0 || phase !== 'combat') return;
@@ -1108,7 +1378,7 @@ window.AetherSkirmish = (() => {
       const len = Math.hypot(mx, my) || 1;
       const dashNorm = Math.hypot(dx, dy) || 1;
       burstDir = mx || my ? { x: mx / len, y: my / len } : { x: dx / dashNorm, y: dy / dashNorm };
-      p.burstT = SWIM.burstTime; p.burstCd = SWIM.burstCd * cdMul; p.burstCdMax = p.burstCd; p.invuln = SWIM.burstInvuln;
+      p.burstT = SWIM.burstTime; p.burstCd = SWIM.burstCd * cdMul; p.burstCdMax = p.burstCd; p.invuln = SWIM.burstInvuln; dashCount++;
       burst(p.x, p.y, sector.mote, 16, 250); tone(520, .1, 'sine', .04);
       if (verbs.has('tempest')) supercharge = 3;
       if (refit === 'stillwake' && bossEnt?.kind === 'cantor') {
@@ -1253,6 +1523,36 @@ window.AetherSkirmish = (() => {
         }
         ctx.restore(); return;
       }
+      if (e.kind === 'deacon' || e.kind === 'procession') {
+        const bornIn = Math.min(1, (e.born ?? 1) / .45);
+        if (bornIn < 1) { ctx.globalAlpha = bornIn; const sc = .45 + bornIn * .55; ctx.scale(sc, sc); }
+        if (e.kind === 'deacon') {
+          ctx.rotate(heading);
+          ctx.fillStyle = e.hurt > 0 ? '#fff8e8' : e.exposed > 0 ? '#6b5635' : '#351923';
+          ctx.strokeStyle = e.exposed > 0 ? '#eadbb7' : '#b79a62'; ctx.lineWidth = 2.2;
+          ctx.beginPath(); ctx.moveTo(r, 0); ctx.lineTo(r * .2, -r); ctx.lineTo(-r * .75, -r * .55); ctx.lineTo(-r, 0); ctx.lineTo(-r * .75, r * .55); ctx.lineTo(r * .2, r); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#090e18'; ctx.fillRect(-r * .45, -3, r * .9, 6);
+          ctx.strokeStyle = '#e8d7ad'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(-5, -r - 8); ctx.lineTo(0, -r - 15); ctx.lineTo(5, -r - 8); ctx.stroke();
+        } else {
+          ctx.fillStyle = e.hurt > 0 ? '#fff8e8' : '#24121b';
+          ctx.strokeStyle = e.exposed > 0 ? '#f0dfb8' : '#aa8952'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill(); ctx.stroke();
+          for (let ring = 0; ring < 3; ring++) {
+            ctx.save(); ctx.rotate((ring - 1) * .72 + (reduced() ? 0 : clock * .08 * (ring % 2 ? -1 : 1)));
+            ctx.beginPath(); ctx.ellipse(0, 0, r + 12, (r + 12) * .34, 0, 0, TAU); ctx.stroke(); ctx.restore();
+          }
+          ctx.fillStyle = e.phase === 3 ? '#e8d7ad' : '#6f2735';
+          ctx.beginPath(); ctx.moveTo(-r * .45, -r * .35); ctx.lineTo(r * .45, -r * .35); ctx.lineTo(r * .28, r * .45); ctx.lineTo(-r * .28, r * .45); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = '#c6a76b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-r * .55, -r * .38); ctx.lineTo(r * .55, -r * .38); ctx.stroke();
+          if (e.phase === 3) { ctx.beginPath(); ctx.moveTo(-8, -r * .7); ctx.lineTo(4, -8); ctx.lineTo(-4, 9); ctx.lineTo(10, r * .7); ctx.stroke(); }
+        }
+        if (e.hp < e.maxHp) {
+          ctx.rotate(-heading); ctx.strokeStyle = '#e8d7ad'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, 0, r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(e.hp / e.maxHp, 0, 1)); ctx.stroke();
+        }
+        ctx.restore(); return;
+      }
       if (window.AetherBattleArt) {
         window.AetherBattleArt.enemy(ctx, e, sector, clock, heading);
         ctx.restore();
@@ -1302,6 +1602,18 @@ window.AetherSkirmish = (() => {
     function draw() {
       if (window.AetherBattleArt) window.AetherBattleArt.backdrop(ctx, W, H, options.sector ?? 0, clock, boss);
       else { ctx.fillStyle = sector.bg; ctx.fillRect(0, 0, W, H); }
+      // Midnight enamel and oxblood shadow turn the arena into a ruined nave;
+      // brass lancets stay behind all gameplay silhouettes and tells.
+      ctx.fillStyle = options.veteran ? '#05091370' : '#07101f38'; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.strokeStyle = '#a98c5724'; ctx.fillStyle = '#4b182418'; ctx.lineWidth = 2;
+      for (const side of [-1, 1]) {
+        const x = side < 0 ? 62 : W - 62;
+        ctx.beginPath(); ctx.moveTo(x - 38, H); ctx.lineTo(x - 38, 170); ctx.quadraticCurveTo(x, 82, x + 38, 170); ctx.lineTo(x + 38, H); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, 124); ctx.lineTo(x, H); ctx.moveTo(x - 37, 250); ctx.lineTo(x + 37, 250); ctx.stroke();
+      }
+      ctx.translate(W / 2, H / 2); ctx.strokeStyle = '#b39a6420';
+      for (let spoke = 0; spoke < 8; spoke++) { ctx.rotate(TAU / 8); ctx.beginPath(); ctx.moveTo(145, 0); ctx.lineTo(184, 0); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(0, 0, 150, 0, TAU); ctx.stroke(); ctx.restore();
       // Sector atmosphere: a slow-breathing nebula wash and an engraved frame.
       const neb = ctx.createRadialGradient(W * .72, H * .3, 40, W * .72, H * .3, 420);
       neb.addColorStop(0, sector.fog + '2b'); neb.addColorStop(1, sector.fog + '00');
@@ -1402,8 +1714,32 @@ window.AetherSkirmish = (() => {
         for (const votive of livingVotives()) { ctx.beginPath(); ctx.moveTo(bossEnt.x, bossEnt.y); ctx.lineTo(votive.x, votive.y); ctx.stroke(); }
         ctx.setLineDash([]); ctx.restore();
       }
+      // Processional tethers are tactical geometry: the same thread communicates
+      // the ward and the line a dash can physically sever.
+      for (const deacon of enemies) {
+        if (deacon.kind !== 'deacon' || deacon.hp <= 0 || !deacon.tetherTarget || deacon.tetherTarget.hp <= 0) continue;
+        ctx.save(); ctx.strokeStyle = deacon.tetherBroken > 0 ? '#756d5b55' : '#c5a76bbb';
+        ctx.lineWidth = deacon.tetherBroken > 0 ? 1 : 2.5; ctx.setLineDash(deacon.tetherBroken > 0 ? [2, 10] : [10, 6]);
+        ctx.beginPath(); ctx.moveTo(deacon.x, deacon.y); ctx.lineTo(deacon.tetherTarget.x, deacon.tetherTarget.y); ctx.stroke();
+        ctx.setLineDash([]); ctx.restore();
+      }
       for (const e of enemies) drawEnemy(e);
       if (bossEnt) drawEnemy(bossEnt);
+      // The Ossuary Bell locks oxblood wedges before their ivory cutting edge.
+      // Antiphon always leaves a generous central and outer safe lane.
+      if (bossEnt?.kind === 'procession' && bossEnt.attack) {
+        const b = bossEnt, a = b.attack, live = a.t <= a.live;
+        const angles = a.kind === 'antiphon' ? [a.angle - .28, a.angle + .28] : [a.angle];
+        ctx.save(); ctx.strokeStyle = live ? '#f0e3c2' : '#a6535e'; ctx.fillStyle = live ? '#e8d7ad28' : '#6f273528';
+        ctx.lineWidth = live ? 12 : 3; ctx.setLineDash(live ? [] : [12, 9]);
+        for (const angle of angles) {
+          const half = a.kind === 'antiphon' ? .075 : .19;
+          ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.arc(b.x, b.y, 680, angle - half, angle + half); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(b.x + Math.cos(angle) * b.radius, b.y + Math.sin(angle) * b.radius);
+          ctx.lineTo(b.x + Math.cos(angle) * 680, b.y + Math.sin(angle) * 680); ctx.stroke();
+        }
+        ctx.setLineDash([]); ctx.restore();
+      }
       // The Maw beam has one full second of visual warning before it ignites.
       if (bossEnt?.beam) {
         const b=bossEnt, a=b.beam.angle;
@@ -1462,6 +1798,22 @@ window.AetherSkirmish = (() => {
         ctx.lineCap = 'round';
         const trailLen = b.weapon === 'lance' ? .045 : .022;
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * trailLen, b.y - b.vy * trailLen); ctx.stroke();
+      }
+      // Cadenza censers: tarnished brass armillaries with an ivory cutting
+      // point. Their true orbit radius is visible even under reduced motion.
+      if (cadenzaTime > 0) {
+        const centers = cadenzaCenters();
+        ctx.save(); ctx.strokeStyle = '#a98c5755'; ctx.lineWidth = 1.2; ctx.setLineDash([3, 8]);
+        ctx.beginPath(); ctx.arc(player.x, player.y, 72 + cadenzaPower * 7, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        for (const c of centers) {
+          ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a + Math.PI / 2);
+          ctx.fillStyle = '#321722'; ctx.strokeStyle = '#d0b477'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(0, 0, 17, 6, 0, 0, TAU); ctx.stroke();
+          ctx.fillStyle = '#eee1c2'; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(4, -7); ctx.lineTo(-4, -7); ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
       }
       // Player kite and thruster trails
       const p = player;
@@ -1545,20 +1897,22 @@ window.AetherSkirmish = (() => {
       ctx.fillText(`SCORE ${score.toLocaleString()}`, W - 18, 76);
       if (!boss) { ctx.fillText(endless ? `WAVE ${Math.max(1, wave)}` : `ACT ${Math.max(1, wave)} / ${ACTS.length}`, W - 18, 53); }
       if (refit && phase !== 'draft') {
-        const refitLabel = refit === 'guard' ? 'REFIT: PLATING + QUICK DASH' : refit === 'power' ? 'REFIT: DAMAGE +35%' : refit === 'pursuit' ? 'REFIT: PURSUIT SIGNAL' : refit === 'shelter' ? 'REFIT: STORM GROUNDED' : refit === 'severance' ? 'REFIT: SEVERING ROUNDS' : refit === 'stillwake' ? 'REFIT: STILLWAKE VEIL' : INSTRUMENTS[refit] ? `FIELD: ${INSTRUMENTS[refit].name.toUpperCase()}` : '';
+        const refitLabel = refit === 'guard' ? 'REFIT: PLATING + QUICK DASH' : refit === 'power' ? 'REFIT: DAMAGE +35%' : refit === 'pursuit' ? 'REFIT: PURSUIT SIGNAL' : refit === 'procession' ? 'VIA: BLACK PROCESSION' : refit === 'shelter' ? 'REFIT: STORM GROUNDED' : refit === 'severance' ? 'REFIT: SEVERING ROUNDS' : refit === 'stillwake' ? 'REFIT: STILLWAKE VEIL' : INSTRUMENTS[refit] ? `FIELD: ${INSTRUMENTS[refit].name.toUpperCase()}` : '';
         if (refitLabel) { ctx.fillStyle = '#efd39c'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"'; ctx.fillText(refitLabel, W - 18, 96); }
       }
       if (options.veteran) {
-        ctx.fillStyle = guardTime > 0 || guardCooldown <= 0 ? '#a7ebde' : '#879d9b'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"';
+        ctx.fillStyle = guardTime > 0 || guardCooldown <= 0 ? '#d8c494' : '#879d9b'; ctx.textAlign = 'right'; ctx.font = '600 13px "DM Sans"';
         ctx.fillText(guardTime > 0 ? 'E · REVERSING' : guardCooldown > 0 ? `E · REVERSAL ${guardCooldown.toFixed(1)}s` : 'E · REVERSAL READY', W - 18, 120);
+        ctx.fillStyle = cadenzaTime > 0 || consonance > 0 ? '#e8d7ad' : '#879d9b';
+        ctx.fillText(cadenzaTime > 0 ? `R · CADENZA ${cadenzaTime.toFixed(1)}s · ${cadenzaPower} CENSERS` : `R · CADENZA · CONSONANCE ${consonance}/3 · COMBOS ${consonanceCombos}`, W - 18, 140);
       }
       if (bossEnt) {
-        const cantor = bossEnt.kind === 'cantor';
-        ctx.fillStyle = cantor ? '#b9e8ef' : '#e8a0a8'; ctx.textAlign = 'center';
+        const cantor = bossEnt.kind === 'cantor', procession = bossEnt.kind === 'procession';
+        ctx.fillStyle = cantor ? '#b9e8ef' : procession ? '#c6a76b' : '#e8a0a8'; ctx.textAlign = 'center';
         ctx.fillRect(W / 2 - 160, 16, 320 * Math.max(0, bossEnt.hp / bossEnt.maxHp), 10);
-        ctx.strokeStyle = cantor ? '#b9e8ef55' : '#e8a0a855'; ctx.strokeRect(W / 2 - 160, 16, 320, 10);
+        ctx.strokeStyle = cantor ? '#b9e8ef55' : procession ? '#c6a76b55' : '#e8a0a855'; ctx.strokeRect(W / 2 - 160, 16, 320, 10);
         ctx.fillStyle = '#e9dcae';
-        const bossLabel = cantor ? `THE MERIDIAN CANTOR · ${bossEnt.warded ? `WARDED (${livingVotives().length})` : bossEnt.exposed > 0 ? 'EXPOSED' : `PHASE ${bossEnt.phase}`}` : 'THE UMBRAL MAW';
+        const bossLabel = cantor ? `THE MERIDIAN CANTOR · ${bossEnt.warded ? `WARDED (${livingVotives().length})` : bossEnt.exposed > 0 ? 'EXPOSED' : `PHASE ${bossEnt.phase}`}` : procession ? `THE OSSUARY BELL · ${bossEnt.warded ? 'DEACON WARD' : bossEnt.exposed > 0 ? 'CRACKED / EXPOSED' : `TOLL ${bossEnt.phase}`}` : 'THE UMBRAL MAW';
         ctx.fillText(bossLabel, W / 2, 44);
       }
       if (phase === 'intro' && !boss) {
@@ -1602,13 +1956,13 @@ window.AetherSkirmish = (() => {
         canvas.dataset.playerX = Math.round(player.x); canvas.dataset.playerY = Math.round(player.y);
         canvas.dataset.score = score; canvas.dataset.streak = bestStreak;
         canvas.dataset.boss = bossEnt?.hp ?? 0;
-        const cantor = bossEnt?.kind === 'cantor' ? bossEnt : null;
+        const cantor = bossEnt?.kind === 'cantor' ? bossEnt : null, procession = bossEnt?.kind === 'procession' ? bossEnt : null;
         canvas.dataset.bossKind = bossEnt?.kind || '';
-        canvas.dataset.bossState = cantor ? cantor.warded ? 'warded' : cantor.exposed > 0 ? 'exposed' : cantor.attack?.kind || 'recovering' : bossEnt ? `phase-${bossPhase}` : '';
-        canvas.dataset.bossAttack = cantor?.attack?.kind || '';
-        canvas.dataset.bossAttackPhase = cantor?.attack?.kind === 'crown' ? cantor.attack.t <= cantor.attack.live ? 'live' : 'windup' : cantor?.attack?.kind === 'sigils' ? 'locking' : '';
-        canvas.dataset.bossAttackTime = Math.max(0, cantor?.attack?.t || 0).toFixed(3);
-        canvas.dataset.bossPhase = cantor?.phase || (bossEnt ? bossPhase : 0);
+        canvas.dataset.bossState = cantor ? cantor.warded ? 'warded' : cantor.exposed > 0 ? 'exposed' : cantor.attack?.kind || 'recovering' : procession ? procession.warded ? 'warded' : procession.exposed > 0 ? 'exposed' : procession.attack?.kind || 'recovering' : bossEnt ? `phase-${bossPhase}` : '';
+        canvas.dataset.bossAttack = bossEnt?.attack?.kind || '';
+        canvas.dataset.bossAttackPhase = bossEnt?.attack ? ['crown', 'toll', 'antiphon'].includes(bossEnt.attack.kind) ? bossEnt.attack.t <= bossEnt.attack.live ? 'live' : 'windup' : bossEnt.attack.kind === 'sigils' ? 'locking' : '' : '';
+        canvas.dataset.bossAttackTime = Math.max(0, bossEnt?.attack?.t || 0).toFixed(3);
+        canvas.dataset.bossPhase = bossEnt?.phase || (bossEnt ? bossPhase : 0);
         canvas.dataset.bossX = Math.round(bossEnt?.x || 0); canvas.dataset.bossY = Math.round(bossEnt?.y || 0);
         canvas.dataset.votives = livingVotives().length;
         const openMarks = cantorMarks.filter(mark => !mark.fired);
@@ -1638,7 +1992,15 @@ window.AetherSkirmish = (() => {
         canvas.dataset.reversals = reversalCount; canvas.dataset.reversalHits = reversalHits; canvas.dataset.friendlyOrbs = orbs.filter(o => o.friendly).length;
         canvas.dataset.aegisBlocks = aegisBlocks; canvas.dataset.aegisBreaches = aegisBreaches;
         canvas.dataset.aegisMortars = aegisMortars; canvas.dataset.aegisReversals = aegisReversals;
-        syncGuard();
+        canvas.dataset.consonance = consonance; canvas.dataset.consonanceCombos = consonanceCombos;
+        canvas.dataset.cadenza = cadenzaTime > 0 ? 'active' : consonance > 0 ? 'ready' : 'empty';
+        canvas.dataset.cadenzaTime = cadenzaTime.toFixed(3); canvas.dataset.cadenzaPower = cadenzaPower;
+        canvas.dataset.cadenzaCount = cadenzaCount; canvas.dataset.cadenzaHits = cadenzaHits; canvas.dataset.cadenzaErases = cadenzaErases;
+        canvas.dataset.tetherSevers = tetherSevers; canvas.dataset.tetherRewards = tetherRewards; canvas.dataset.deacons = enemies.filter(e => e.kind === 'deacon' && e.hp > 0).length;
+        canvas.dataset.processionSevers = processionSevers; canvas.dataset.processionClears = processionClears; canvas.dataset.processionStage = processionStage;
+        canvas.dataset.bossObjective = procession && procession.phase === 2 && !processionObjectiveMet(procession) ? 'sever-both' : 'open';
+        canvas.dataset.dashCount = dashCount;
+        syncDash(); syncGuard(); syncCadenza();
       }
     }
     function tick(now) {
@@ -1660,6 +2022,7 @@ window.AetherSkirmish = (() => {
       canvas.dataset.paused = 'true';
       cancelAnimationFrame(raf); raf = 0;
       tone(360, .1, 'triangle', .035);
+      syncDash(); syncGuard(); syncCadenza();
       draw();
       updateStatus(true);
     }
@@ -1670,7 +2033,7 @@ window.AetherSkirmish = (() => {
       acc = 0; last = 0;
       canvas.dataset.paused = 'false';
       tone(660, .1, 'triangle', .035);
-      updateStatus(true);
+      syncDash(); syncGuard(); syncCadenza(); updateStatus(true);
       raf = requestAnimationFrame(tick);
     }
     let statusNext = 0, statusText = '';
@@ -1679,11 +2042,13 @@ window.AetherSkirmish = (() => {
       if (!force && nowMs < statusNext) return;
       statusNext = nowMs + 500;
       const actIndex = clamp(Math.max(1, wave), 1, ACTS.length) - 1;
-      const cantor = bossEnt?.kind === 'cantor' ? bossEnt : null;
+      const cantor = bossEnt?.kind === 'cantor' ? bossEnt : null, procession = bossEnt?.kind === 'procession' ? bossEnt : null;
+      const processionRoute = options.veteran && !endless && Math.max(1, wave) === 3 && refit === 'procession';
       const cantorStatus = cantor ? cantor.warded ? `Mirror ward active with ${livingVotives().length} votives.` : cantor.exposed > 0 ? 'Choir severed; Cantor exposed.' : cantor.attack?.kind === 'crown' ? `Crown ${cantor.attack.t <= cantor.attack.live ? 'firing' : 'charging'}.` : cantor.attack?.kind === 'sigils' ? 'Sigils are locking the ship wake.' : 'Cantor recovering.' : '';
+      const processionStatus = procession ? procession.warded ? 'Deacon tethers ward the Bell.' : procession.exposed > 0 ? 'The cracked Bell is exposed.' : procession.attack ? `${procession.attack.kind} ${procession.attack.t <= procession.attack.live ? 'firing' : 'locked'}.` : 'The Bell is recovering.' : '';
       const text = ended
         ? (player.hp <= 0 ? `The skiff is lost. Final score ${score}.` : `Hunt complete. Score ${score}.`)
-        : `${paused ? 'Paused. ' : ''}Hull ${Math.ceil(Math.max(0, player.hp))} of ${player.maxHp}. ${boss ? 'Boss: the Umbral Maw.' : cantor ? `Act 4 of 4: the Meridian Cantor. ${cantorStatus}` : endless ? `Wave ${Math.max(1, wave)}.` : `Act ${actIndex + 1} of ${ACTS.length}: ${ACTS[actIndex].name}.`} Score ${score}.`;
+        : `${paused ? 'Paused. ' : ''}Hull ${Math.ceil(Math.max(0, player.hp))} of ${player.maxHp}. ${boss ? 'Boss: the Umbral Maw.' : cantor ? `Act 4 of 4: the Meridian Cantor. ${cantorStatus}` : procession ? `Act 3 of 4: the Ossuary Bell. ${processionStatus}` : endless ? `Wave ${Math.max(1, wave)}.` : `Act ${actIndex + 1} of ${ACTS.length}: ${ACTS[actIndex].name}.`} Score ${score}. Consonance ${consonance} of 3.`;
       if (text !== statusText) { statusText = text; srStatus.textContent = text; }
       // Persistent mission line: finite hunts read as authored acts, endless as a vigil.
       const inbound = pending.length ? ` · ${pending.length} contact${pending.length === 1 ? '' : 's'} inbound` : '';
@@ -1691,6 +2056,8 @@ window.AetherSkirmish = (() => {
         ? (player.hp <= 0 ? 'Skiff lost — the field keeps the score.' : 'Hunt complete — the field is yours.')
         : boss ? 'Objective: silence the Umbral Maw.'
         : cantor ? `Act 4 of 4 · The glass cathedral — ${cantor.warded ? 'Sever the mirror votives; the Cantor takes reduced damage.' : cantor.exposed > 0 ? 'The choir is broken: strike the exposed Cantor.' : VETERAN_ACT.hint}`
+        : procession ? `Act 3 of 4 · Black Procession — ${procession.warded ? 'Sever the Deacon tethers with Lance, Mortar, or a dash through the thread.' : procession.exposed > 0 ? 'The Bell is cracked: spend your strongest verse now.' : 'Leave the locked toll; punish the recovery.'}`
+        : processionRoute && phase !== 'draft' ? 'Act 3 of 4 · Black Procession — silence the three-stage Ossuary Bell for +45 dust and ivory repairs.'
         : endless ? `Endless vigil · wave ${Math.max(1, wave)}${inbound}${phase === 'draft' ? ' · refit available' : ''}`
         : phase === 'draft' ? `Act ${actIndex + 1} cleared · next: ${ACTS[Math.min(ACTS.length - 1, actIndex + 1)].name} — choose a field refit.`
         : `Act ${actIndex + 1} of ${ACTS.length} · ${ACTS[actIndex].name} — ${ACTS[actIndex].hint}${inbound}`;
@@ -1699,6 +2066,20 @@ window.AetherSkirmish = (() => {
         missionStatus.textContent = line;
         missionStatus.dataset.skirmishObjective = objectiveText;
       }
+      const tactical = [
+        `Hull ${Math.ceil(Math.max(0, player.hp))}/${player.maxHp}`,
+        `${WEAPONS[weapon].name}${WEAPONS[weapon].charge ? ` charge ${Math.round(clamp(charge / WEAPONS[weapon].charge, 0, 1) * 100)}%` : ''}`,
+        player.burstCd <= 0 ? 'Dash ready' : `Dash ${player.burstCd.toFixed(1)}s`,
+        ...(options.veteran ? [
+          guardTime > 0 ? 'Reversal active' : guardCooldown > 0 ? `Reversal ${guardCooldown.toFixed(1)}s` : 'Reversal ready',
+          `Consonance ${consonance}/3`,
+          cadenzaTime > 0 ? `Cadenza ${cadenzaTime.toFixed(1)}s · ${cadenzaPower} censers` : consonance > 0 ? 'Cadenza ready (R)' : 'Cadenza needs a combo',
+          `Combos ${consonanceCombos}`,
+        ] : []),
+        ...(procession ? [`Ossuary Bell toll ${procession.phase}/3${procession.warded ? ' · Deacon ward' : ''}`] : []),
+        ...(cantor ? [`Cantor phase ${cantor.phase}/2${cantor.warded ? ' · mirror ward' : ''}`] : []),
+      ].join(' · ');
+      if (tacticalStatus.textContent !== tactical) tacticalStatus.textContent = tactical;
     }
     function point(e) {
       const r = canvas.getBoundingClientRect();
@@ -1738,10 +2119,11 @@ window.AetherSkirmish = (() => {
         e.preventDefault();
         setWeapon(WEAPON_IDS[Number(k) - 1]);
       }
-      if ((['w', 'a', 's', 'd', 'j', 'z', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) || (options.veteran && k === 'e')) && document.activeElement === canvas) e.preventDefault();
+      if ((['w', 'a', 's', 'd', 'j', 'z', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k) || (options.veteran && (k === 'e' || k === 'r'))) && document.activeElement === canvas) e.preventDefault();
       keys.add(k);
       if (k === ' ' && !e.repeat && document.activeElement === canvas && !paused) tryBurst();
       if (k === 'e' && !e.repeat && document.activeElement === canvas && !paused) tryGuard();
+      if (k === 'r' && !e.repeat && document.activeElement === canvas && !paused) tryCadenza();
       if (k === 'p' && !e.repeat) paused ? resume() : pause();
       if (k === 'f' && !e.repeat && document.activeElement === canvas) {
         if (document.fullscreenElement === canvas) document.exitFullscreen?.().catch?.(()=>{});
@@ -1769,6 +2151,7 @@ window.AetherSkirmish = (() => {
       canvas.remove();
       weaponBar.remove();
       missionStatus.remove();
+      tacticalStatus.remove();
       draftBar.remove();
       srStatus.remove();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
@@ -1776,9 +2159,13 @@ window.AetherSkirmish = (() => {
     return { destroy, pause, resume, get state() { return {
       hp: player.hp, wave, dust, kills, phase, paused, score, boltsFired: boltCount, weapon, charge, pending: pending.length,
       act: endless ? null : clamp(Math.max(1, wave), 1, ACTS.length), veteran: !!options.veteran,
-      player: { x: player.x, y: player.y, burstCd: player.burstCd, supercharge },
+      player: { x: player.x, y: player.y, burstCd: player.burstCd, burstT: player.burstT, invuln: player.invuln, supercharge },
       guardTime, guardCooldown, guardCount, guardWhiffs, reversalCount, reversalHits, aegisBlocks, aegisBreaches, aegisMortars, aegisReversals,
-      enemies: enemies.filter(e => e.hp > 0).map(e => ({ kind: e.kind, x: e.x, y: e.y, spawnX: e.spawnX, spawnY: e.spawnY, hp: e.hp, maxHp: e.maxHp, state: e.state, guardAngle: e.guardAngle, guardBlocks: e.guardBlocks || 0, guardBreaches: e.guardBreaches || 0, mortarBreaches: e.mortarBreaches || 0, reversalBreaches: e.reversalBreaches || 0, cd: e.cd })),
+      consonance, consonanceCombos, cadenzaTime, cadenzaPower, cadenzaCount, cadenzaHits, cadenzaErases, tetherSevers, tetherRewards, processionSevers, processionClears, processionStage, dashCount,
+      wells: wells.length,
+      refit,
+      boss: bossEnt ? { kind: bossEnt.kind, x: bossEnt.x, y: bossEnt.y, hp: bossEnt.hp, maxHp: bossEnt.maxHp, phase: bossEnt.phase || bossPhase, attack: bossEnt.attack?.kind || '', attackPhase: bossEnt.attack ? bossEnt.attack.t <= bossEnt.attack.live ? 'live' : 'windup' : '', attackAngle: bossEnt.attack?.angle ?? bossEnt.attack?.aim ?? 0, attackTime: bossEnt.attack?.t || 0, attackLive: bossEnt.attack?.live || 0, warded: !!bossEnt.warded, objectiveOpen: bossEnt.kind !== 'procession' || bossEnt.phase >= 3 || processionObjectiveMet(bossEnt) } : null,
+      enemies: enemies.filter(e => e.hp > 0).map(e => ({ kind: e.kind, x: e.x, y: e.y, spawnX: e.spawnX, spawnY: e.spawnY, hp: e.hp, maxHp: e.maxHp, state: e.state, guardAngle: e.guardAngle, guardBlocks: e.guardBlocks || 0, guardBreaches: e.guardBreaches || 0, mortarBreaches: e.mortarBreaches || 0, reversalBreaches: e.reversalBreaches || 0, cd: e.cd, tetherBroken: e.tetherBroken || 0, tetherTarget: e.tetherTarget?.kind || '', exposed: e.exposed || 0, severRewarded: !!e.severRewarded, bellSevered: !!e.bellSevered, verseWeapon: e.verseWeapon || '' })),
       orbs: orbs.map(o => ({ x: o.x, y: o.y, friendly: !!o.friendly, damage: o.damage || 0 })),
     }; } };
   }

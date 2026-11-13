@@ -7,6 +7,7 @@ The pilots use the public engine, real canvas keyboard/pointer events and the
 actual rAF simulation. They never replace game state or install test-only hooks.
 """
 import http.server
+import math
 import socketserver
 import threading
 from pathlib import Path
@@ -516,7 +517,10 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
             assert abs(int(data(canvas)['catcherX']) - int(catcher_reined)) <= 1, (catcher_before, catcher_reined, data(canvas))
             assert data(canvas)['umbraRein'] == 'true'
             touch.end()
-            page.clock.run_for(100)
+            for _ in range(12):
+                if data(canvas)['umbraRein'] == 'false':
+                    break
+                page.clock.run_for(20)
             assert data(canvas)['umbraRein'] == 'false'
             touch.start(*control_center(page, 'dash', 'rein'))
             page.clock.run_for(80)
@@ -538,7 +542,9 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                 fire = False
                 if number('activeShades') > 0:
                     target = number('shadeX')
-                    fire = number('shadeY') > 450
+                    # Telemetry refreshes at 10Hz; 450 can already be a
+                    # collision by the next CDP turn. Use the preceding sample.
+                    fire = number('shadeY') > 445
                 elif number('umbraStarY') > 70:
                     target = number('umbraStarX')
                     fire = current['umbraStarLit'] == 'false' and number('umbraStarY') > 450
@@ -546,7 +552,14 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                     target = 820 if number('nextMeteorX') < 450 else 80
                 point(page, target)
                 if fire and charge >= 100:
-                    tap_control(page, 'dash', 'dash')
+                    # Pause just 10ms ahead (never in the past), then freeze
+                    # virtual time while Chromium dispatches the real touch;
+                    # CDP latency must not consume the unchanged 200ms dash.
+                    page.clock.pause_at(page.evaluate('Date.now() / 1000') + .01)
+                    try:
+                        tap_control(page, 'dash', 'dash')
+                    finally:
+                        page.clock.resume()
                 page.clock.run_for(40)
                 current = data(canvas)
                 if int(current['eclipseCatches']) >= 1 and int(current['shadesBroken']) >= 1:
@@ -582,6 +595,23 @@ with Server(('127.0.0.1', 0), QuietHandler) as server:
                         x, y = float(current['choirBoltX']), float(current['choirBoltY'])
                     else:
                         x, y = float(current['cometX'] or 450), float(current['cometY'] or 280)
+                    if not parry and float(current['cometFocus'] or 0) >= 2 and current['cathedralAimX']:
+                        # A sub-0.14 offset remains a centred Focus return, but
+                        # deliberately guides the charged comet into the glass
+                        # instead of depending on a random contact within 26s.
+                        cx, cy = float(current['cometX']), float(current['cometY'])
+                        vx, vy = float(current['cometVX']), float(current['cometVY'])
+                        if math.hypot(cx - 450, cy - 280) > 120 and (cx - 450) * vx + (cy - 280) * vy > 0:
+                            angle = math.atan2(cy - 280, cx - 450)
+                            desired = math.atan2(float(current['cathedralAimY']) - 280, float(current['cathedralAimX']) - 450)
+                            offset = math.atan2(math.sin(angle + math.pi - desired), math.cos(angle + math.pi - desired)) / .8
+                            # Use the exact public rebound solution only when
+                            # it fits the strict centred threshold; otherwise
+                            # hold centre for a later valid trajectory.
+                            if abs(offset) <= .135:
+                                x, y = 450 + math.cos(angle + offset) * 235, 280 + math.sin(angle + offset) * 235
+                            else:
+                                x, y = 450 + math.cos(angle) * 235, 280 + math.sin(angle) * 235
                     screen_point = world_point(page, 'breaker', x, y)
                     if active:
                         touch.move(*screen_point)

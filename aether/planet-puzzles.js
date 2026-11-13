@@ -32,18 +32,30 @@ window.AetherPuzzles = (() => {
   // A scratch plan uses the exact same transitions as committed moves. It does
   // not mutate the board, consume hints, or add a new saved-action format.
   function orbitPlan(def,board,counts) {
-    let projected=clone(board);const actions=[];
+    let projected=clone(board),valid=true,invalidAction=null;const actions=[];
     for(let i=0;i<def.count;i++)for(let j=0;j<(counts[i]||0);j++) {
-      const action={type:'moon',value:i};projected=transition('jupiter',def,projected,action);actions.push(action);
+      const action={type:'moon',value:i},next=transition('jupiter',def,projected,action);
+      if(!next){valid=false;invalidAction=action;return {board:projected,actions,valid,invalidAction};}
+      projected=next;actions.push(action);
     }
-    return {board:projected,actions};
+    return {board:projected,actions,valid,invalidAction};
   }
-  function coupling(def,i) {
-    const step=def.retrograde?-1:1,next=mod(i+step,def.count),previous=mod(i-step,def.count);
+  function coupling(def,i,board=null) {
+    const reversed=Boolean(def.retrograde)!==Boolean(def.expedition&&board?.dial%2),step=reversed?-1:1,next=mod(i+step,def.count),previous=mod(i-step,def.count);
     return `${moonNames[i]} +1, ${moonNames[next]} +2${def.double?`, ${moonNames[previous]} +1`:''}`;
   }
   function instruction(id,def,board) {
     if(won(id,def,board))return 'Survey complete. Replay for a shorter route, or continue your survey.';
+    if(def.expedition) {
+      const next=board.seals.findIndex(open=>!open);
+      if(next>=0) {
+        const seal=def.expedition.seals[next];
+        return `${def.expedition.sealName} ${next+1} is ${board.dial===seal.at?'aligned; open it now':'closed'}. ${board.dial===seal.at?'':`Turn the mechanism to position ${seal.at+1}. `}Locked puzzle pieces refuse actions until their ward is broken.`;
+      }
+      if(def.expedition.exitSequence&&board.exitStep<def.expedition.exitSequence.length) {const next=def.expedition.exitSequence[board.exitStep];return `Exit route ${board.exitStep} / ${def.expedition.exitSequence.length}. Next: reach the ${next==='west'?'western':'eastern'} exit${next==='east'?' with the orrery at home':''}; earlier escape positions alone do not seal this chamber.`;}
+      if(board.dial!==0)return coreWon(id,def,board)?`The core survey is complete. Return the mechanism to its ivory home mark (position 1); it is now at position ${board.dial+1}.`:`Mechanism position ${board.dial+1}: the core puzzle is still unsolved. Read the transformed rules before choosing the next action.`;
+      return `${def.expedition.rule} ${def.masterwork.instruction}`;
+    }
     if(def.masterwork) {
       if(id==='neptune') { const goal=def.goals[board.collected];return `Wind rides to a barrier; Pulse moves exactly one square. Next: ${board.collected===def.goals.length-1?'relay R':'buoy '+(board.collected+1)} at row ${Math.floor(goal/def.n)+1}, column ${goal%def.n+1}.`; }
       if(id==='mars')return `Push normally, or select Winch and step away from a touching sample to pull it. ${board.winches} winch pull${board.winches===1?'':'s'} remain.`;
@@ -60,10 +72,14 @@ window.AetherPuzzles = (() => {
     return `Next: ${board.collected===def.goals.length-1?'relay R':'buoy '+(board.collected+1)} at row ${Math.floor(goal/def.n)+1}, column ${goal%def.n+1}. Stop on it; passing over does not collect it.`;
   }
   function explainAction(id,def,before,action,after) {
+    if(def.expedition&&action.type==='mechanism') {
+      if(action.value==='cycle')return `${def.expedition.mechanism} advanced to position ${after.dial+1} of ${def.expedition.period}. ${def.expedition.cycleEffect}`;
+      return `${def.expedition.sealName} ${action.value+1} opened. ${def.expedition.seals[action.value].targets.length?'Its inscribed puzzle pieces can now move.':'The chamber’s final ward is broken.'}`;
+    }
     if(def.masterwork) {
       if(id==='mercury'&&action.instrument==='diagonal')return 'Prism pulse: only the diagonal neighbours toggled; the selected crater stayed unchanged.';
       if(id==='venus'&&action.instrument==='mirror')return 'Mirror wrench: left and right openings exchanged without rotating the pipe.';
-      if(id==='earth'&&action.continuation) { const path=before.paths[before.active],from=path?.at(-1);if(gateLink(def,from,action.value))return 'Gate transfer: the route crossed between the paired ⇄ gates without using an adjoining square.'; }
+      if(id==='earth'&&action.continuation) { const path=before.paths[before.active],from=path?.at(-1);if(gateLink(def,from,action.value,before))return 'Gate transfer: the route crossed between the paired ⇄ gates without using an adjoining square.'; }
       if(id==='mars'&&action.instrument==='winch')return `The winch pulled one sample into the rover’s old square. ${after.winches} winch pull${after.winches===1?'':'s'} remain.`;
       if(id==='jupiter'&&action.instrument==='swap')return `${moonNames[action.value]} and ${moonNames[mod(action.value+1,def.count)]} exchanged phases. Their positions did not advance.`;
       if(id==='saturn'&&action.instrument==='rotate')return 'The three-square block rotated 90° about its centre cell. Its centre stayed fixed.';
@@ -98,7 +114,12 @@ window.AetherPuzzles = (() => {
     }
     return cells;
   }
-  function gateLink(def,a,b) { return Boolean(def.gates&&((def.gates[0]===a&&def.gates[1]===b)||(def.gates[1]===a&&def.gates[0]===b))); }
+  function expeditionGates(def,board=null) {
+    if(!def.expedition||!board)return def.gates||[];
+    return def.expedition.gateTrack?.[board.dial]||def.gates||[];
+  }
+  function gateLink(def,a,b,board=null) { const gates=expeditionGates(def,board);return Boolean(gates.length===2&&((gates[0]===a&&gates[1]===b)||(gates[1]===a&&gates[0]===b))); }
+  function expeditionWall(def,board,p) { return Boolean(def.expedition?.portcullis?.includes(p)&&board.dial%2===1); }
   function blockAxis(def,board,i) { return board.axes?.[i]||def.blocks[i].axis; }
   function pipeTargets(def) {
     const masks=Array(def.n*def.n).fill(0);
@@ -122,7 +143,7 @@ window.AetherPuzzles = (() => {
     if(id==='venus') { def.target=pipeTargets(def); def.fixed=[def.path[0],def.path.at(-1)]; }
     return def;
   }
-  function initial(id,def,index) {
+  function initialBoard(id,def,index) {
     if(id==='mercury') {
       const lights=Array(def.n*def.n).fill(0);
       if(def.masterwork?.mechanic==='lenses') {
@@ -150,9 +171,14 @@ window.AetherPuzzles = (() => {
     if(board.phases.every(v=>v===0))advance(board,def,0);
     return board;
   }
+  function initial(id,def,index) {
+    const board=initialBoard(id,def,index);
+    if(def.expedition) { board.dial=0;board.seals=def.expedition.seals.map(()=>false);if(def.expedition.exitSequence)board.exitStep=0; }
+    return board;
+  }
   function advance(board,def,i) {
     board.phases[i]=mod(board.phases[i]+1,def.divisions);
-    const step=def.retrograde?-1:1,next=mod(i+step,def.count);
+    const reversed=Boolean(def.retrograde)!==Boolean(def.expedition&&board.dial%2),step=reversed?-1:1,next=mod(i+step,def.count);
     board.phases[next]=mod(board.phases[next]+2,def.divisions);
     if(def.double) { const prev=mod(i-step,def.count); board.phases[prev]=mod(board.phases[prev]+1,def.divisions); }
   }
@@ -184,7 +210,9 @@ window.AetherPuzzles = (() => {
   }
   // The same pure transition function powers play, saved-game replay, and hints.
   function transition(id,def,current,action) {
-    if(!action || !['cell','move','moon','block'].includes(action.type))return null;
+    if(!action || !['cell','move','moon','block','mechanism'].includes(action.type))return null;
+    if(def.expedition&&action.type==='mechanism')return expeditionTransition(id,def,current,action);
+    if(def.expedition&&!expeditionActionAllowed(def,current,action))return null;
     const board=clone(current), v=action.value;
     if(id==='mercury' && action.type==='cell' && Number.isInteger(v) && v>=0 && v<def.n**2) {
       if(action.instrument==='diagonal'&&def.masterwork?.mechanic!=='lenses')return null;
@@ -204,7 +232,7 @@ window.AetherPuzzles = (() => {
       const owner=def.paths.findIndex(p=>p[0]===v || p.at(-1)===v), active=board.active, path=board.paths[active];
       const occupied=board.paths.findIndex(p=>p.includes(v));
       if(action.continuation && (active<0 || (owner>=0 && owner!==active) || (occupied>=0 && occupied!==active)))return null;
-      const linked=active>=0&&path?.length&&(direction(path.at(-1),v,def.n)>=0||gateLink(def,path.at(-1),v));
+      const linked=active>=0&&path?.length&&(direction(path.at(-1),v,def.n)>=0||gateLink(def,path.at(-1),v,current));
       if(linked && (owner===-1 || (owner===active && v!==path[0])) && (occupied===-1 || occupied===active)) {
         const earlier=path.indexOf(v);
         if(earlier>=0)board.paths[active]=path.slice(0,earlier+1);
@@ -228,19 +256,20 @@ window.AetherPuzzles = (() => {
       board.positions[i]+=sign;
     } else if(['mars','uranus','neptune'].includes(id) && action.type==='move' && Number.isInteger(v) && v>=0 && v<4) {
       if(id==='uranus') {
-        const anchor=action.anchor??-1;
+        const anchor=action.anchor??-1,heading=def.expedition?mod(v+current.dial,4):v;
         if(anchor>=0&&(def.masterwork?.mechanic!=='anchor'||!board.balls.includes(anchor)))return null;
-        board.balls=slide(board.balls,v,def,anchor);
+        board.balls=slide(board.balls,heading,def,anchor);
       } else if(id==='neptune') {
+        const heading=def.expedition?mod(v+current.dial,4):v;
         if(action.instrument==='pulse') {
           if(def.masterwork?.mechanic!=='pulse')return null;
-          const to=neighbour(board.player,v,def.n);if(to<0||def.walls.includes(to))return null;board.player=to;
-        } else board.player=slide([board.player],v,def)[0];
+          const to=neighbour(board.player,heading,def.n);if(to<0||def.walls.includes(to))return null;board.player=to;
+        } else board.player=slide([board.player],heading,def)[0];
         if(board.player===current.player)return null;
         if(board.player===def.goals[board.collected])board.collected++;
       } else {
         const to=neighbour(board.player,v,def.n),winch=action.instrument==='winch';
-        if(to<0||def.walls.includes(to))return null;
+        if(to<0||def.walls.includes(to)||expeditionWall(def,current,to))return null;
         if(winch) {
           if(def.masterwork?.mechanic!=='winch'||!board.winches||board.crates.includes(to))return null;
           const behind=neighbour(board.player,(v+2)%4,def.n);if(behind<0||!board.crates.includes(behind))return null;
@@ -248,13 +277,14 @@ window.AetherPuzzles = (() => {
         } else {
           if(board.crates.includes(to)) {
             const beyond=neighbour(to,v,def.n);
-            if(beyond<0||def.walls.includes(beyond)||board.crates.includes(beyond))return null;
+            if(beyond<0||def.walls.includes(beyond)||expeditionWall(def,current,beyond)||board.crates.includes(beyond))return null;
             board.crates=board.crates.map(p=>p===to?beyond:p).sort((a,b)=>a-b);
           }
           board.player=to;
         }
       }
     } else return null;
+    if(def.expedition)recordExpeditionRoute(id,def,current,board);
     return same(board,current)?null:board;
   }
   function wetPipes(def,board) {
@@ -266,15 +296,32 @@ window.AetherPuzzles = (() => {
     return seen;
   }
   function completedPaths(def,board) { return board.paths.filter((p,i)=>p.length>1 && [p[0],p.at(-1)].every(v=>[def.paths[i][0],def.paths[i].at(-1)].includes(v))).length; }
-  function won(id,def,board) {
+  function coreWon(id,def,board) {
     if(id==='mercury')return board.lights.every(v=>v===0);
     if(id==='venus')return wetPipes(def,board).size===def.n**2;
     if(id==='earth')return completedPaths(def,board)===def.paths.length && board.paths.flat().length===def.n**2;
     if(id==='mars')return board.crates.every(p=>def.goals.includes(p));
     if(id==='jupiter')return board.phases.every(p=>p===0);
-    if(id==='saturn')return board.positions[0]===4;
+    if(id==='saturn')return board.positions[0]===(def.expedition&&board.dial%2?0:4);
     if(id==='uranus')return board.balls.every(p=>def.goals.includes(p));
     return board.collected===def.goals.length;
+  }
+  function recordExpeditionRoute(id,def,before,after) {
+    const sequence=def.expedition?.exitSequence;
+    if(id==='saturn'&&sequence) {
+      const step=after.exitStep||0;
+      if(step<sequence.length&&coreWon(id,def,after)) {
+        const exit=after.dial%2?'west':'east';
+        if(exit===sequence[step])after.exitStep=step+1;
+      }
+    }
+    return after;
+  }
+  function won(id,def,board) {
+    const complete=coreWon(id,def,board);
+    if(!def.expedition)return complete;
+    const route=def.expedition.exitSequence;
+    return complete&&board.dial===0&&board.seals.every(Boolean)&&(!route||board.exitStep>=route.length);
   }
   function lightSolution(def,board) {
     const n=def.n**2, rows=Array.from({length:n},(_,i)=>[...Array.from({length:n},(_,j)=>Number(toggles(j,def.n).includes(i))),board.lights[i]]), pivots=[];
@@ -337,7 +384,8 @@ window.AetherPuzzles = (() => {
     if(id==='uranus'&&def.masterwork?.mechanic==='anchor')return [...(board?.balls||[]).flatMap(anchor=>DIRS.map((_,value)=>({type:'move',value,anchor}))),...moves];
     return moves;
   }
-  async function solve(id,def,board,signal) {
+  async function solve(id,def,board,signal,coreOnly=false) {
+    if(def.expedition&&!coreOnly)return expeditionPath(def,board);
     if(id==='mercury')return def.masterwork?.mechanic==='lenses'?lensSolution(def,board):lightSolution(def,board).map(value=>({type:'cell',value}));
     if(id==='venus'&&def.masterwork?.mechanic==='mirror')return mirrorSolution(def,board);
     if(id==='earth'&&def.gates&&board.paths.every(p=>!p.length))return surveySolution(def);
@@ -345,7 +393,7 @@ window.AetherPuzzles = (() => {
     for(let head=0;head<nodes.length && nodes.length<150000;head++) {
       if(head%1200===0) { await new Promise(resolve=>setTimeout(resolve,0)); if(signal?.aborted)return null; }
       const node=nodes[head];
-      if(won(id,def,node.board)) { const path=[]; let i=head; while(nodes[i].parent>=0){ path.push(nodes[i].action); i=nodes[i].parent; } return path.reverse(); }
+      if((coreOnly?coreWon(id,def,node.board):won(id,def,node.board))) { const path=[]; let i=head; while(nodes[i].parent>=0){ path.push(nodes[i].action); i=nodes[i].parent; } return path.reverse(); }
       for(const action of actionsFor(id,def,node.board)) {
         const next=transition(id,def,node.board,action); if(!next)continue;
         // A sample in a non-goal corner can never be recovered without a winch.
@@ -357,6 +405,7 @@ window.AetherPuzzles = (() => {
     return null;
   }
   function par(id,def,board) {
+    if(def.expedition?.par!==undefined)return def.expedition.par;
     if(def.masterwork?.par!==undefined)return def.masterwork.par;
     if(id==='mercury')return lightSolution(def,board).length;
     if(id==='earth')return def.n**2-def.paths.length;
@@ -370,9 +419,10 @@ window.AetherPuzzles = (() => {
   }
   function actionCost(id,before,after) {
     if(id!=='earth')return 1;
+    if(before.dial!==after.dial||!same(before.seals,after.seals))return 1;
     return after.paths.flat().length>before.paths.flat().length && after.paths.some(p=>p.length>1 && !same(p,before.paths[after.paths.indexOf(p)])) ? 1 : 0;
   }
-  function progress(id,def,board) {
+  function coreProgress(id,def,board) {
     if(id==='mercury')return `${board.lights.filter(v=>!v).length} / ${def.n**2} in shadow`;
     if(id==='venus')return `${wetPipes(def,board).size} / ${def.n**2} pipes supplied`;
     if(id==='earth')return `${completedPaths(def,board)} / ${def.paths.length} linked · ${board.paths.flat().length} / ${def.n**2} squares`;
@@ -382,6 +432,11 @@ window.AetherPuzzles = (() => {
     if(id==='uranus')return `${board.balls.filter(p=>def.goals.includes(p)).length} / ${def.goals.length} capsules docked`;
     return `${board.collected} / ${def.goals.length} beacons reached`;
   }
+  function progress(id,def,board) {
+    const core=coreProgress(id,def,board);
+    if(!def.expedition)return core;
+    return `${core}${def.expedition.exitSequence?` · exit route ${board.exitStep}/${def.expedition.exitSequence.length}`:''} · mechanism ${board.dial+1}/${def.expedition.period} · wards ${board.seals.filter(Boolean).length}/${board.seals.length}`;
+  }
   function pipeArt(mask,extra='') {
     return `<svg viewBox="0 0 100 100" aria-hidden="true" class="pipe-art ${extra}">${DIRS.map(([x,y],d)=>mask&(1<<d)?`<path class="pipe-channel" d="M50 50L${50+x*50} ${50+y*50}"/>`:'').join('')}${DIRS.map(([x,y],d)=>mask&(1<<d)?`<path class="pipe-core" d="M50 50L${50+x*50} ${50+y*50}"/>`:'').join('')}${DIRS.map(([x,y],d)=>mask&(1<<d)?`<path class="pipe-flow" d="M50 50L${50+x*50} ${50+y*50}"/>`:'').join('')}<circle class="pipe-joint" cx="50" cy="50" r="7"/></svg>`;
   }
@@ -389,19 +444,18 @@ window.AetherPuzzles = (() => {
   function boardHTML(id,def,board,ui={}) {
     const deal=ui.deal?p=>`--deal:${Math.min(p,40)};`:()=> '';
     if(id==='jupiter') {
-      const plan=ui.plan||[], hasPlan=plan.some(c=>c>0);
-      const projected=hasPlan?orbitPlan(def,board,plan).board.phases:null;
-      return `<div class="orbital-dials ${ui.won?'is-won':''}">${board.phases.map((phase,i)=>{
+      const plan=ui.plan||[], hasPlan=plan.some(c=>c>0),preview=hasPlan?orbitPlan(def,board,plan):null,projected=preview?.valid?preview.board.phases:null;
+      return `<div class="orbital-dials ${ui.won?'is-won':''}" ${def.expedition?`data-expedition-dial="${board.dial}"`:''}>${board.phases.map((phase,i)=>{
         const moon=moonNames[i], burns=plan[i]||0, aim=projected?projected[i]:phase,exchange=def.masterwork?.mechanic==='swap'&&ui.instrument==='swap';
-        const label=exchange?`Exchange ${moon} with ${moonNames[mod(i+1,def.count)]} immediately. Current position ${phase} of ${def.divisions}.`:projected
-          ? `${moon}: now at ${phase} of ${def.divisions}; the plan moves it to ${aim}${aim===0?', aligned':''}. Queue another burn (${coupling(def,i)}). ${burns} queued.`
-          : `Queue a burn on ${moon}: ${coupling(def,i)}. Position ${phase} of ${def.divisions}; target 0.`;
-        return `<button class="orbital-dial ${phase===0?'aligned':''} ${projected&&aim===0?'plan-aligned':''} ${burns?'has-burns':''} ${ui.hintCell===i?'hinted':''} ${ui.changed?.has(i)?'changed':''}" style="${ui.deal?`--deal:${i};`:''}" data-puzzle-moon="${i}" aria-label="${label}"><span class="dial-title">${moon}</span><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="dial-track" cx="75" cy="75" r="53"/><circle class="dial-track-inner" cx="75" cy="75" r="30"/>${Array.from({length:def.divisions},(_,j)=>{const a=j/def.divisions*Math.PI*2;return `<circle cx="${75+Math.sin(a)*53}" cy="${75-Math.cos(a)*53}" r="${j===0?5:2}" class="${j===0?'dial-target':''}"/>`;}).join('')}<path class="dial-needle" d="M75 75L75 22" transform="rotate(${phase/def.divisions*360} 75 75)"/>${projected&&aim!==phase?`<path class="dial-needle dial-needle-plan" d="M75 75L75 32" transform="rotate(${aim/def.divisions*360} 75 75)"/>`:''}${projected?`<circle class="dial-moon-plan" cx="${75+Math.sin(aim/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(aim/def.divisions*Math.PI*2)*53}" r="5"/>`:''}<circle class="dial-moon" cx="${75+Math.sin(phase/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(phase/def.divisions*Math.PI*2)*53}" r="8"/></svg><span class="dial-position">${phase} / ${def.divisions} <span>${phase===0?'Aligned':exchange?'Exchange next':'Queue +1 burn'}</span></span>${projected?`<span class="dial-position dial-plan-row">Now ${phase} → Plan ${aim} <span>${aim===0?'Will align ✓':'Off target'}</span></span>`:''}<small>${coupling(def,i)}</small>${burns?`<span class="burn-badge" aria-hidden="true">×${burns}</span>`:''}</button>`;
+        const label=exchange?`Exchange ${moon} with ${moonNames[mod(i+1,def.count)]} immediately. Current position ${phase} of ${def.divisions}.`:preview&&!preview.valid&&preview.invalidAction?.value===i?`The queued burn on ${moon} is blocked by a ward. Remove it or open the ward before launching.`:projected
+          ? `${moon}: now at ${phase} of ${def.divisions}; the plan moves it to ${aim}${aim===0?', aligned':''}. Queue another burn (${coupling(def,i,board)}). ${burns} queued.`
+          : `Queue a burn on ${moon}: ${coupling(def,i,board)}. Position ${phase} of ${def.divisions}; target 0.`;
+        return `<button class="orbital-dial ${phase===0?'aligned':''} ${projected&&aim===0?'plan-aligned':''} ${burns?'has-burns':''} ${ui.hintCell===i?'hinted':''} ${ui.changed?.has(i)?'changed':''}" style="${ui.deal?`--deal:${i};`:''}" data-puzzle-moon="${i}" aria-label="${label}"><span class="dial-title">${moon}</span><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="dial-track" cx="75" cy="75" r="53"/><circle class="dial-track-inner" cx="75" cy="75" r="30"/>${Array.from({length:def.divisions},(_,j)=>{const a=j/def.divisions*Math.PI*2;return `<circle cx="${75+Math.sin(a)*53}" cy="${75-Math.cos(a)*53}" r="${j===0?5:2}" class="${j===0?'dial-target':''}"/>`;}).join('')}<path class="dial-needle" d="M75 75L75 22" transform="rotate(${phase/def.divisions*360} 75 75)"/>${projected&&aim!==phase?`<path class="dial-needle dial-needle-plan" d="M75 75L75 32" transform="rotate(${aim/def.divisions*360} 75 75)"/>`:''}${projected?`<circle class="dial-moon-plan" cx="${75+Math.sin(aim/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(aim/def.divisions*Math.PI*2)*53}" r="5"/>`:''}<circle class="dial-moon" cx="${75+Math.sin(phase/def.divisions*Math.PI*2)*53}" cy="${75-Math.cos(phase/def.divisions*Math.PI*2)*53}" r="8"/></svg><span class="dial-position">${phase} / ${def.divisions} <span>${phase===0?'Aligned':exchange?'Exchange next':'Queue +1 burn'}</span></span>${projected?`<span class="dial-position dial-plan-row">Now ${phase} → Plan ${aim} <span>${aim===0?'Will align ✓':'Off target'}</span></span>`:''}<small>${coupling(def,i,board)}</small>${burns?`<span class="burn-badge" aria-hidden="true">×${burns}</span>`:''}</button>`;
       }).join('')}</div>`;
     }
-    if(id==='saturn')return `<div class="puzzle-grid ring-board board-saturn ${ui.won?'is-won':''}" style="--grid:6" role="group" aria-label="Sliding ring passage"><span class="ring-exit" aria-hidden="true">EXIT →</span>${Array.from({length:36},(_,p)=>`<span class="ring-square" style="${deal(p)}" aria-hidden="true"></span>`).join('')}</div>`;
+    if(id==='saturn')return `<div class="puzzle-grid ring-board board-saturn ${ui.won?'is-won':''}" style="--grid:6" ${def.expedition?`data-expedition-dial="${board.dial}"`:''} role="group" aria-label="Sliding ring passage"><span class="ring-exit ${def.expedition&&board.dial%2?'exit-west':''}" aria-hidden="true">${def.expedition&&board.dial%2?'← EXIT':'EXIT →'}</span>${Array.from({length:36},(_,p)=>`<span class="ring-square" style="${deal(p)}" aria-hidden="true"></span>`).join('')}</div>`;
     const wet=id==='venus'?wetPipes(def,board):null;
-    return `<div class="puzzle-grid board-${id} ${id==='earth'?'flow-board':''} ${['mars','uranus','neptune'].includes(id)?'swipe-board':''} ${ui.won?'is-won':''}" style="--grid:${def.n}" role="group" aria-label="${catalogue[id].title} puzzle board">${Array.from({length:def.n**2},(_,p)=>{
+    return `<div class="puzzle-grid board-${id} ${id==='earth'?'flow-board':''} ${['mars','uranus','neptune'].includes(id)?'swipe-board':''} ${ui.won?'is-won':''}" style="--grid:${def.n}" ${def.expedition?`data-expedition-dial="${board.dial}"`:''} role="group" aria-label="${catalogue[id].title} puzzle board">${Array.from({length:def.n**2},(_,p)=>{
       let text='',art='',kind='',label=`Row ${Math.floor(p/def.n)+1}, column ${p%def.n+1}`,style='';
       if(id==='mercury') {const lit=board.lights[p];kind=lit?'sunlit':'shadow';art='<span class="crater" aria-hidden="true"><i></i><i></i><i></i></span>';text=lit?'☀':'';label+=lit?', sunlit crater':', shadowed crater';}
       if(id==='venus') {
@@ -411,7 +465,7 @@ window.AetherPuzzles = (() => {
         label+=`, pipe ${DIRS.map((_,d)=>board.pipes[p]&(1<<d)?directionNames[d]:'').filter(Boolean).join(' and ')}${end?`, ${end}`:''}${def.fixed.includes(p)?', fixed':''}`;
       }
       if(id==='earth') {
-        const endpoint=def.paths.findIndex(path=>path[0]===p||path.at(-1)===p), owner=board.paths.findIndex(path=>path.includes(p)), colour=endpoint>=0?endpoint:owner,gate=def.gates?.includes(p);
+        const endpoint=def.paths.findIndex(path=>path[0]===p||path.at(-1)===p), owner=board.paths.findIndex(path=>path.includes(p)), colour=endpoint>=0?endpoint:owner,gate=expeditionGates(def,board).includes(p);
         if(colour>=0)style=`--path-colour:${colours[colour]};`;
         kind=`flow-cell ${endpoint>=0?'flow-station':''} ${owner>=0?'routed':''} ${board.active===colour && colour>=0?'active-route':''} ${gate?'survey-gate':''}`;
         if(endpoint>=0)text=`<span class="station-ring" aria-hidden="true"></span><b>${endpoint+1}</b>`;
@@ -419,7 +473,7 @@ window.AetherPuzzles = (() => {
         if(owner>=0) {const path=board.paths[owner],at=path.indexOf(p);let mask=0;for(const q of [path[at-1],path[at+1]])if(q!==undefined){const d=direction(p,q,def.n);if(d>=0)mask|=1<<d;}art=pipeArt(mask,'river');}
         label+=(endpoint>=0?`, station ${endpoint+1}`:owner>=0?`, path ${owner+1}`:', empty')+(gate?', paired survey gate; its route may continue to the other ⇄ gate':'');
       }
-      if(def.walls?.includes(p)) {kind='terrain-wall';label+=', wall';}
+      if(def.walls?.includes(p)||expeditionWall(def,board,p)) {kind='terrain-wall';label+=expeditionWall(def,board,p)&&!def.walls?.includes(p)?', closed expedition portcullis':', wall';}
       else if(id==='mars') {
         if(def.goals.includes(p)){kind+=' goal-cell';label+=', collection bay';}
         if(board.crates.includes(p)){label+=', sample canister';}
@@ -432,7 +486,9 @@ window.AetherPuzzles = (() => {
         if(at>=0){kind+=` buoy-cell ${at<board.collected?'visited':''} ${at===board.collected?'next-buoy':''}`;art=`<span class="buoy-marker" aria-hidden="true"><i></i><b>${at===3?'R':at+1}</b></span>`;label+=`, ${at===3?'relay':'buoy '+(at+1)}${at<board.collected?', collected':''}`;}
         if(board.player===p){label+=', probe';}
       }
-      const anchored=id==='uranus'&&ui.instrument==='anchor'&&ui.selectedCell===p&&board.balls.includes(p),interactive=(['mercury','venus','earth','mars'].includes(id)||(id==='uranus'&&def.masterwork?.mechanic==='anchor'&&board.balls.includes(p))) && !def.walls?.includes(p);
+      const ward=def.expedition&&['mercury','venus','earth'].includes(id)?def.expedition.seals.findIndex(seal=>seal.targets.includes(p)): -1,warded=ward>=0&&!board.seals[ward];
+      if(warded){kind+=' expedition-warded';label+=`, sealed by ward ${ward+1}`;style+='box-shadow:inset 0 0 0 2px #a84f5f;';}
+      const anchored=id==='uranus'&&ui.instrument==='anchor'&&ui.selectedCell===p&&board.balls.includes(p),interactive=(['mercury','venus','earth','mars'].includes(id)||(id==='uranus'&&def.masterwork?.mechanic==='anchor'&&board.balls.includes(p))) && !def.walls?.includes(p)&&!expeditionWall(def,board,p);
       if(anchored)style+='box-shadow:inset 0 0 0 3px #d8b57d;';
       return `<${interactive?'button':'span'} class="puzzle-cell ${kind} ${ui.hintCell===p?'hinted':''} ${ui.changed?.has(p)?'changed':''}" style="${style}${deal(p)}" ${interactive?`data-puzzle-cell="${p}" aria-label="${label}${anchored?', selected anchor':''}"${id==='venus'&&def.fixed.includes(p)?' aria-disabled="true"':''}${anchored?' aria-pressed="true"':''}`:`role="img" aria-label="${label}"`}>${art}<span class="cell-mark" aria-hidden="true">${text}</span></${interactive?'button':'span'}>`;
     }).join('')}</div>`;
@@ -440,9 +496,9 @@ window.AetherPuzzles = (() => {
   // Persistent overlay pieces (rover, canisters, capsules, probe, ring blocks) glide via CSS transitions.
   function piecesHTML(id,def,board,ui={}) {
     const deal=ui.deal?(i)=>`--deal:${i};`:()=>'';
-    if(id==='saturn')return `<div class="pieces-layer ring-pieces" style="--grid:6">${def.blocks.map((b,i)=>{
-      const {axis,x,y}=blockGeometry(def,board,i);
-      return `<button class="ring-block ${i===0?'probe-block':''} ${ui.selected===i?'selected':''} ${ui.hintCell===i?'hinted':''}" style="--x:${x};--y:${y};--w:${axis==='h'?b.len:1};--h:${axis==='v'?b.len:1};${deal(i)}" data-x="${x}" data-y="${y}" data-puzzle-block="${i}" aria-pressed="${ui.selected===i}" aria-label="${i===0?'Probe P':`Block ${i}`} · ${axis==='h'?'horizontal':'vertical'}${def.masterwork&&i>0&&b.len===3?' · can rotate':''}"><span class="block-label">${i===0?'P':i}</span><small>${axis==='h'?'↔':'↕'}</small>${i===0?'<i class="probe-porthole" aria-hidden="true"></i>':''}</button>`;
+    if(id==='saturn')return `<div class="pieces-layer ring-pieces" style="--grid:6;touch-action:none">${def.blocks.map((b,i)=>{
+      const {axis,x,y}=blockGeometry(def,board,i),ward=def.expedition?def.expedition.seals.findIndex(seal=>seal.targets.includes(i)):-1,warded=ward>=0&&!board.seals[ward];
+      return `<button class="ring-block ${i===0?'probe-block':''} ${ui.selected===i?'selected':''} ${ui.hintCell===i?'hinted':''} ${warded?'expedition-warded':''}" style="--x:${x};--y:${y};--w:${axis==='h'?b.len:1};--h:${axis==='v'?b.len:1};touch-action:none;${deal(i)}" data-x="${x}" data-y="${y}" data-puzzle-block="${i}" aria-pressed="${ui.selected===i}" aria-label="${i===0?'Probe P':`Block ${i}`} · ${axis==='h'?'horizontal':'vertical'}${def.masterwork&&i>0&&b.len===3?' · can rotate':''}${warded?` · sealed by ward ${ward+1}`:''}"><span class="block-label">${i===0?'P':i}</span><small>${axis==='h'?'↔':'↕'}</small>${i===0?'<i class="probe-porthole" aria-hidden="true"></i>':''}</button>`;
     }).join('')}</div>`;
     if(!['mars','uranus','neptune'].includes(id))return '';
     const piece=(cls,x,y,extra='',i=0)=>`<span class="piece ${cls}" data-x="${x}" data-y="${y}" style="--x:${x};--y:${y};${deal(i)}${extra}" aria-hidden="true"></span>`;
@@ -740,5 +796,125 @@ window.AetherPuzzles = (() => {
     }
     return null;
   }
-  return {catalogue,names,definition,initial,transition,won,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,eclipse,masterwork,masterworkRules,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames,blockAxis,blockGeometry,gateLink};
+  // The Grand Expedition is a fourth optional layer. Its mechanisms are real
+  // board state: saved drafts replay the same actions as live play, and every
+  // chamber below is accepted only after its complete plan reaches won().
+  const expeditionRules={
+    mercury:{name:'The Nocturne Orrery',period:4,mechanism:'Zodiac ring',cycleLabel:'Rotate zodiac',sealName:'Ox-blood ward',cycleEffect:'Every unsolved crater array rotates one quarter-turn clockwise; a completed array locks into its frame while the dial returns home.',rule:'Rotate the zodiac to align each ward, break both wards in order, and darken every crater with Cross and Prism. Sealed craters refuse switches. Finish with the zodiac on its ivory home mark.',stageNames:['Illuminated margin','The rotating hours','Caloris reliquary','Finale: the long midnight'],tips:['The first ward opens at zodiac position 2. Later chambers require Cross and Prism deductions while the crater array is rotated; a dark array locks safely for homing.','A crater outlined in oxblood is still warded. The final ward is deliberately left until after the core array is dark.']},
+    venus:{name:'The Aureate Alembic',period:4,mechanism:'Pressure carousel',cycleLabel:'Advance carousel',sealName:'Pressure seal',cycleEffect:'Every unpinned pipe in an incomplete circuit turns one quarter-turn; a completed circuit locks into its frame for homing.',rule:'Advance the pressure carousel to align and break both seals in order. Sealed pipes cannot turn or mirror. Restore every pipe to P, then return the carousel to its ivory home mark.',stageNames:['Vesper valve','Cloudborn arches','The sealed condenser','Finale: crown of pressure'],tips:['Carousel position 2 exposes the first seal. Its pipe rotations are physical, so four advances—not a cosmetic reset—restore the starting fittings.','Use Mirror for corner fittings and Turn for ordinary orientation after the wards release them.']},
+    earth:{name:'The Itinerant Mappa',period:4,mechanism:'Meridian wheel',cycleLabel:'Turn meridian',sealName:'Cartographer’s ward',cycleEffect:'The paired ⇄ gates rotate around the map, changing its usable topology; four turns restore their original squares.',rule:'Turn the meridian to move the paired gates and align both wards. Break them in order, complete every numbered route with the survey gates, fill the grid, and return the meridian home.',stageNames:['The first rubric','Rivers in the margin','Gates of the hemispheres','Finale: the living atlas'],tips:['A gate jump belongs to one numbered route. Its paired square moves whenever the meridian turns, so read the current ⇄ locations rather than memorising squares.','The first ward releases inscribed route squares; the second is an authentication step after the map is filled.']},
+    mars:{name:'The Sanguine Custody',period:2,mechanism:'Portcullis engine',cycleLabel:'Toggle portcullis',sealName:'Custody seal',cycleEffect:'The striped portcullis squares alternate between open ground and impassable wall.',rule:'Toggle the portcullis engine to align both custody seals. Their locked drive headings refuse movement until released. Push and winch every sample into a bay, authenticate the final seal, and leave the portcullises open.',stageNames:['Dust and iron','The moving cloister','Jezero reliquary','Finale: the last canister'],tips:['The engine alternates open and closed topology. Open the first seal at position 2; later chambers require a rover route while their portcullis is closed.','A locked heading affects walking, pushing and winching alike. Undo restores the rover, samples, engine and seals together.']},
+    jupiter:{name:'The Resonant Choir',period:2,mechanism:'Retrograde choir',cycleLabel:'Reverse choir',sealName:'Resonance seal',cycleEffect:'Orbital coupling reverses: the neighbour that receives +2 changes to the other side of the selected moon.',rule:'Reverse the choir to align both resonance seals. Sealed moons refuse burns and exchanges. Align every dial with burns and phase exchanges, authenticate the final seal, and restore forward coupling.',stageNames:['The first antiphon','Moons in retrograde','The four-voiced lock','Finale: conjunction of choirs'],tips:['Position 2 reverses the coupling shown beneath each moon. Return to position 1 before replaying a forward-coupling burn plan.','Exchange moves phase offsets without advancing them; a burn still changes the whole linked choir.']},
+    saturn:{name:'The Cassini Diptych',period:2,mechanism:'Exit orrery',cycleLabel:'Shift exit',sealName:'Ring ward',cycleEffect:'The passage exit moves between the east and west edge, changing the probe’s required destination.',rule:'Shift the exit orrery to align both ring wards. Sealed blocks refuse slides and rotation. Clear the probe’s lane with slides and centre-pivot turns, authenticate the final ward, and restore the eastern exit.',stageNames:['The outer leaf','Shepherd’s hinge','Encke reliquary','Finale: the divided ring'],tips:['The eastern exit is home. At position 2 the exit is western, so a probe at the western edge is not a completed expedition until every ward and the home position agree.','A ring ward belongs to a block, not a direction. Select blocks to read their ward labels before planning rotation.']},
+    uranus:{name:'The Sideways Hours',period:4,mechanism:'Axial frame',cycleLabel:'Rotate axial frame',sealName:'Gyroscopic ward',cycleEffect:'The command frame rotates 90°: at later positions each tilt acts on the next clockwise heading.',rule:'Rotate the axial frame to align both gyroscopic wards. Locked headings refuse normal and anchored tilts. Dock every capsule using anchors and simultaneous motion, authenticate the final ward, and return the frame home.',stageNames:['The canted initial','Counterweight cloister','Miranda’s turning page','Finale: ninety-eight degrees'],tips:['At frame position 2, an Up command slides east. Four frame turns restore the original headings; later chambers require anchored and ordinary tilts while the frame is rotated.','A locked heading also locks anchored tilts. Open the ward before choosing the capsule that must stay fixed.']},
+    neptune:{name:'The Tempest Psalter',period:4,mechanism:'Storm vane',cycleLabel:'Turn storm vane',sealName:'Tempest ward',cycleEffect:'The wind and Pulse heading rotate 90° clockwise with the vane, while barriers and buoys stay fixed.',rule:'Turn the storm vane to align both tempest wards. Locked headings refuse Wind and Pulse. Stop on every buoy in order, authenticate the final ward, and return the vane to its ivory home mark.',stageNames:['The distant verse','Currents in the margin','The dark-spot reliquary','Finale: the last transmission'],tips:['The vane changes both sails, not just Wind. At position 2 an Up command travels east; four turns restore the chart.','A shared expedition reserve rewards deliberate mechanism turns as well as efficient sailing. Undo returns spent energy.']},
+  };
+  function expeditionActionTarget(action) {
+    if(!Number.isInteger(action.value))return action.type==='block'&&Array.isArray(action.value)?action.value[0]:-1;
+    return action.value;
+  }
+  function expeditionActionAllowed(def,board,action) {
+    const target=expeditionActionTarget(action);
+    return !def.expedition.seals.some((seal,i)=>!board.seals[i]&&seal.targets.includes(target));
+  }
+  function expeditionTransition(id,def,current,action) {
+    const board=clone(current),exp=def.expedition;
+    if(action.value==='cycle') {
+      board.dial=mod(board.dial+1,exp.period);
+      if(id==='mercury'&&!coreWon(id,def,current)) {
+        const lights=Array(def.n**2).fill(0);
+        for(let p=0;p<lights.length;p++)lights[transformedPoint(p,def.n,1,false)]=current.lights[p];
+        board.lights=lights;
+      } else if(id==='venus'&&!coreWon(id,def,current))board.pipes=current.pipes.map((mask,p)=>def.fixed.includes(p)?mask:rotate(mask));
+      return recordExpeditionRoute(id,def,current,board);
+    }
+    const i=action.value;
+    if(!Number.isInteger(i)||i<0||i>=exp.seals.length||board.seals[i]||board.dial!==exp.seals[i].at||(i>0&&!board.seals[i-1]))return null;
+    board.seals[i]=true;return recordExpeditionRoute(id,def,current,board);
+  }
+  function expeditionPath(def,board) {
+    const id=def.expedition.id,solution=def.expedition.solution;let checked=initial(id,def,6);
+    for(let i=0;i<=solution.length;i++) {
+      if(same(checked,board))return clone(solution.slice(i));
+      if(i===solution.length)break;
+      checked=transition(id,def,checked,solution[i]);if(!checked)return null;
+    }
+    return null;
+  }
+  const expeditionCache=new Map();
+  async function expedition(id,seed,signal) {
+    const rule=expeditionRules[id];if(!rule)return null;
+    seed>>>=0;const cacheKey=`${id}:${seed}`;if(expeditionCache.has(cacheKey))return clone(expeditionCache.get(cacheKey));
+    const stages=[];
+    for(let stage=0;stage<4;stage++) {
+      let completed=null;
+      // Later chambers solve under the transformed rules. A fresh deterministic
+      // candidate is tried if a portcullis closes the only route or a solver
+      // would bypass the inherited instrument rather than engage with it.
+      for(let attempt=0;attempt<10&&!completed;attempt++) {
+        if(signal?.aborted)return null;
+        const stageSeed=(seed^Math.imul(stage+1,0x9e3779b9)^Math.imul(attempt,0x85ebca6b)^idSeed(id))>>>0,base=await masterwork(id,stageSeed,signal);
+        if(!base||signal?.aborted)return null;
+        const coreDial=id==='saturn'||stage===0?0:1+((stage-1)%(rule.period-1)),secondAt=id==='saturn'?1:stage===0?Math.min(2,rule.period-1):(coreDial+1)%rule.period;
+        const baseTargets=[...new Set(base.masterwork.solution.map(expeditionActionTarget).filter(v=>v>=0))];
+        if(!baseTargets.length)continue;
+        const exp={id,stage,period:rule.period,coreDial,transformed:coreDial!==0,seals:[{at:1,targets:[baseTargets[0]]},{at:secondAt,targets:[]}],solution:[],par:0,...(id==='saturn'&&stage>0?{exitSequence:['east','west','east']}:{})};
+        const def={...base,expedition:exp};
+        if(id==='earth') {
+          exp.gateTrack=[clone(def.gates)];
+          for(let i=1;i<rule.period;i++){const previous=exp.gateTrack[i-1];exp.gateTrack.push(previous.map(p=>transformedPoint(p,def.n,1,false)));}
+          // The authored watershed uses its original gate pairing at the core
+          // position; other meridians genuinely relocate that topology.
+          if(coreDial>0)exp.gateTrack[coreDial]=clone(def.gates);
+        }
+        if(id==='mars') {
+          const free=Array.from({length:def.n**2},(_,p)=>p).filter(p=>!def.walls.includes(p)&&!def.goals.includes(p)&&p!==def.player&&!def.crates.includes(p));
+          exp.portcullis=free.length?[free[(seed+stage*7+attempt*11)%free.length]]:[];
+        }
+        let board=initial(id,def,6),valid=true;const actions=[];
+        const apply=action=>{
+          if(!valid)return;
+          const next=transition(id,def,board,action);if(!next){valid=false;return;}
+          board=next;actions.push(clone(action));
+        };
+        const cycleTo=at=>{let guard=0;while(valid&&board.dial!==at&&guard++<=rule.period)apply({type:'mechanism',value:'cycle'});};
+        cycleTo(exp.seals[0].at);apply({type:'mechanism',value:0});cycleTo(coreDial);
+        let coreActions=stage===0?clone(base.masterwork.solution):await solve(id,def,board,signal,true);
+        if(signal?.aborted)return null;
+        if(!coreActions?.length||coreActions.length>120||(stage>0&&!usesMasterworkInstrument(id,coreActions)))continue;
+        for(const action of coreActions)apply(action);
+        if(!valid||!coreWon(id,def,board))continue;
+        cycleTo(exp.seals[1].at);apply({type:'mechanism',value:1});
+        if(id==='saturn'&&stage>0) {
+          // The moving exit creates two genuine follow-up deductions rather
+          // than accepting the first eastern escape as the whole finale.
+          const western=await solve(id,def,board,signal,true);if(!western?.length)continue;
+          for(const action of western)apply(action);
+          cycleTo(0);
+          const eastern=await solve(id,def,board,signal,true);if(!eastern?.length)continue;
+          for(const action of eastern)apply(action);
+        } else cycleTo(0);
+        if(!valid||!coreWon(id,def,board))continue;
+        const targets=[...new Set(coreActions.map(expeditionActionTarget).filter(v=>v>=0))];
+        if(!targets.length)continue;
+        exp.seals[0].targets=[targets[0]];if(targets.length>1)exp.seals[0].targets.push(targets[Math.floor(targets.length/2)]);
+        // Replayed from a clean initial board after finalising the wards: this
+        // is the authoritative acceptance check, not the scratch solver state.
+        let checked=initial(id,def,6),moves=0;valid=true;
+        for(const action of actions) {
+          const next=transition(id,def,checked,action);if(!next){valid=false;break;}
+          moves+=actionCost(id,checked,next);checked=next;
+        }
+        if(!valid||!won(id,def,checked)||won(id,def,initial(id,def,6)))continue;
+        Object.assign(exp,{name:rule.stageNames[stage],rule:rule.rule,tips:rule.tips,solution:actions,par:moves,mechanism:rule.mechanism,cycleLabel:rule.cycleLabel,cycleEffect:rule.cycleEffect,sealName:rule.sealName,finale:stage===3});
+        completed=def;
+      }
+      if(!completed)return null;
+      stages.push(completed);
+    }
+    const par=stages.reduce((sum,def)=>sum+def.expedition.par,0),run={id,seed,name:rule.name,stages,par,allowance:4,energy:par+4,unit:'shared energy'};
+    if(expeditionCache.size>=16)expeditionCache.delete(expeditionCache.keys().next().value);
+    expeditionCache.set(cacheKey,clone(run));return clone(run);
+  }
+  return {catalogue,names,definition,initial,transition,won,coreWon,solve,par,actionCost,progress,boardHTML,piecesHTML,hintTips,endless,replay,eclipse,masterwork,masterworkRules,expedition,expeditionRules,expeditionPath,expeditionGates,expeditionActionTarget,expeditionWall,neighbour,direction,directionNames,pipeTargets,rotate,completedPaths,lessons,instruction,explainAction,orbitPlan,coupling,moonNames,blockAxis,blockGeometry,gateLink};
 })();

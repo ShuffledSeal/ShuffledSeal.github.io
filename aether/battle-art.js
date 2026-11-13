@@ -5,11 +5,13 @@
 window.AetherBattleArt = (() => {
   const TAU = Math.PI * 2;
   const palettes = [
-    { deep: '#090f18', middle: '#1d2032', gas: '#814c66', glint: '#f7b471', rim: '#f4d7a2', teal: '#78cfc7', planet: ['#dc8e69','#6a3c59','#191a31'] },
-    { deep: '#071219', middle: '#162a32', gas: '#396776', glint: '#b8e7ce', rim: '#a9dbe5', teal: '#67e6ca', planet: ['#d3a26c','#665168','#1f2239'] },
-    { deep: '#060a18', middle: '#11172e', gas: '#343f86', glint: '#a0b9ff', rim: '#dfc8fe', teal: '#a0e5e5', planet: ['#7581b8','#30295d','#10102a'] },
+    { deep: '#040a14', middle: '#0b1a2d', gas: '#6b2d43', glint: '#e0bd7f', rim: '#f0dfbd', teal: '#7fb7be', planet: ['#d6a578','#64394c','#11192b'] },
+    { deep: '#050c16', middle: '#102236', gas: '#284f67', glint: '#d6bd89', rim: '#eadcbf', teal: '#7dc5c4', planet: ['#cfaa78','#55475e','#141c31'] },
+    { deep: '#030711', middle: '#0c1428', gas: '#3c315e', glint: '#b7acd4', rim: '#e6d5b7', teal: '#8fc6c0', planet: ['#8c8fb5','#392c50','#0d1226'] },
   ];
   const cache = new Map();
+  const motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  const artTime = time => motionQuery.matches ? 0 : time;
   function rng(seed) { return () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296); }
   const rgba = (hex, a) => {
     const n = Number.parseInt(hex.slice(1), 16);
@@ -19,6 +21,42 @@ window.AetherBattleArt = (() => {
   function line(c, coords) {
     c.beginPath(); coords.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y));
     c.closePath();
+  }
+  function lancet(c, x, y, w, h) {
+    c.beginPath(); c.moveTo(x, y + h); c.lineTo(x, y + w * .58);
+    c.bezierCurveTo(x, y + w * .25, x + w * .19, y + w * .12, x + w * .5, y);
+    c.bezierCurveTo(x + w * .81, y + w * .12, x + w, y + w * .25, x + w, y + w * .58);
+    c.lineTo(x + w, y + h); c.closePath();
+  }
+  // Cached architectural etching lives at the extreme edges, below gameplay.
+  function architecture(c, w, h, p, sector) {
+    c.save();
+    const panels = [[-42, h * .19, 172, h * .86], [w - 122, h * .24, 156, h * .82]];
+    for (const [x, y, pw, ph] of panels) {
+      lancet(c, x, y, pw, ph);
+      c.fillStyle = rgba(sector === 2 ? '#302744' : '#5c2430', .12); c.fill();
+      c.strokeStyle = rgba(p.rim, .13); c.lineWidth = 2; c.stroke();
+      lancet(c, x + 12, y + 18, pw - 24, ph - 30);
+      c.strokeStyle = rgba(p.rim, .075); c.lineWidth = 1; c.stroke();
+      c.beginPath(); c.moveTo(x + pw / 2, y + 18); c.lineTo(x + pw / 2, y + ph);
+      for (let row = 1; row < 5; row++) {
+        const yy = y + ph * row / 5; c.moveTo(x + 4, yy); c.lineTo(x + pw - 4, yy);
+      }
+      c.stroke();
+    }
+    // An occult armillary plate, deliberately too faint to read as a collision.
+    const x = w * .48, y = h * .55;
+    c.strokeStyle = rgba(p.rim, .07); c.lineWidth = 1;
+    for (const [rx, ry, angle] of [[205, 67, -.34], [72, 205, .53], [155, 105, .2]]) {
+      c.beginPath(); c.ellipse(x, y, rx, ry, angle, 0, TAU); c.stroke();
+    }
+    line(c, Array.from({ length: 16 }, (_, i) => {
+      const a = i * TAU / 16 - Math.PI / 2, r = i % 2 ? 33 : 78;
+      return [x + Math.cos(a) * r, y + Math.sin(a) * r];
+    }));
+    c.stroke();
+    c.fillStyle = rgba('#6e2e42', .045); c.fill();
+    c.restore();
   }
   function planet(c, x, y, radius, p, sector, rand) {
     c.save();
@@ -93,6 +131,7 @@ window.AetherBattleArt = (() => {
         ctx.beginPath();ctx.moveTo(x-r*4,y);ctx.lineTo(x+r*4,y);ctx.moveTo(x,y-r*4);ctx.lineTo(x,y+r*4);ctx.stroke();
       }
     }
+    architecture(ctx, w, h, p, sector);
     const positions = [ [815,-30,185], [840,55,177], [785,55,205] ];
     planet(ctx, ...positions[sector], p, sector, rand);
     // Navigation ornament, a fine astronomical plate etched behind gameplay.
@@ -108,6 +147,7 @@ window.AetherBattleArt = (() => {
     return c;
   }
   function backdrop(ctx, w, h, sector, time, boss) {
+    time = artTime(time);
     const key = `${sector}:${w}:${h}`;
     if(!cache.has(key)) cache.set(key, make(sector,w,h));
     ctx.drawImage(cache.get(key),0,0);
@@ -129,6 +169,7 @@ window.AetherBattleArt = (() => {
     ctx.restore();
   }
   function ship(ctx, hull, heading, time, dashing, sector) {
+    time = artTime(time);
     const p=palettes[sector?.name?.includes('Giants')?1:sector?.name?.includes('Dark')?2:0];
     const big = hull==='bell' ? 1.23 : hull==='moth' ? .94 : hull==='comet' ? 1.05:1;
     ctx.save();ctx.rotate(heading);ctx.scale(big,big);
@@ -165,6 +206,7 @@ window.AetherBattleArt = (() => {
     maw:['#ff8cbe','#713985'],lancer:['#79ddf4','#285672'],blossom:['#afecca','#286955']
   };
   function enemy(ctx,e,sector,time,heading) {
+    time = artTime(time);
     const colors=ePalette[e.kind]||ePalette.drifter;
     const r=e.radius || (e.kind==='maw'?28:15);
     const born=Math.min(1,(e.born??1)/.45);
